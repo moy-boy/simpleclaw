@@ -45,6 +45,11 @@ import {
   normalizeOptionalString,
 } from "../shared/string-coerce.js";
 import {
+  formatUnsupportedModelRefMessage,
+  isSupportedModelRef,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
+import {
   ErrorCodes,
   type ErrorShape,
   errorShape,
@@ -534,6 +539,9 @@ export async function applySessionsPatchToStore(params: {
       });
       if ("error" in resolved) {
         return invalid(resolved.error);
+      }
+      if (shouldEnforceSupportedModelProviderIds(cfg) && !isSupportedModelRef(resolved.key)) {
+        return invalid(formatUnsupportedModelRefMessage(resolved.key));
       }
       const isDefault =
         resolved.ref.provider === resolvedDefault.provider &&

@@ -116,25 +116,14 @@ describe("config footprint guardrails", () => {
     ).toStrictEqual([]);
   });
 
-  it("keeps bundled channel private-network config canonical in generated metadata", () => {
-    const pluginIds = ["matrix", "nextcloud-talk", "tlon"];
+  it("keeps generated bundled channel metadata scoped to the supported channel surface", () => {
+    expect(
+      GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA.map((entry) => entry.channelId).toSorted(),
+    ).toStrictEqual(["discord", "telegram"]);
 
-    for (const pluginId of pluginIds) {
-      const metadata = GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA.find(
-        (entry) => entry.pluginId === pluginId,
-      );
-      if (metadata === undefined) {
-        throw new Error(`${pluginId} metadata missing`);
-      }
-      const paths = new Set(collectSchemaPaths(metadata.schema));
-      expect(paths.has("allowPrivateNetwork"), `${pluginId} leaked flat allowPrivateNetwork`).toBe(
-        false,
-      );
-      expect(
-        paths.has("network.dangerouslyAllowPrivateNetwork"),
-        `${pluginId} missing canonical network.dangerouslyAllowPrivateNetwork`,
-      ).toBe(true);
-    }
+    expect(
+      GENERATED_BUNDLED_CHANNEL_CONFIG_METADATA.map((entry) => entry.pluginId).toSorted(),
+    ).toStrictEqual(["discord", "telegram"]);
   });
 
   it("keeps canonical nested streaming paths in the public core channel schema", () => {

@@ -26,6 +26,11 @@ function isInstalledOrConfigured(config: OpenClawConfig, pluginId: string): bool
   return Boolean(config.plugins?.entries?.[pluginId] || config.plugins?.installs?.[pluginId]);
 }
 
+function isAllowedByConfiguredAllowlist(config: OpenClawConfig, pluginId: string): boolean {
+  const allow = config.plugins?.allow?.filter((entry) => entry.trim());
+  return !allow || allow.length === 0 || allow.includes(pluginId);
+}
+
 function isGenericOfficialPluginEntry(entry: { source?: string; kind?: string }): boolean {
   const manifest = getOfficialExternalPluginCatalogManifest(entry);
   return (
@@ -70,7 +75,12 @@ export function resolveOfficialPluginOnboardingInstallEntries(params: {
     }
     const pluginId = resolveOfficialExternalPluginId(entry);
     const install = resolveOfficialExternalPluginInstall(entry);
-    if (!pluginId || !install || isInstalledOrConfigured(params.config, pluginId)) {
+    if (
+      !pluginId ||
+      !install ||
+      !isAllowedByConfiguredAllowlist(params.config, pluginId) ||
+      isInstalledOrConfigured(params.config, pluginId)
+    ) {
       continue;
     }
     entries.push({

@@ -100,6 +100,10 @@ describe("registerDirectoryCli", () => {
   });
 
   it("installs an explicit optional directory channel on demand", async () => {
+    mocks.loadConfig.mockReturnValue({
+      channels: {},
+      plugins: { entries: { "demo-directory": { enabled: true } } },
+    });
     const self = vi.fn().mockResolvedValue({ id: "self-1", name: "Family Phone" });
     mocks.resolveInstallableChannelPlugin.mockResolvedValue({
       cfg: {
@@ -141,19 +145,19 @@ describe("registerDirectoryCli", () => {
   });
 
   it("uses the auto-enabled config snapshot for omitted channel selection", async () => {
-    const autoEnabledConfig = { channels: { whatsapp: {} }, plugins: { allow: ["whatsapp"] } };
-    const self = vi.fn().mockResolvedValue({ id: "self-2", name: "WhatsApp Bot" });
+    const autoEnabledConfig = { channels: { telegram: {} }, plugins: { allow: ["telegram"] } };
+    const self = vi.fn().mockResolvedValue({ id: "self-2", name: "Telegram Bot" });
     mocks.applyPluginAutoEnable.mockReturnValue({
       config: autoEnabledConfig,
-      changes: ["whatsapp"],
+      changes: ["telegram"],
     });
     mocks.resolveMessageChannelSelection.mockResolvedValue({
-      channel: "whatsapp",
-      configured: ["whatsapp"],
+      channel: "telegram",
+      configured: ["telegram"],
       source: "single-configured",
     });
     mocks.getChannelPlugin.mockReturnValue({
-      id: "whatsapp",
+      id: "telegram",
       directory: { self },
     });
 
@@ -182,10 +186,10 @@ describe("registerDirectoryCli", () => {
     const listPeers = vi.fn().mockResolvedValue([{ id: "user:config", kind: "user" }]);
     const listPeersLive = vi.fn().mockResolvedValue([{ id: "user:live", kind: "user" }]);
     mocks.resolveInstallableChannelPlugin.mockResolvedValue({
-      cfg: { channels: { slack: {} } },
-      channelId: "slack",
+      cfg: { channels: { discord: {} } },
+      channelId: "discord",
       plugin: {
-        id: "slack",
+        id: "discord",
         directory: { listPeers, listPeersLive },
       },
       configChanged: false,
@@ -200,7 +204,7 @@ describe("registerDirectoryCli", () => {
         "peers",
         "list",
         "--channel",
-        "slack",
+        "discord",
         "--query",
         "ada",
         "--limit",
@@ -224,10 +228,10 @@ describe("registerDirectoryCli", () => {
   it("falls back to config-backed directory list readers when live readers are absent", async () => {
     const listGroups = vi.fn().mockResolvedValue([{ id: "channel:config", kind: "group" }]);
     mocks.resolveInstallableChannelPlugin.mockResolvedValue({
-      cfg: { channels: { slack: {} } },
-      channelId: "slack",
+      cfg: { channels: { discord: {} } },
+      channelId: "discord",
       plugin: {
-        id: "slack",
+        id: "discord",
         directory: { listGroups },
       },
       configChanged: false,
@@ -236,7 +240,7 @@ describe("registerDirectoryCli", () => {
     const program = new Command().name("openclaw");
     registerDirectoryCli(program);
 
-    await program.parseAsync(["directory", "groups", "list", "--channel", "slack", "--json"], {
+    await program.parseAsync(["directory", "groups", "list", "--channel", "discord", "--json"], {
       from: "user",
     });
 

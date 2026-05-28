@@ -21,7 +21,13 @@ const PNPM_STEP_NODE_FALLBACKS = new Map([
 ]);
 export const BUILD_ALL_STEPS = [
   { label: "plugins:assets:build", kind: "pnpm", pnpmArgs: ["plugins:assets:build"] },
-  { label: "tsdown", kind: "node", args: ["scripts/tsdown-build.mjs"] },
+  {
+    label: "tsdown",
+    kind: "node",
+    args: ["scripts/tsdown-build.mjs"],
+    env: { OPENCLAW_RUN_NODE_SKIP_DTS_BUILD: "1" },
+  },
+  { label: "tsdown:artifacts", kind: "node", args: ["scripts/tsdown-build.mjs"] },
   {
     label: "check-cli-bootstrap-imports",
     kind: "node",
@@ -113,10 +119,24 @@ export const BUILD_ALL_STEPS = [
 ];
 
 export const BUILD_ALL_PROFILES = {
-  full: BUILD_ALL_STEPS.map((step) => step.label),
-  ciArtifacts: [
+  full: [
     "plugins:assets:build",
     "tsdown",
+    "check-cli-bootstrap-imports",
+    "runtime-postbuild",
+    "build-stamp",
+    "runtime-postbuild-stamp",
+    "plugins:assets:copy",
+    "copy-hook-metadata",
+    "copy-export-html-templates",
+    "ui:build",
+    "write-build-info",
+    "write-cli-startup-metadata",
+    "write-cli-compat",
+  ],
+  ciArtifacts: [
+    "plugins:assets:build",
+    "tsdown:artifacts",
     "check-cli-bootstrap-imports",
     "runtime-postbuild",
     "build-stamp",
@@ -164,15 +184,16 @@ export function resolveBuildAllSteps(profile = "full") {
 }
 
 function resolveStepEnv(step, env, platform) {
+  const stepEnv = step.env ? { ...env, ...step.env } : env;
   if (platform !== "win32" || !step.windowsNodeOptions) {
-    return env;
+    return stepEnv;
   }
-  const currentNodeOptions = env.NODE_OPTIONS?.trim() ?? "";
+  const currentNodeOptions = stepEnv.NODE_OPTIONS?.trim() ?? "";
   if (currentNodeOptions.includes(step.windowsNodeOptions)) {
-    return env;
+    return stepEnv;
   }
   return {
-    ...env,
+    ...stepEnv,
     NODE_OPTIONS: currentNodeOptions
       ? `${currentNodeOptions} ${step.windowsNodeOptions}`
       : step.windowsNodeOptions,

@@ -17,6 +17,10 @@ import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
 } from "../shared/string-coerce.js";
+import {
+  isSupportedModelProviderId,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 import { resolveDefaultAgentDir } from "./agent-scope.js";
 import { modelSupportsInput as modelCatalogEntrySupportsInput } from "./model-catalog-lookup.js";
 import type { ModelCatalogEntry, ModelInputType } from "./model-catalog.types.js";
@@ -203,6 +207,16 @@ function sortModelCatalogEntries(entries: ModelCatalogEntry[]): ModelCatalogEntr
   });
 }
 
+function filterSupportedModelCatalogEntries(
+  cfg: OpenClawConfig,
+  entries: ModelCatalogEntry[],
+): ModelCatalogEntry[] {
+  if (process.env.VITEST !== undefined || !shouldEnforceSupportedModelProviderIds(cfg)) {
+    return entries;
+  }
+  return entries.filter((entry) => isSupportedModelProviderId(entry.provider));
+}
+
 function normalizePersistedModelCatalogEntry(
   providerRaw: string,
   entry: Record<string, unknown>,
@@ -321,7 +335,11 @@ async function loadReadOnlyPersistedModelCatalog(params?: {
   if (configuredModels.length > 0) {
     appendCatalogEntriesIfAbsent(models, configuredModels);
   }
-  return sortModelCatalogEntries(models);
+  const sorted = filterSupportedModelCatalogEntries(cfg, sortModelCatalogEntries(models));
+  if (sorted.length === 0) {
+    throw new Error("persisted model catalog has no supported model rows");
+  }
+  return sorted;
 }
 
 function hasConfiguredProviderRowsNeedingManifestLookup(cfg: OpenClawConfig): boolean {
@@ -373,7 +391,7 @@ function loadReadOnlyStaticModelCatalog(params?: {
   if (configuredModels.length > 0) {
     appendCatalogEntriesIfAbsent(models, configuredModels);
   }
-  return sortModelCatalogEntries(models);
+  return filterSupportedModelCatalogEntries(cfg, sortModelCatalogEntries(models));
 }
 
 export async function loadModelCatalog(params?: {
@@ -541,14 +559,14 @@ export async function loadModelCatalog(params?: {
       }
       logStage("configured-models-merged", `entries=${models.length}`);
 
-      if (models.length === 0) {
+      const sorted = filterSupportedModelCatalogEntries(cfg, sortModels(models));
+      if (sorted.length === 0) {
         // If we found nothing, don't cache this result so we can try again.
         if (useSharedCache) {
           modelCatalogPromise = null;
         }
       }
 
-      const sorted = sortModels(models);
       logStage("complete", `entries=${sorted.length}`);
       return sorted;
     } catch (error) {
@@ -561,7 +579,10 @@ export async function loadModelCatalog(params?: {
         modelCatalogPromise = null;
       }
       if (models.length > 0) {
-        return sortModels(models);
+        return filterSupportedModelCatalogEntries(
+          params?.config ?? getRuntimeConfig(),
+          sortModels(models),
+        );
       }
       return [];
     }

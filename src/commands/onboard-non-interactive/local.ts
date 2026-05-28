@@ -15,6 +15,11 @@ import {
   waitForGatewayReachable,
 } from "../onboard-helpers.js";
 import type { OnboardOptions } from "../onboard-types.js";
+import {
+  applySupportedPluginDefaults,
+  formatUnsupportedOnboardAuthChoice,
+  isSupportedOnboardAuthChoice,
+} from "../supported-surface.js";
 import { applyNonInteractiveGatewayConfig } from "./local/gateway-config.js";
 import {
   type GatewayHealthFailureDiagnostics,
@@ -150,22 +155,40 @@ export async function runNonInteractiveLocalSetup(params: {
     defaultWorkspaceDir: DEFAULT_WORKSPACE,
   });
 
-  let nextConfig: OpenClawConfig = applyLocalSetupWorkspaceConfig(baseConfig, workspaceDir);
+  let nextConfig: OpenClawConfig = applySupportedPluginDefaults(
+    applyLocalSetupWorkspaceConfig(baseConfig, workspaceDir),
+  );
   if (opts.skipBootstrap) {
     nextConfig = applySkipBootstrapConfig(nextConfig);
   }
 
-  const inferredAuthChoice = opts.authChoice
-    ? undefined
-    : (await import("./local/auth-choice-inference.js")).inferAuthChoiceFromFlags(opts, {
-        config: nextConfig,
-        workspaceDir,
-        env: process.env,
-      });
+  const authChoiceInference = (
+    await import("./local/auth-choice-inference.js")
+  ).inferAuthChoiceFromFlags(opts, {
+    config: nextConfig,
+    workspaceDir,
+    env: process.env,
+  });
+  if (authChoiceInference.unsupportedMatches.length > 0) {
+    const unsupportedFlags = [
+      ...new Set(authChoiceInference.unsupportedMatches.map((match) => match.label)),
+    ];
+    runtime.error(
+      [
+        "Unsupported API provider flags were provided for non-interactive setup.",
+        "This setup supports OpenAI subscription login only.",
+        `Flags: ${unsupportedFlags.join(", ")}`,
+        `Use ${formatCliCommand("openclaw onboard")} for browser login, or pass --auth-choice openai-codex-device-code for device pairing.`,
+      ].join("\n"),
+    );
+    runtime.exit(1);
+    return;
+  }
+  const inferredAuthChoice = opts.authChoice ? undefined : authChoiceInference;
   if (!opts.authChoice && inferredAuthChoice && inferredAuthChoice.matches.length > 1) {
     runtime.error(
       [
-        "Multiple API key flags were provided for non-interactive setup.",
+        "Multiple provider auth flags were provided for non-interactive setup.",
         "Use a single provider flag or pass --auth-choice explicitly.",
         `Flags: ${inferredAuthChoice.matches.map((match) => match.label).join(", ")}`,
       ].join("\n"),
@@ -174,6 +197,11 @@ export async function runNonInteractiveLocalSetup(params: {
     return;
   }
   const authChoice = opts.authChoice ?? inferredAuthChoice?.choice ?? "skip";
+  if (!isSupportedOnboardAuthChoice(authChoice)) {
+    runtime.error(formatUnsupportedOnboardAuthChoice(String(authChoice)));
+    runtime.exit(1);
+    return;
+  }
   if (authChoice !== "skip") {
     const { applyNonInteractiveAuthChoice } = await import("./local/auth-choice.js");
     const nextConfigAfterAuth = await applyNonInteractiveAuthChoice({

@@ -34,6 +34,14 @@
       "@openclaw/*": ["./extensions/*"]
     }
   },
-  "include": ["src/**/*", "ui/**/*", "extensions/**/*", "packages/**/*"],
+  "include": [
+    "src/**/*",
+    "ui/**/*",
+    "extensions/codex/**/*",
+    "extensions/discord/**/*",
+    "extensions/openai/**/*",
+    "extensions/telegram/**/*",
+    "packages/**/*"
+  ],
   "exclude": ["node_modules", "dist", "**/dist/**"]
 }

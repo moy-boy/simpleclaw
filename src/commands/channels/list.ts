@@ -17,6 +17,7 @@ import { formatDocsLink } from "../../terminal/links.js";
 import { theme } from "../../terminal/theme.js";
 import { isCatalogChannelInstalled } from "../channel-setup/discovery.js";
 import { listTrustedChannelPluginCatalogEntries } from "../channel-setup/trusted-catalog.js";
+import { isSupportedChannelId, shouldEnforceSupportedChannelIds } from "../supported-surface.js";
 import { formatChannelAccountLabel, requireValidConfig } from "./shared.js";
 
 export type ChannelsListOptions = {
@@ -151,14 +152,15 @@ export async function channelsListCommand(
   }
   const showAll = opts.all === true;
 
+  const enforceSupportedChannels = shouldEnforceSupportedChannelIds(cfg);
   const plugins = listReadOnlyChannelPluginsForConfig(cfg, {
     includeSetupFallbackPlugins: true,
-  });
+  }).filter((plugin) => !enforceSupportedChannels || isSupportedChannelId(plugin.id));
   const workspaceDir = resolveAgentWorkspaceDir(cfg, resolveDefaultAgentId(cfg));
   const catalogEntries = listTrustedChannelPluginCatalogEntries({
     cfg,
     ...(workspaceDir ? { workspaceDir } : {}),
-  });
+  }).filter((entry) => !enforceSupportedChannels || isSupportedChannelId(entry.id));
   const runtimeAccountsByChannel =
     opts.json === true
       ? new Map<string, ChannelAccountSnapshot[]>()

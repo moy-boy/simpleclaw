@@ -5,6 +5,7 @@ import {
   collectPnpmLockViolations,
   parsePnpmPackageKey,
 } from "../scripts/generate-npm-shrinkwrap.mjs";
+import { listSupportedBundledPluginIds } from "../scripts/lib/supported-surface.mjs";
 
 type PnpmBuildConfig = {
   allowBuilds?: Record<string, boolean>;
@@ -78,10 +79,8 @@ describe("package manager build policy", () => {
     const pnpmLockPackages = collectPnpmLockPackages();
     const shrinkwrapPaths = [
       "npm-shrinkwrap.json",
-      ...fs
-        .readdirSync("extensions", { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => `extensions/${entry.name}/npm-shrinkwrap.json`)
+      ...listSupportedBundledPluginIds()
+        .map((pluginId) => `extensions/${pluginId}/npm-shrinkwrap.json`)
         .filter((shrinkwrapPath) => fs.existsSync(shrinkwrapPath))
         .sort((left, right) => left.localeCompare(right)),
     ];
@@ -92,12 +91,9 @@ describe("package manager build policy", () => {
     }
   });
 
-  it("ships shrinkwrap for every publishable plugin package", () => {
-    for (const entry of fs.readdirSync("extensions", { withFileTypes: true })) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-      const packageJsonPath = `extensions/${entry.name}/package.json`;
+  it("ships shrinkwrap for every publishable supported plugin package", () => {
+    for (const pluginId of listSupportedBundledPluginIds()) {
+      const packageJsonPath = `extensions/${pluginId}/package.json`;
       if (!fs.existsSync(packageJsonPath)) {
         continue;
       }
@@ -110,7 +106,7 @@ describe("package manager build policy", () => {
         continue;
       }
 
-      const shrinkwrapPath = `extensions/${entry.name}/npm-shrinkwrap.json`;
+      const shrinkwrapPath = `extensions/${pluginId}/npm-shrinkwrap.json`;
       const shrinkwrap = readJson(shrinkwrapPath) as NpmShrinkwrap;
       const devLockedPackages = Object.entries(shrinkwrap.packages ?? {}).filter(
         ([, lockedPackage]) => lockedPackage.dev === true,

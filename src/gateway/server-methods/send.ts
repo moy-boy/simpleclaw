@@ -23,12 +23,16 @@ import { extractToolPayload } from "../../infra/outbound/tool-payload.js";
 import { getAgentScopedMediaLocalRoots } from "../../media/local-roots.js";
 import { getCurrentPluginMetadataSnapshot } from "../../plugins/current-plugin-metadata-snapshot.js";
 import { normalizePollInput } from "../../polls.js";
-import { parseThreadSessionSuffix } from "../../sessions/session-key-utils.js";
 import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
   readStringValue,
 } from "../../shared/string-coerce.js";
+import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+} from "../../supported-surface.js";
 import { ADMIN_SCOPE } from "../operator-scopes.js";
 import {
   ErrorCodes,
@@ -150,6 +154,11 @@ async function resolveRequestedChannel(params: {
     } catch (err) {
       return { error: errorShape(ErrorCodes.INVALID_REQUEST, String(err)) };
     }
+  }
+  if (shouldEnforceSupportedChannelIds(cfg) && !isSupportedChannelId(channel)) {
+    return {
+      error: errorShape(ErrorCodes.INVALID_REQUEST, formatUnsupportedChannelMessage(channel)),
+    };
   }
   return { cfg, channel };
 }
@@ -560,27 +569,13 @@ export const sendHandlers: GatewayRequestHandlers = {
           replyToId,
           threadId,
         });
-        const providedSessionBaseKey =
-          parseThreadSessionSuffix(providedSessionKey).baseSessionKey ?? providedSessionKey;
-        const shouldUseDerivedThreadSessionKey =
-          channel === "slack" &&
-          !!providedSessionKey &&
-          !!normalizeOptionalString(derivedRoute?.threadId) &&
-          normalizeOptionalLowercaseString(derivedRoute?.baseSessionKey) ===
-            normalizeOptionalLowercaseString(providedSessionBaseKey) &&
-          normalizeOptionalLowercaseString(derivedRoute?.sessionKey) !== providedSessionKey;
         const outboundRoute = derivedRoute
           ? providedSessionKey
-            ? shouldUseDerivedThreadSessionKey
-              ? {
-                  ...derivedRoute,
-                  baseSessionKey: derivedRoute.baseSessionKey ?? providedSessionKey,
-                }
-              : {
-                  ...derivedRoute,
-                  sessionKey: providedSessionKey,
-                  baseSessionKey: providedSessionKey,
-                }
+            ? {
+                ...derivedRoute,
+                sessionKey: providedSessionKey,
+                baseSessionKey: providedSessionKey,
+              }
             : derivedRoute
           : null;
         if (outboundRoute) {

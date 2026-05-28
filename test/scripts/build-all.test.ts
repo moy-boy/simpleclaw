@@ -100,6 +100,27 @@ describe("resolveBuildAllStep", () => {
     });
   });
 
+  it("uses runtime-only tsdown output for the default build profile", () => {
+    const step = getBuildAllStep("tsdown");
+
+    const result = resolveBuildAllStep(step, {
+      nodeExecPath: "/custom/node",
+      env: { FOO: "bar" },
+    });
+
+    expect(result).toEqual({
+      command: "/custom/node",
+      args: ["scripts/tsdown-build.mjs"],
+      options: {
+        stdio: "inherit",
+        env: {
+          FOO: "bar",
+          OPENCLAW_RUN_NODE_SKIP_DTS_BUILD: "1",
+        },
+      },
+    });
+  });
+
   it("can route pnpm script steps through direct node entrypoints", () => {
     const step = getBuildAllStep("plugins:assets:build");
 
@@ -152,15 +173,29 @@ describe("resolveBuildAllStep", () => {
 });
 
 describe("resolveBuildAllSteps", () => {
-  it("keeps the full profile aligned with the declared steps", () => {
-    expect(resolveBuildAllSteps("full")).toEqual(BUILD_ALL_STEPS);
-    expect(BUILD_ALL_PROFILES.full).toEqual(BUILD_ALL_STEPS.map((step) => step.label));
+  it("uses a runtime-focused default build profile", () => {
+    expect(resolveBuildAllSteps("full").map((step) => step.label)).toEqual([
+      "plugins:assets:build",
+      "tsdown",
+      "check-cli-bootstrap-imports",
+      "runtime-postbuild",
+      "build-stamp",
+      "runtime-postbuild-stamp",
+      "plugins:assets:copy",
+      "copy-hook-metadata",
+      "copy-export-html-templates",
+      "ui:build",
+      "write-build-info",
+      "write-cli-startup-metadata",
+      "write-cli-compat",
+    ]);
+    expect(BUILD_ALL_PROFILES.full).toEqual(resolveBuildAllSteps("full").map((step) => step.label));
   });
 
   it("uses a runtime artifact plus plugin SDK export profile for ci artifacts", () => {
     expect(resolveBuildAllSteps("ciArtifacts").map((step) => step.label)).toEqual([
       "plugins:assets:build",
-      "tsdown",
+      "tsdown:artifacts",
       "check-cli-bootstrap-imports",
       "runtime-postbuild",
       "build-stamp",
@@ -213,10 +248,11 @@ describe("resolveBuildAllSteps", () => {
   it("includes ui:build in the full and ciArtifacts profiles after runtime postbuild", () => {
     for (const profile of ["full", "ciArtifacts"]) {
       const labels = resolveBuildAllSteps(profile).map((step) => step.label);
+      const tsdownLabel = profile === "ciArtifacts" ? "tsdown:artifacts" : "tsdown";
       expect(labels).toContain("ui:build");
       // Control UI bundling must run after tsdown clears dist so that
       // dist/control-ui survives `pnpm build` without a second command.
-      expect(labels.indexOf("ui:build")).toBeGreaterThan(labels.indexOf("tsdown"));
+      expect(labels.indexOf("ui:build")).toBeGreaterThan(labels.indexOf(tsdownLabel));
       expect(labels.indexOf("ui:build")).toBeGreaterThan(labels.indexOf("runtime-postbuild-stamp"));
       // ui:build must run before write-build-info so the build manifest can
       // see the final dist/control-ui assets.

@@ -56,30 +56,8 @@ type ChannelSetupSelectionEntry = {
 };
 
 const CHANNEL_PRIMER_BLURB_KEYS: Record<string, string> = {
-  clickclack: "wizard.channelsPrimer.blurbs.clickclack",
   discord: "wizard.channelsPrimer.blurbs.discord",
-  feishu: "wizard.channelsPrimer.blurbs.feishu",
-  googlechat: "wizard.channelsPrimer.blurbs.googlechat",
-  imessage: "wizard.channelsPrimer.blurbs.imessage",
-  irc: "wizard.channelsPrimer.blurbs.irc",
-  line: "wizard.channelsPrimer.blurbs.line",
-  mattermost: "wizard.channelsPrimer.blurbs.mattermost",
-  matrix: "wizard.channelsPrimer.blurbs.matrix",
-  msteams: "wizard.channelsPrimer.blurbs.msteams",
-  "nextcloud-talk": "wizard.channelsPrimer.blurbs.nextcloudTalk",
-  nostr: "wizard.channelsPrimer.blurbs.nostr",
-  qqbot: "wizard.channelsPrimer.blurbs.qqbot",
-  signal: "wizard.channelsPrimer.blurbs.signal",
-  slack: "wizard.channelsPrimer.blurbs.slack",
-  "synology-chat": "wizard.channelsPrimer.blurbs.synologyChat",
   telegram: "wizard.channelsPrimer.blurbs.telegram",
-  tlon: "wizard.channelsPrimer.blurbs.tlon",
-  twitch: "wizard.channelsPrimer.blurbs.twitch",
-  wecom: "wizard.channelsPrimer.blurbs.wecom",
-  whatsapp: "wizard.channelsPrimer.blurbs.whatsapp",
-  yuanbao: "wizard.channelsPrimer.blurbs.yuanbao",
-  zalo: "wizard.channelsPrimer.blurbs.zalo",
-  zalouser: "wizard.channelsPrimer.blurbs.zalouser",
 };
 
 function buildChannelSetupSelectionContribution(params: {
@@ -342,13 +320,24 @@ export async function collectChannelStatus(params: {
   installedPlugins?: ChannelSetupPlugin[];
   resolveAdapter?: (channel: ChannelChoice) => ChannelSetupWizardAdapter | undefined;
 }): Promise<ChannelStatusSummary> {
-  const installedPlugins = params.installedPlugins ?? listChannelSetupPlugins();
+  const allowedChannelIds = new Set(params.options?.channelIds ?? []);
+  const includeChannel = (channel: ChannelChoice) =>
+    allowedChannelIds.size === 0 || allowedChannelIds.has(channel);
+  const installedPlugins = (params.installedPlugins ?? listChannelSetupPlugins()).filter((plugin) =>
+    includeChannel(plugin.id),
+  );
   const workspaceDir = resolveAgentWorkspaceDir(params.cfg, resolveDefaultAgentId(params.cfg));
-  const { installedCatalogEntries, installableCatalogEntries } = resolveChannelSetupEntries({
+  const resolvedEntries = resolveChannelSetupEntries({
     cfg: params.cfg,
     installedPlugins,
     workspaceDir,
   });
+  const installedCatalogEntries = resolvedEntries.installedCatalogEntries.filter((entry) =>
+    includeChannel(entry.id as ChannelChoice),
+  );
+  const installableCatalogEntries = resolvedEntries.installableCatalogEntries.filter((entry) =>
+    includeChannel(entry.id as ChannelChoice),
+  );
   const bundledSources = resolveBundledPluginSources({ workspaceDir });
   const resolveAdapter =
     params.resolveAdapter ??
@@ -374,6 +363,7 @@ export async function collectChannelStatus(params: {
   );
   const statusByChannel = new Map(statusEntries.map((entry) => [entry.channel, entry]));
   const fallbackStatuses = listChatChannels()
+    .filter((meta) => includeChannel(meta.id))
     .filter((meta) => shouldShowChannelInSetup(meta))
     .filter((meta) => !statusByChannel.has(meta.id))
     .map((meta) => {

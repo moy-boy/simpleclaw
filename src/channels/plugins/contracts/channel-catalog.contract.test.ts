@@ -5,46 +5,39 @@ import {
 } from "./test-helpers/channel-catalog-contract.js";
 
 describeChannelCatalogEntryContract({
-  channelId: "msteams",
-  npmSpec: "@openclaw/msteams",
-  alias: "teams",
+  channelId: "discord",
+  npmSpec: "@openclaw/discord",
 });
 
-const whatsappMeta = {
-  id: "whatsapp",
-  label: "WhatsApp",
-  selectionLabel: "WhatsApp (QR link)",
-  detailLabel: "WhatsApp Web",
-  docsPath: "/channels/whatsapp",
-  blurb: "works with your own number; recommend a separate phone + eSIM.",
+const telegramMeta = {
+  id: "telegram",
+  label: "Telegram",
+  selectionLabel: "Telegram (Bot API)",
+  detailLabel: "Telegram Bot",
+  docsPath: "/channels/telegram",
+  blurb: "register a bot with @BotFather and get going.",
 };
 
 describeBundledMetadataOnlyChannelCatalogContract({
-  pluginId: "whatsapp",
-  packageName: "@openclaw/whatsapp",
-  npmSpec: "@openclaw/whatsapp",
-  meta: whatsappMeta,
-  defaultChoice: "npm",
+  pluginId: "telegram",
+  packageName: "@openclaw/telegram",
+  npmSpec: "@openclaw/telegram",
+  meta: telegramMeta,
 });
 
 describeOfficialFallbackChannelCatalogContract({
-  channelId: "whatsapp",
-  npmSpec: "@openclaw/whatsapp",
-  meta: whatsappMeta,
-  packageName: "@openclaw/whatsapp",
-  pluginId: "whatsapp",
-  externalNpmSpec: "@vendor/whatsapp-fork",
-  externalLabel: "WhatsApp Fork",
-});
-
-describeChannelCatalogEntryContract({
-  channelId: "wecom",
-  npmSpec: "@wecom/wecom-openclaw-plugin@2026.5.7",
-  alias: "wework",
-});
-
-describeChannelCatalogEntryContract({
-  channelId: "yuanbao",
-  npmSpec: "openclaw-plugin-yuanbao@2.13.1",
-  alias: "yb",
+  channelId: "discord",
+  npmSpec: "@openclaw/discord",
+  meta: {
+    id: "discord",
+    label: "Discord",
+    selectionLabel: "Discord (Bot API)",
+    detailLabel: "Discord Bot",
+    docsPath: "/channels/discord",
+    blurb: "very well supported right now.",
+  },
+  packageName: "@openclaw/discord",
+  pluginId: "discord",
+  externalNpmSpec: "@vendor/discord-fork",
+  externalLabel: "Discord Fork",
 });

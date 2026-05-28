@@ -14,6 +14,11 @@ import { redactSensitiveUrlLikeString } from "../../shared/net/redact-sensitive-
 import { formatDocsLink } from "../../terminal/links.js";
 import { theme } from "../../terminal/theme.js";
 import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+} from "../supported-surface.js";
+import {
   appendBaseUrlBit,
   appendEnabledConfiguredLinkedBits,
   appendModeBit,
@@ -39,6 +44,30 @@ function redactGatewayUrlSecretsInText(text: string): string {
 
 function formatChannelsStatusError(err: unknown): string {
   return redactGatewayUrlSecretsInText(formatErrorMessage(err));
+}
+
+function filterSupportedGatewayChannelsPayload(
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!payload || typeof payload !== "object") {
+    return {};
+  }
+  const record = { ...payload };
+  if (record.channelAccounts && typeof record.channelAccounts === "object") {
+    record.channelAccounts = Object.fromEntries(
+      Object.entries(record.channelAccounts as Record<string, unknown>).filter(([channelId]) =>
+        isSupportedChannelId(channelId),
+      ),
+    );
+  }
+  if (record.channelLabels && typeof record.channelLabels === "object") {
+    record.channelLabels = Object.fromEntries(
+      Object.entries(record.channelLabels as Record<string, unknown>).filter(([channelId]) =>
+        isSupportedChannelId(channelId),
+      ),
+    );
+  }
+  return record;
 }
 
 function formatEventLoopBits(value: unknown): string | null {
@@ -216,6 +245,19 @@ export async function channelsStatusCommand(
 ) {
   const timeoutMs = Number(opts.timeout ?? (opts.probe ? 30_000 : 10_000));
   const requestedChannel = opts.channel ? normalizeChannelId(opts.channel) : null;
+  const configForPolicy = await requireValidConfigSnapshot(runtime);
+  if (!configForPolicy) {
+    return;
+  }
+  if (
+    shouldEnforceSupportedChannelIds(configForPolicy) &&
+    opts.channel &&
+    !isSupportedChannelId(requestedChannel ?? opts.channel)
+  ) {
+    runtime.error(formatUnsupportedChannelMessage(opts.channel));
+    runtime.exit(1);
+    return;
+  }
   const statusLabel = opts.probe ? "Checking channel status (probe)…" : "Checking channel status…";
   const shouldLogStatus = opts.json !== true && !process.stderr.isTTY;
   if (shouldLogStatus) {
@@ -236,11 +278,14 @@ export async function channelsStatusCommand(
         if (opts.channel) {
           params.channel = opts.channel;
         }
-        return await callGateway({
+        const payload = await callGateway({
           method: "channels.status",
           params,
           timeoutMs,
         });
+        return shouldEnforceSupportedChannelIds(configForPolicy)
+          ? filterSupportedGatewayChannelsPayload(payload)
+          : payload;
       },
     );
     if (opts.json) {
@@ -251,10 +296,7 @@ export async function channelsStatusCommand(
   } catch (err) {
     const safeError = formatChannelsStatusError(err);
     runtime.error(`Gateway not reachable: ${safeError}`);
-    const cfg = await requireValidConfigSnapshot(runtime);
-    if (!cfg) {
-      return;
-    }
+    const cfg = configForPolicy;
     const { resolvedConfig } = await resolveCommandConfigWithSecrets({
       config: cfg,
       commandName: "channels status",

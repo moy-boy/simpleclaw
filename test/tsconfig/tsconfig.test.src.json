@@ -6,7 +6,10 @@
     "../../src/**/*.test.tsx",
     "../../ui/**/*.d.ts",
     "../../ui/src/ui/app.ts",
-    "../../extensions/**/*.d.ts",
+    "../../extensions/codex/**/*.d.ts",
+    "../../extensions/discord/**/*.d.ts",
+    "../../extensions/openai/**/*.d.ts",
+    "../../extensions/telegram/**/*.d.ts",
     "../../packages/**/*.d.ts"
   ]
 }

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, posix, resolve } from "node:path";
+import { shouldIncludeBundledPluginId } from "./supported-surface.mjs";
 
 export const EXTENSION_PACKAGE_BOUNDARY_INCLUDE = ["./*.ts", "./src/**/*.ts"] as const;
 export const EXTENSION_PACKAGE_BOUNDARY_EXCLUDE = [
@@ -45,10 +46,7 @@ export const EXTENSION_PACKAGE_BOUNDARY_BASE_PATHS = {
     "../dist/plugin-sdk/src/plugin-sdk/secret-ref-runtime.d.ts",
   ],
   "openclaw/plugin-sdk/ssrf-runtime": ["../dist/plugin-sdk/src/plugin-sdk/ssrf-runtime.d.ts"],
-  "@openclaw/qa-channel/api.js": ["../dist/plugin-sdk/extensions/qa-channel/api.d.ts"],
   "@openclaw/discord/api.js": ["../dist/plugin-sdk/extensions/discord/api.d.ts"],
-  "@openclaw/slack/api.js": ["../dist/plugin-sdk/extensions/slack/api.d.ts"],
-  "@openclaw/whatsapp/api.js": ["../dist/plugin-sdk/extensions/whatsapp/api.d.ts"],
   "@openclaw/*.js": ["../packages/plugin-sdk/dist/extensions/*.d.ts", "../extensions/*"],
   "@openclaw/*": ["../packages/plugin-sdk/dist/extensions/*", "../extensions/*"],
   "@openclaw/plugin-sdk/*": ["../dist/plugin-sdk/src/plugin-sdk/*.d.ts"],
@@ -72,8 +70,6 @@ export const EXTENSION_PACKAGE_BOUNDARY_XAI_PATHS = {
       "openclaw/plugin-sdk/channel-secret-basic-runtime": _omitBasic,
       "openclaw/plugin-sdk/channel-secret-tts-runtime": _omitTts,
       "@openclaw/discord/api.js": _omitDiscord,
-      "@openclaw/slack/api.js": _omitSlack,
-      "@openclaw/whatsapp/api.js": _omitWhatsApp,
       ...rest
     }) => rest)(EXTENSION_PACKAGE_BOUNDARY_BASE_PATHS),
     "../",
@@ -97,7 +93,6 @@ export const EXTENSION_PACKAGE_BOUNDARY_XAI_PATHS = {
   "openclaw/plugin-sdk/provider-web-search-contract": [
     "../../dist/plugin-sdk/src/plugin-sdk/provider-web-search-contract.d.ts",
   ],
-  "@openclaw/qa-channel/api.js": ["../../dist/plugin-sdk/extensions/qa-channel/api.d.ts"],
   "@openclaw/*.js": ["../../packages/plugin-sdk/dist/extensions/*.d.ts", "../*"],
   "@openclaw/*": ["../*"],
   "@openclaw/plugin-sdk/*": ["../../dist/plugin-sdk/src/plugin-sdk/*.d.ts"],
@@ -130,6 +125,7 @@ function collectBundledExtensionIds(rootDir = resolve(".")): string[] {
   return readdirSync(join(rootDir, "extensions"), { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
+    .filter((extensionId) => shouldIncludeBundledPluginId(extensionId))
     .toSorted();
 }
 

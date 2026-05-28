@@ -447,14 +447,14 @@ describe("resolveChannelSetupSelectionContributions", () => {
       makeChannelSetupEntries({
         entries: [
           {
-            id: "feishu",
+            id: "telegram",
             meta: {
-              id: "feishu",
-              label: "Feishu",
-              selectionLabel: "Feishu",
-              docsPath: "/channels/feishu",
-              docsLabel: "feishu",
-              blurb: "飞书/Lark enterprise messaging.",
+              id: "telegram",
+              label: "Telegram",
+              selectionLabel: "Telegram",
+              docsPath: "/channels/telegram",
+              docsLabel: "telegram",
+              blurb: "simplest way to get started — register a bot with @BotFather and get going.",
             },
           },
         ],
@@ -465,18 +465,18 @@ describe("resolveChannelSetupSelectionContributions", () => {
       const lines = resolveChannelSelectionNoteLines({
         cfg: {} as never,
         installedPlugins: [],
-        selection: ["feishu"],
+        selection: ["telegram"],
       });
 
       expect(formatChannelSelectionLine).toHaveBeenCalledWith(
         expect.objectContaining({
-          label: "Feishu",
-          blurb: "飞书/Lark 企业消息。",
+          label: "Telegram",
+          blurb: "最容易上手：在 @BotFather 注册 bot 后即可开始。",
           selectionDocsPrefix: "文档：",
         }),
         expect.any(Function),
       );
-      expect(lines).toEqual(["Feishu — 飞书/Lark 企业消息。"]);
+      expect(lines).toEqual(["Telegram — 最容易上手：在 @BotFather 注册 bot 后即可开始。"]);
     } finally {
       if (previousLocale === undefined) {
         delete process.env.OPENCLAW_LOCALE;

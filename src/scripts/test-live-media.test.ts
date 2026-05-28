@@ -33,41 +33,25 @@ describe("test-live-media", () => {
 
   it("defaults to all suites with auth filtering", async () => {
     vi.stubEnv("TEST_AUTH_OPENAI", "1");
-    vi.stubEnv("TEST_AUTH_GOOGLE", "1");
-    vi.stubEnv("TEST_AUTH_MINIMAX", "1");
-    vi.stubEnv("TEST_AUTH_FAL", "1");
-    vi.stubEnv("TEST_AUTH_VYDRA", "1");
 
     const { buildRunPlan, parseArgs } = await import("../../scripts/test-live-media.ts");
     const plan = buildRunPlan(parseArgs([]));
 
-    expect(plan.map((entry) => entry.suite.id)).toEqual(["image", "music", "video"]);
-    expect(requirePlanEntry(plan, "image").providers).toEqual([
-      "fal",
-      "google",
-      "minimax",
-      "openai",
-      "vydra",
-    ]);
-    expect(requirePlanEntry(plan, "music").providers).toEqual(["google", "minimax"]);
-    expect(requirePlanEntry(plan, "video").providers).toEqual([
-      "google",
-      "minimax",
-      "openai",
-      "vydra",
-    ]);
+    expect(plan.map((entry) => entry.suite.id)).toEqual(["image", "video"]);
+    expect(requirePlanEntry(plan, "image").providers).toEqual(["openai"]);
+    expect(requirePlanEntry(plan, "video").providers).toEqual(["openai"]);
   });
 
   it("supports suite-specific provider filters without auth narrowing", async () => {
     const { buildRunPlan, parseArgs } = await import("../../scripts/test-live-media.ts");
     const plan = buildRunPlan(
-      parseArgs(["video", "--video-providers", "fal,openai,runway", "--all-providers"]),
+      parseArgs(["video", "--video-providers", "openai", "--all-providers"]),
     );
 
     expect(plan).toHaveLength(1);
     const [entry] = plan;
     expect(entry?.suite.id).toBe("video");
-    expect(entry?.providers).toEqual(["fal", "openai", "runway"]);
+    expect(entry?.providers).toEqual(["openai"]);
   });
 
   it("forwards quiet flags separately from passthrough args", async () => {

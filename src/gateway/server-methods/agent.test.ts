@@ -109,6 +109,8 @@ vi.mock("../../agents/agent-scope.js", () => ({
   },
   resolveAgentConfig: (cfg: { agents?: { list?: Array<{ id?: string }> } }, agentId: string) =>
     cfg.agents?.list?.find((agent) => agent.id === agentId),
+  resolveAgentExplicitModelPrimary: () => undefined,
+  resolveAgentModelFallbacksOverride: () => undefined,
   resolveAgentWorkspaceDir: (cfg: { agents?: { defaults?: { workspace?: string } } }) =>
     cfg?.agents?.defaults?.workspace ?? "/tmp/workspace",
   resolveAgentEffectiveModelPrimary: () => undefined,
@@ -717,9 +719,9 @@ describe("gateway agent handler", () => {
   });
 
   it("keeps stored group metadata when a trusted group session receives caller-supplied selectors", async () => {
-    const sessionKey = "agent:main:slack:group:C123";
+    const sessionKey = "agent:main:discord:group:C123";
     const existingEntry = buildExistingMainStoreEntry({
-      channel: "slack",
+      channel: "discord",
       groupId: "C123",
       groupChannel: "#trusted",
       space: "TTRUSTED",
@@ -751,7 +753,7 @@ describe("gateway agent handler", () => {
         message: "trusted group turn",
         agentId: "main",
         sessionKey,
-        channel: "slack",
+        channel: "discord",
         groupId: "C123",
         groupChannel: "#forged-admin",
         groupSpace: "TFORGED",
@@ -776,7 +778,7 @@ describe("gateway agent handler", () => {
   });
 
   it("persists first-turn group selectors for a trusted new group session", async () => {
-    const sessionKey = "agent:main:slack:group:C123";
+    const sessionKey = "agent:main:discord:group:C123";
     mocks.loadSessionEntry.mockReturnValue({
       cfg: {},
       storePath: "/tmp/sessions.json",
@@ -802,7 +804,7 @@ describe("gateway agent handler", () => {
         message: "first trusted group turn",
         agentId: "main",
         sessionKey,
-        channel: "slack",
+        channel: "discord",
         groupId: "C123",
         groupChannel: "#general",
         groupSpace: "TWORKSPACE",
@@ -922,8 +924,8 @@ describe("gateway agent handler", () => {
         message: "test override",
         agentId: "main",
         sessionKey: "agent:main:main",
-        provider: "anthropic",
-        model: "claude-haiku-4-5",
+        provider: "openai",
+        model: "gpt-5.4",
         idempotencyKey: "test-idem-model-override",
       },
       {
@@ -937,8 +939,40 @@ describe("gateway agent handler", () => {
     );
 
     expectRecordFields(await waitForAgentCommandCall(), {
-      provider: "anthropic",
-      model: "claude-haiku-4-5",
+      provider: "openai",
+      model: "gpt-5.4",
+    });
+  });
+
+  it("rejects unsupported provider overrides for admin-scoped callers", async () => {
+    primeMainAgentRun();
+    mocks.agentCommand.mockClear();
+    const respond = vi.fn();
+
+    await invokeAgent(
+      {
+        message: "test unsupported override",
+        agentId: "main",
+        sessionKey: "agent:main:main",
+        provider: "anthropic",
+        model: "claude-haiku-4-5",
+        idempotencyKey: "test-idem-unsupported-model-override",
+      },
+      {
+        reqId: "test-idem-unsupported-model-override",
+        client: {
+          connect: {
+            scopes: ["operator.admin"],
+          },
+        } as AgentHandlerArgs["client"],
+        respond,
+      },
+    );
+
+    expect(mocks.agentCommand).not.toHaveBeenCalled();
+    expectRespondError(respond, {
+      message:
+        'Unsupported provider "anthropic".\nThis setup supports OpenAI subscription login only: openai or openai-codex.',
     });
   });
 
@@ -971,8 +1005,8 @@ describe("gateway agent handler", () => {
         message: "test override",
         agentId: "main",
         sessionKey: "agent:main:main",
-        provider: "anthropic",
-        model: "claude-haiku-4-5",
+        provider: "openai",
+        model: "gpt-5.4",
         idempotencyKey: "test-idem-model-override-write",
       },
       {
@@ -1000,8 +1034,8 @@ describe("gateway agent handler", () => {
         message: "test override",
         agentId: "main",
         sessionKey: "agent:main:main",
-        provider: "anthropic",
-        model: "claude-haiku-4-5",
+        provider: "openai",
+        model: "gpt-5.4",
         idempotencyKey: "test-idem-model-override-internal",
       },
       {
@@ -1018,8 +1052,8 @@ describe("gateway agent handler", () => {
     );
 
     expectRecordFields(await waitForAgentCommandCall(), {
-      provider: "anthropic",
-      model: "claude-haiku-4-5",
+      provider: "openai",
+      model: "gpt-5.4",
     });
   });
 
@@ -1806,8 +1840,8 @@ describe("gateway agent handler", () => {
       {
         message: "Reply exactly: pong",
         agentId: "main",
-        provider: "ollama",
-        model: "llama3.2:latest",
+        provider: "openai",
+        model: "gpt-5.4",
         modelRun: true,
         promptMode: "none",
         sessionKey: "agent:main:main",

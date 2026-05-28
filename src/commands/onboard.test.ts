@@ -76,6 +76,27 @@ describe("setupWizardCommand", () => {
     expect(mocks.runNonInteractiveSetup).not.toHaveBeenCalled();
   });
 
+  it("rejects unsupported auth choices before setup starts", async () => {
+    const runtime = makeRuntime();
+
+    await setupWizardCommand(
+      {
+        authChoice: "openai-api-key",
+      },
+      runtime,
+    );
+
+    expect(runtime.error).toHaveBeenCalledWith(
+      [
+        'Unsupported --auth-choice "openai-api-key".',
+        "This setup supports OpenAI subscription login only: openai-codex, openai-codex-device-code, or skip.",
+      ].join("\n"),
+    );
+    expect(runtime.exit).toHaveBeenCalledWith(1);
+    expect(mocks.runInteractiveSetup).not.toHaveBeenCalled();
+    expect(mocks.runNonInteractiveSetup).not.toHaveBeenCalled();
+  });
+
   it("logs ASCII-safe Windows guidance before setup", async () => {
     const runtime = makeRuntime();
     const platformSpy = vi.spyOn(process, "platform", "get").mockReturnValue("win32");

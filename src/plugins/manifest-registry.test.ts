@@ -588,22 +588,22 @@ describe("loadPluginManifestRegistry", () => {
 
   it("marks official installed npm globals as trusted official installs", () => {
     const dir = makeTempDir();
-    writeManifest(dir, { id: "diagnostics-prometheus", configSchema: { type: "object" } });
+    writeManifest(dir, { id: "codex", configSchema: { type: "object" } });
 
     const registry = loadPluginManifestRegistry({
       installRecords: {
-        "diagnostics-prometheus": {
+        codex: {
           source: "npm",
           installPath: dir,
-          resolvedName: "@openclaw/diagnostics-prometheus",
+          resolvedName: "@openclaw/codex",
           resolvedVersion: "2026.5.3",
         },
       },
       candidates: [
         createPluginCandidate({
-          idHint: "diagnostics-prometheus",
+          idHint: "codex",
           rootDir: dir,
-          packageName: "@openclaw/diagnostics-prometheus",
+          packageName: "@openclaw/codex",
           origin: "global",
         }),
       ],
@@ -614,28 +614,28 @@ describe("loadPluginManifestRegistry", () => {
 
   it("preserves trusted official installs when a config path selects the installed package", () => {
     const dir = makeTempDir();
-    writeManifest(dir, { id: "diagnostics-prometheus", configSchema: { type: "object" } });
+    writeManifest(dir, { id: "codex", configSchema: { type: "object" } });
 
     const registry = loadPluginManifestRegistry({
       installRecords: {
-        "diagnostics-prometheus": {
+        codex: {
           source: "npm",
           installPath: dir,
-          resolvedName: "@openclaw/diagnostics-prometheus",
+          resolvedName: "@openclaw/codex",
           resolvedVersion: "2026.5.3",
         },
       },
       candidates: [
         createPluginCandidate({
-          idHint: "diagnostics-prometheus",
+          idHint: "codex",
           rootDir: dir,
-          packageName: "@openclaw/diagnostics-prometheus",
+          packageName: "@openclaw/codex",
           origin: "global",
         }),
         createPluginCandidate({
-          idHint: "diagnostics-prometheus",
+          idHint: "codex",
           rootDir: dir,
-          packageName: "@openclaw/diagnostics-prometheus",
+          packageName: "@openclaw/codex",
           origin: "config",
         }),
       ],
@@ -650,15 +650,15 @@ describe("loadPluginManifestRegistry", () => {
 
   it("does not trust unrecorded globals that spoof official ids", () => {
     const dir = makeTempDir();
-    writeManifest(dir, { id: "diagnostics-prometheus", configSchema: { type: "object" } });
+    writeManifest(dir, { id: "codex", configSchema: { type: "object" } });
 
     const registry = loadPluginManifestRegistry({
       installRecords: {},
       candidates: [
         createPluginCandidate({
-          idHint: "diagnostics-prometheus",
+          idHint: "codex",
           rootDir: dir,
-          packageName: "@openclaw/diagnostics-prometheus",
+          packageName: "@openclaw/codex",
           origin: "global",
         }),
       ],
@@ -1254,79 +1254,6 @@ describe("loadPluginManifestRegistry", () => {
       additionalProperties: false,
     });
     expectNoRegistryDiagnosticContains(registry, "without channelConfigs metadata");
-  });
-
-  it("hydrates supplemental official external catalog contracts for lagging npm manifests", () => {
-    const dir = makeTempDir();
-    writeManifest(dir, {
-      id: "wecom-openclaw-plugin",
-      channels: ["wecom"],
-      configSchema: { type: "object" },
-    });
-
-    const registry = loadRegistry([
-      createPluginCandidate({
-        idHint: "wecom-openclaw-plugin",
-        rootDir: dir,
-        origin: "global",
-        packageName: "@wecom/wecom-openclaw-plugin",
-      }),
-    ]);
-
-    expect(registry.plugins[0]?.contracts?.tools).toEqual(["wecom_mcp"]);
-    const wecomConfig = expectRecordFields(
-      registry.plugins[0]?.channelConfigs?.wecom,
-      "wecom config",
-      {
-        label: "WeCom",
-      },
-    );
-    expectRecordFields(wecomConfig.schema, "wecom schema", { type: "object" });
-    expectNoRegistryDiagnosticContains(registry, "without channelConfigs metadata");
-  });
-
-  it("fills missing official external catalog descriptors for partial npm channel configs", () => {
-    const dir = makeTempDir();
-    writeManifest(dir, {
-      id: "wecom-openclaw-plugin",
-      channels: ["wecom"],
-      configSchema: { type: "object" },
-      channelConfigs: {
-        wecom: {
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              corpId: { type: "string" },
-            },
-          },
-        },
-      },
-    });
-
-    const registry = loadRegistry([
-      createPluginCandidate({
-        idHint: "wecom-openclaw-plugin",
-        rootDir: dir,
-        origin: "global",
-        packageName: "@wecom/wecom-openclaw-plugin",
-      }),
-    ]);
-
-    const wecomConfig = expectRecordFields(
-      registry.plugins[0]?.channelConfigs?.wecom,
-      "wecom config",
-      {
-        label: "WeCom",
-        description: "Enterprise WeChat conversation channel.",
-      },
-    );
-    expectRecordFields(wecomConfig.schema, "wecom schema", {
-      additionalProperties: false,
-      properties: {
-        corpId: { type: "string" },
-      },
-    });
   });
 
   it("drops prototype-polluting channel config keys from plugin manifests", () => {

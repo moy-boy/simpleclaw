@@ -8,6 +8,7 @@ import { writePackageDistInventory } from "../src/infra/package-dist-inventory.t
 import { createPnpmRunnerSpawnSpec } from "./pnpm-runner.mjs";
 const requiredPreparedPathGroups = [
   ["dist/index.js", "dist/index.mjs"],
+  ["dist/plugin-sdk/index.d.ts"],
   ["dist/control-ui/index.html"],
 ];
 const requiredControlUiAssetPrefix = "dist/control-ui/assets/";
@@ -86,7 +87,7 @@ function ensurePreparedArtifacts(): void {
   }
 
   console.error(
-    "prepack: requires an existing build and Control UI bundle. Run `pnpm build && pnpm ui:build` before packing or publishing.",
+    "prepack: requires existing package artifacts. Run `pnpm build:ci-artifacts` before packing or publishing.",
   );
   process.exit(1);
 }
@@ -121,8 +122,7 @@ async function writeDistInventory(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  runPnpm(["build"]);
-  runPnpm(["ui:build"]);
+  runPnpm(["build:ci-artifacts"]);
   ensurePreparedArtifacts();
   await writeDistInventory();
   runBuildSmoke();

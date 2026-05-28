@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { BUNDLED_PLUGIN_PATH_PREFIX, BUNDLED_PLUGIN_ROOT_DIR } from "./bundled-plugin-paths.mjs";
+import { isSupportedBundledPluginId } from "./supported-surface.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 
@@ -71,7 +72,11 @@ function listChangedPaths(base, head = "HEAD") {
 }
 
 function listAvailableExtensionIdsFromGit() {
-  const packageFiles = runGit(["ls-files", "--", `:(glob)${BUNDLED_PLUGIN_PATH_PREFIX}*/package.json`])
+  const packageFiles = runGit([
+    "ls-files",
+    "--",
+    `:(glob)${BUNDLED_PLUGIN_PATH_PREFIX}*/package.json`,
+  ])
     .split("\n")
     .map((line) => normalizeRelative(line.trim()))
     .filter((line) => line.length > 0);
@@ -79,6 +84,7 @@ function listAvailableExtensionIdsFromGit() {
     .map((file) => file.match(new RegExp(`^${BUNDLED_PLUGIN_PATH_PREFIX}([^/]+)/package\\.json$`)))
     .filter((match) => match)
     .map((match) => match[1])
+    .filter((extensionId) => isSupportedBundledPluginId(extensionId))
     .toSorted((left, right) => left.localeCompare(right));
 }
 
@@ -95,6 +101,7 @@ function listAvailableExtensionIdsFromDirectory() {
     .filter((extensionId) =>
       fs.existsSync(path.join(repoRoot, BUNDLED_PLUGIN_ROOT_DIR, extensionId, "package.json")),
     )
+    .filter((extensionId) => isSupportedBundledPluginId(extensionId))
     .toSorted((left, right) => left.localeCompare(right));
 }
 

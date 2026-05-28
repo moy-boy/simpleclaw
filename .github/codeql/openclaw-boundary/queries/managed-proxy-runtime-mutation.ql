@@ -35,13 +35,12 @@ predicate forbiddenGlobalAgentKey(string key) { key = ["HTTP_PROXY", "HTTPS_PROX
 predicate relevantSourceFile(File file) {
   exists(string path |
     path = file.getRelativePath() and
-    path.regexpMatch("^(src|extensions)/.*\\.(ts|mts|js|mjs)$") and
+    path.regexpMatch("^(src|extensions/(codex|discord|openai|telegram))/.*\\.(ts|mts|js|mjs)$") and
     not path.regexpMatch(".*\\.(test|spec)\\.(ts|mts|js|mjs)$") and
     not path.regexpMatch(".*\\.(test-utils|test-harness|e2e-harness)\\.ts$") and
     not path.regexpMatch(".*/test-support/.*") and
     not path.regexpMatch(".*/vendor/.*") and
-    not path.regexpMatch(".*\\.min\\.js$") and
-    not path.regexpMatch("^extensions/diffs/assets/.*")
+    not path.regexpMatch(".*\\.min\\.js$")
   )
 }
 
@@ -308,12 +307,6 @@ predicate allowedManagedProxyRuntimeMutation(Expr mutation) {
   or
   allowedFunctionOwnerScope(mutation, "src/infra/net/proxy/proxy-lifecycle.ts",
     "disableGlobalAgentProxyForIpv6GatewayLoopback")
-  or
-  allowedMethodOwnerScope(mutation, "extensions/browser/src/browser/cdp-proxy-bypass.ts",
-    "NoProxyLeaseManager.acquire")
-  or
-  allowedMethodOwnerScope(mutation, "extensions/browser/src/browser/cdp-proxy-bypass.ts",
-    "NoProxyLeaseManager.release")
 }
 
 from Expr mutation

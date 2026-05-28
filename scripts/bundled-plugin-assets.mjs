@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { shouldIncludeBundledPluginId } from "./lib/supported-surface.mjs";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const VALID_PHASES = new Set(["build", "copy"]);
@@ -60,6 +61,7 @@ function resolveAssetCommand(packageJson, phase) {
 export async function readBundledPluginAssetHooks(options = {}) {
   const repoRoot = options.rootDir ?? rootDir;
   const phase = options.phase;
+  const env = options.env ?? process.env;
   if (!VALID_PHASES.has(phase)) {
     throw new Error(`Unsupported bundled plugin asset phase: ${String(phase)}`);
   }
@@ -76,6 +78,9 @@ export async function readBundledPluginAssetHooks(options = {}) {
   const hooks = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) {
+      continue;
+    }
+    if (pluginFilters.size === 0 && !shouldIncludeBundledPluginId(entry.name, env)) {
       continue;
     }
     const pluginDir = path.join(extensionsDir, entry.name);

@@ -6,10 +6,12 @@ import {
   resolveLocalHeavyCheckEnv,
   shouldAcquireLocalHeavyCheckLockForOxlint,
 } from "./lib/local-heavy-check-runtime.mjs";
+import { listSupportedBundledPluginRoots } from "./lib/supported-surface.mjs";
 
 const DEFAULT_WINDOWS_EXTENSION_CHUNK_SIZE = 8;
 const EXTENSION_TS_CONFIG = "config/tsconfig/oxlint.extensions.json";
 const EXTENSIONS_DIR = "extensions";
+const SUPPORTED_EXTENSION_ROOTS = listSupportedBundledPluginRoots(EXTENSIONS_DIR);
 const OXLINT_SOURCE_FILE_PATTERN = /\.[cm]?[jt]sx?$/;
 
 const CORE_SHARD = {
@@ -18,7 +20,7 @@ const CORE_SHARD = {
 };
 const EXTENSIONS_SHARD = {
   name: "extensions",
-  args: ["--tsconfig", EXTENSION_TS_CONFIG, EXTENSIONS_DIR],
+  args: ["--tsconfig", EXTENSION_TS_CONFIG, ...SUPPORTED_EXTENSION_ROOTS],
 };
 const SCRIPTS_SHARD = {
   name: "scripts",
@@ -32,9 +34,7 @@ export function createOxlintShards({
   readDir = fs.readdirSync,
 } = {}) {
   const extensionShards =
-    platform === "win32"
-      ? createWindowsExtensionShards({ cwd, env, readDir })
-      : [EXTENSIONS_SHARD];
+    platform === "win32" ? createWindowsExtensionShards({ cwd, env, readDir }) : [EXTENSIONS_SHARD];
 
   return [CORE_SHARD, ...extensionShards, SCRIPTS_SHARD];
 }
@@ -96,6 +96,7 @@ function listExtensionEntries({ cwd, readDir }) {
   const dirs = entries
     .filter((entry) => entry.isDirectory())
     .map((entry) => `${EXTENSIONS_DIR}/${entry.name}`)
+    .filter((entry) => SUPPORTED_EXTENSION_ROOTS.includes(entry))
     .toSorted((left, right) => left.localeCompare(right));
   const rootFiles = entries
     .filter((entry) => entry.isFile() && OXLINT_SOURCE_FILE_PATTERN.test(entry.name))

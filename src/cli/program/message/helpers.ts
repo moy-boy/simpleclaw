@@ -6,6 +6,11 @@ import {
 } from "../../../channels/plugins/types.public.js";
 import { resolveMessageSecretScope } from "../../../cli/message-secret-scope.js";
 import { messageCommand } from "../../../commands/message.js";
+import {
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+} from "../../../commands/supported-surface.js";
+import { getRuntimeConfig } from "../../../config/config.js";
 import { danger, setVerbose } from "../../../globals.js";
 import { CHANNEL_TARGET_DESCRIPTION } from "../../../infra/outbound/channel-target.js";
 import { runGlobalGatewayStopSafely } from "../../../plugins/hook-runner-global.js";
@@ -105,6 +110,19 @@ function resolveMessagePluginPreloadPlan(
   return { preload: false };
 }
 
+function assertSupportedScopedMessageChannel(scopedChannel: string | undefined): void {
+  if (!scopedChannel) {
+    return;
+  }
+  const config = getRuntimeConfig();
+  if (!shouldEnforceSupportedChannelIds(config) || isSupportedChannelId(scopedChannel)) {
+    return;
+  }
+  throw new Error(
+    `Unsupported channel "${scopedChannel}". This setup supports Telegram and Discord only.`,
+  );
+}
+
 export function createMessageCliHelpers(
   message: Command,
   messageChannelOptions: string,
@@ -128,6 +146,7 @@ export function createMessageCliHelpers(
     await runCommandWithRuntime(
       defaultRuntime,
       async () => {
+        assertSupportedScopedMessageChannel(resolveScopedMessageChannel(opts));
         const preloadPlan = resolveMessagePluginPreloadPlan(action, opts);
         if (preloadPlan.preload) {
           ensurePluginRegistryLoaded(preloadPlan.loadOptions);

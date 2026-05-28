@@ -45,6 +45,52 @@ describe("modelsSetCommand", () => {
       agents: {
         defaults: {
           models: {
+            "openai/gpt-5.4": {},
+          },
+        },
+      },
+    } as unknown as OpenClawConfig;
+    const runtimeConfig = {
+      agents: {
+        defaults: {
+          models: {
+            "openai/gpt-5.4": { alias: "fast" },
+          },
+        },
+      },
+    } as unknown as OpenClawConfig;
+    mocks.readConfigFileSnapshot.mockResolvedValue({
+      valid: true,
+      hash: "config-hash",
+      sourceConfig,
+      runtimeConfig,
+      config: runtimeConfig,
+    });
+    const runtime = makeRuntime();
+
+    await modelsSetCommand("fast", runtime);
+
+    expect(mocks.replaceConfigFile).toHaveBeenCalledOnce();
+    const [replaceParams] = mocks.replaceConfigFile.mock.calls[0] ?? [];
+    expect(replaceParams?.nextConfig.agents?.defaults?.model).toEqual({
+      primary: "openai/gpt-5.4",
+    });
+    expect(replaceParams?.nextConfig.agents?.defaults?.models).toEqual({
+      "openai/gpt-5.4": {},
+    });
+    expect(replaceParams?.nextConfig.agents?.defaults?.models).not.toHaveProperty("openai/fast");
+    expect(mocks.repairCodexRuntimePluginInstallForModelSelection).toHaveBeenCalledWith({
+      cfg: replaceParams?.nextConfig,
+      model: "openai/gpt-5.4",
+    });
+    expect(runtime.log).toHaveBeenCalledWith("Default model: openai/gpt-5.4");
+  });
+
+  it("rejects aliases that resolve to unsupported providers", async () => {
+    const sourceConfig = {
+      agents: {
+        defaults: {
+          models: {
             "anthropic/claude-sonnet-4-6": {},
           },
         },
@@ -66,24 +112,13 @@ describe("modelsSetCommand", () => {
       runtimeConfig,
       config: runtimeConfig,
     });
-    const runtime = makeRuntime();
 
-    await modelsSetCommand("sonnet", runtime);
+    await expect(modelsSetCommand("sonnet", makeRuntime())).rejects.toThrow(
+      'Unsupported model "anthropic/claude-sonnet-4-6".',
+    );
 
-    expect(mocks.replaceConfigFile).toHaveBeenCalledOnce();
-    const [replaceParams] = mocks.replaceConfigFile.mock.calls[0] ?? [];
-    expect(replaceParams?.nextConfig.agents?.defaults?.model).toEqual({
-      primary: "anthropic/claude-sonnet-4-6",
-    });
-    expect(replaceParams?.nextConfig.agents?.defaults?.models).toEqual({
-      "anthropic/claude-sonnet-4-6": {},
-    });
-    expect(replaceParams?.nextConfig.agents?.defaults?.models).not.toHaveProperty("openai/sonnet");
-    expect(mocks.repairCodexRuntimePluginInstallForModelSelection).toHaveBeenCalledWith({
-      cfg: replaceParams?.nextConfig,
-      model: "anthropic/claude-sonnet-4-6",
-    });
-    expect(runtime.log).toHaveBeenCalledWith("Default model: anthropic/claude-sonnet-4-6");
+    expect(mocks.replaceConfigFile).not.toHaveBeenCalled();
+    expect(mocks.repairCodexRuntimePluginInstallForModelSelection).not.toHaveBeenCalled();
   });
 
   it("keeps authored aliases ahead of runtime-only aliases", async () => {

@@ -9,10 +9,9 @@ const USER_DRIVER = "scripts/e2e/telegram-user-driver.py";
 const QA_LAB_RUNTIME_API = "extensions/qa-lab/runtime-api.ts";
 const PACKAGE_JSON = "package.json";
 const WORKFLOW = ".github/workflows/mantis-telegram-desktop-proof.yml";
-const LIVE_WORKFLOW = ".github/workflows/mantis-telegram-live.yml";
 const PROMPT = ".github/codex/prompts/mantis-telegram-desktop-proof.md";
 const TELEGRAM_PROOF_SKILL = ".agents/skills/telegram-crabbox-e2e-proof/SKILL.md";
-const DOCS = ["docs/help/testing.md", "docs/concepts/qa-e2e-automation.md"];
+const DOCS = ["docs/help/testing.md"];
 
 type WorkflowStep = {
   env?: Record<string, string>;
@@ -78,40 +77,34 @@ function filesUnder(root: string): string[] {
 describe("Mantis Telegram Desktop proof workflow", () => {
   it("uses repository pnpm setup defaults", () => {
     const workflow = parse(readFileSync(WORKFLOW, "utf8")) as Workflow;
-    const liveWorkflow = parse(readFileSync(LIVE_WORKFLOW, "utf8")) as Workflow;
 
     expect(workflow.env?.PNPM_VERSION).toBeUndefined();
-    expect(liveWorkflow.env?.PNPM_VERSION).toBeUndefined();
   });
 
   it("serializes all Mantis Telegram account runs without workflow concurrency cancellation", () => {
     const workflow = parse(readFileSync(WORKFLOW, "utf8")) as Workflow;
-    const liveWorkflow = parse(readFileSync(LIVE_WORKFLOW, "utf8")) as Workflow;
 
     expect(workflow.concurrency).toBeUndefined();
-    expect(liveWorkflow.concurrency).toBeUndefined();
     expect(workflow.permissions?.actions).toBe("read");
-    expect(liveWorkflow.permissions?.actions).toBe("read");
 
-    for (const step of [
-      jobStep(WORKFLOW, "run_telegram_desktop_proof", "Wait for older Mantis Telegram account run"),
-      jobStep(LIVE_WORKFLOW, "run_telegram_live", "Wait for older Mantis Telegram account run"),
-    ]) {
-      expect(step.run).toContain("mantis-telegram-desktop-proof.yml");
-      expect(step.run).toContain("mantis-telegram-live.yml");
-      expect(step.run).toContain('gh run list --repo "$GITHUB_REPOSITORY"');
-      expect(step.run).toContain('--status "$status"');
-      expect(step.run).toContain("GITHUB_RUN_ID");
-      expect(step.run).toContain(".createdAt < $current_created");
-      expect(step.run).toContain("for status in queued in_progress waiting pending requested");
-      expect(step.run).toContain("stale_before=");
-      expect(step.run).toContain(".createdAt >= $stale_before");
-      expect(step.run).toContain("run_has_active_jobs()");
-      expect(step.run).toContain('gh run view "$run_id"');
-      expect(step.run).toContain("${run_id#\\#}");
-      expect(step.run).not.toContain('.[] | select(.status == "queued"');
-      expect(step.run).toContain("sleep 60");
-    }
+    const step = jobStep(
+      WORKFLOW,
+      "run_telegram_desktop_proof",
+      "Wait for older Mantis Telegram account run",
+    );
+    expect(step.run).toContain("mantis-telegram-desktop-proof.yml");
+    expect(step.run).toContain('gh run list --repo "$GITHUB_REPOSITORY"');
+    expect(step.run).toContain('--status "$status"');
+    expect(step.run).toContain("GITHUB_RUN_ID");
+    expect(step.run).toContain(".createdAt < $current_created");
+    expect(step.run).toContain("for status in queued in_progress waiting pending requested");
+    expect(step.run).toContain("stale_before=");
+    expect(step.run).toContain(".createdAt >= $stale_before");
+    expect(step.run).toContain("run_has_active_jobs()");
+    expect(step.run).toContain('gh run view "$run_id"');
+    expect(step.run).toContain("${run_id#\\#}");
+    expect(step.run).not.toContain('.[] | select(.status == "queued"');
+    expect(step.run).toContain("sleep 60");
   });
 
   it("releases Telegram Desktop proof leases left by interrupted agents", () => {
@@ -169,14 +162,11 @@ describe("Mantis Telegram Desktop proof workflow", () => {
 
   it("uses the OpenClaw Mantis mention as the comment trigger", () => {
     const workflow = readFileSync(WORKFLOW, "utf8");
-    const liveWorkflow = readFileSync(LIVE_WORKFLOW, "utf8");
     expect(workflow).toContain("@openclaw-mantis");
     expect(workflow).toContain("/openclaw-mantis");
     expect(workflow).toContain("mantis: telegram-visible-proof");
     expect(workflow).toContain('setOutput("should_run", "false")');
     expect(workflow).toContain('normalized.includes("telegram desktop")');
-    expect(liveWorkflow).toContain('normalized.includes("telegram desktop")');
-    expect(liveWorkflow).toContain("!requestedDesktopProof");
     expect(workflow).not.toContain("@Mantis");
     expect(workflow).not.toContain("@mantis");
     expect(workflow).not.toContain('"/mantis"');
@@ -239,7 +229,7 @@ describe("Mantis Telegram Desktop proof workflow", () => {
       readFileSync(file, "utf8").includes("telegram-user"),
     );
 
-    expect(readFileSync(QA_LAB_RUNTIME_API, "utf8")).not.toContain("telegram-user");
+    expect(existsSync(QA_LAB_RUNTIME_API)).toBe(false);
     expect(packageJson.scripts).not.toHaveProperty("qa:telegram-user:crabbox");
     expect(telegramUserWorkflows).toEqual([WORKFLOW]);
     for (const doc of DOCS) {

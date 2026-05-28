@@ -22,11 +22,24 @@ import {
 } from "../agents/simple-completion-runtime.js";
 import { normalizeThinkLevel, type ThinkLevel } from "../auto-reply/thinking.js";
 import {
+  formatUnsupportedChannelMessage,
+  formatUnsupportedModelProviderMessage,
+  formatUnsupportedModelRefMessage,
+  isSupportedChannelId,
+  isSupportedModelProviderId,
+  isSupportedModelRef,
+  shouldEnforceSupportedChannelIds,
+  shouldEnforceSupportedModelProviderIds,
+} from "../commands/supported-surface.js";
+import {
   getRuntimeConfig,
   getRuntimeConfigSourceSnapshot,
   setRuntimeConfigSnapshot,
 } from "../config/config.js";
-import { resolveAgentModelPrimaryValue } from "../config/model-input.js";
+import {
+  resolveAgentModelFallbackValues,
+  resolveAgentModelPrimaryValue,
+} from "../config/model-input.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { callGateway, randomIdempotencyKey } from "../gateway/call.js";
 import { buildGatewayConnectionDetailsWithResolvers } from "../gateway/connection-details.js";
@@ -64,6 +77,7 @@ import {
   normalizeOptionalString,
   normalizeStringifiedOptionalString,
 } from "../shared/string-coerce.js";
+import { assertSupportedResolvedModelRef } from "../supported-model-policy.js";
 import { formatDocsLink } from "../terminal/links.js";
 import { theme } from "../terminal/theme.js";
 import { canonicalizeSpeechProviderId, listSpeechProviders } from "../tts/provider-registry.js";
@@ -162,7 +176,7 @@ const CAPABILITY_METADATA: CapabilityMetadata[] = [
   },
   {
     id: "model.auth.login",
-    description: "Run the existing provider auth login flow.",
+    description: "Run OpenAI subscription auth login.",
     transports: ["local"],
     flags: ["--provider"],
     resultShape: "interactive auth result",
@@ -359,7 +373,7 @@ const CAPABILITY_METADATA: CapabilityMetadata[] = [
   },
   {
     id: "web.search",
-    description: "Run provider-backed web search.",
+    description: "Run configured web search.",
     transports: ["local"],
     flags: ["--query", "--provider", "--limit", "--json"],
     resultShape: "search provider result",
@@ -695,12 +709,18 @@ async function runModelRun(params: {
           targetIds: getModelsCommandSecretTargetIds(),
         })
       : getRuntimeConfig();
+  if (params.model?.trim() && shouldEnforceSupportedModelProviderIds(cfg)) {
+    assertSupportedResolvedModelRef({ cfg, raw: params.model });
+  }
   const agentId = resolveDefaultAgentId(cfg);
   const modelRef = await canonicalizeModelRunRef({
     raw: params.model,
     cfg,
     preserveAuthProfile: params.transport === "local",
   });
+  if (shouldEnforceSupportedModelProviderIds(cfg) && modelRef && !isSupportedModelRef(modelRef)) {
+    throw new Error(formatUnsupportedModelRefMessage(modelRef));
+  }
   const explicitModelOverride = resolveModelRefOverride(params.model);
   const hasExplicitProviderModelOverride = Boolean(
     params.model?.trim() && explicitModelOverride.provider && explicitModelOverride.model,
@@ -869,6 +889,7 @@ async function runModelRun(params: {
 async function buildModelProviders() {
   const cfg = getRuntimeConfig();
   const catalog = await loadModelCatalog({ config: cfg });
+  const enforceSupportedProviders = shouldEnforceSupportedModelProviderIds(cfg);
   const selectedProvider = resolveSelectedProviderFromModelRef(
     resolveAgentModelPrimaryValue(cfg.agents?.defaults?.model),
   );
@@ -884,6 +905,9 @@ async function buildModelProviders() {
     }
   >();
   for (const entry of catalog) {
+    if (enforceSupportedProviders && !isSupportedModelProviderId(entry.provider)) {
+      continue;
+    }
     const current = grouped.get(entry.provider) ?? {
       provider: entry.provider,
       count: 0,
@@ -922,6 +946,9 @@ async function runModelAuthStatus() {
 
 async function runModelAuthLogout(provider: string, agent?: string) {
   const cfg = getRuntimeConfig();
+  if (shouldEnforceSupportedModelProviderIds(cfg) && !isSupportedModelProviderId(provider)) {
+    throw new Error(formatUnsupportedModelProviderMessage(provider));
+  }
   const agentId = agent?.trim() || resolveDefaultAgentId(cfg);
   const agentDir = resolveAgentDir(cfg, agentId);
   const store = loadAuthProfileStoreForRuntime(agentDir);
@@ -960,6 +987,41 @@ async function runModelAuthLogout(provider: string, agent?: string) {
   };
 }
 
+function assertSupportedCapabilityModelRef(config: OpenClawConfig, model: string | undefined) {
+  if (model?.trim() && shouldEnforceSupportedModelProviderIds(config)) {
+    assertSupportedResolvedModelRef({ cfg: config, raw: model });
+  }
+}
+
+function assertSupportedCapabilityModelConfig(
+  config: OpenClawConfig,
+  modelConfig: Parameters<typeof resolveAgentModelPrimaryValue>[0],
+) {
+  const modelRefs = [
+    resolveAgentModelPrimaryValue(modelConfig),
+    ...resolveAgentModelFallbackValues(modelConfig),
+  ];
+  for (const modelRef of modelRefs) {
+    assertSupportedCapabilityModelRef(config, modelRef);
+  }
+}
+
+function assertSupportedCapabilityProviderId(config: OpenClawConfig, provider: string | undefined) {
+  void config;
+  void provider;
+}
+
+function assertSupportedCapabilityChannelId(config: OpenClawConfig, channel: string | undefined) {
+  const normalizedChannel = normalizeOptionalString(channel);
+  if (
+    normalizedChannel &&
+    shouldEnforceSupportedChannelIds(config) &&
+    !isSupportedChannelId(normalizedChannel)
+  ) {
+    throw new Error(formatUnsupportedChannelMessage(normalizedChannel));
+  }
+}
+
 async function runImageGenerate(params: {
   capability: "image.generate" | "image.edit";
   prompt: string;
@@ -979,6 +1041,8 @@ async function runImageGenerate(params: {
     commandName: `infer ${params.capability}`,
     targetIds: getModelsCommandSecretTargetIds(),
   });
+  assertSupportedCapabilityModelRef(cfg, params.model);
+  assertSupportedCapabilityModelConfig(cfg, cfg.agents?.defaults?.imageGenerationModel);
   const agentDir = resolveAgentDir(cfg, resolveDefaultAgentId(cfg));
   const inputImages =
     params.file && params.file.length > 0
@@ -1008,6 +1072,7 @@ async function runImageGenerate(params: {
     timeoutMs: params.timeoutMs,
     inputImages,
   });
+  assertSupportedCapabilityProviderId(cfg, result.provider);
   const outputs = await Promise.all(
     result.images.map(async (image, index) => {
       const written = await writeOutputAsset({
@@ -1051,6 +1116,8 @@ async function runImageDescribe(params: {
     commandName: `infer ${params.capability}`,
     targetIds: getModelsCommandSecretTargetIds(),
   });
+  assertSupportedCapabilityModelRef(cfg, params.model);
+  assertSupportedCapabilityModelConfig(cfg, cfg.agents?.defaults?.imageModel);
   const agentDir = resolveAgentDir(cfg, resolveDefaultAgentId(cfg));
   const activeModel = requireProviderModelOverride(params.model);
   const prompt = normalizeOptionalString(params.prompt);
@@ -1077,10 +1144,13 @@ async function runImageDescribe(params: {
             prompt,
             timeoutMs: params.timeoutMs,
           });
+      const resultProvider =
+        activeModel?.provider ?? ("provider" in result ? result.provider : undefined);
+      assertSupportedCapabilityProviderId(cfg, resultProvider);
       if (!result.text) {
         if (isMissingMediaUnderstandingProvider(result)) {
           throw new Error(
-            "No image understanding provider is configured or ready. Configure tools.media.image.models or agents.defaults.imageModel.primary, or pass --model <provider/model> after configuring that provider's auth/API key.",
+            "No image understanding provider is configured or ready. Configure tools.media.image.models or agents.defaults.imageModel.primary, or pass an OpenAI --model after configuring subscription auth.",
           );
         }
         throw new Error(`No description returned for image: ${resolvedPath}`);
@@ -1088,7 +1158,7 @@ async function runImageDescribe(params: {
       return {
         path: resolvedPath,
         text: result.text,
-        provider: activeModel?.provider ?? ("provider" in result ? result.provider : undefined),
+        provider: resultProvider,
         model: result.model,
         kind: "image.description",
       };
@@ -1124,6 +1194,7 @@ async function runAudioTranscribe(params: {
     commandName: "infer audio transcribe",
     targetIds: getModelsCommandSecretTargetIds(),
   });
+  assertSupportedCapabilityModelRef(cfg, params.model);
   const activeModel = requireProviderModelOverride(params.model);
   const result = await transcribeAudioFile({
     filePath: path.resolve(params.file),
@@ -1132,10 +1203,12 @@ async function runAudioTranscribe(params: {
     activeModel,
     prompt: params.prompt,
   });
+  const resultProvider = "provider" in result ? result.provider : undefined;
+  assertSupportedCapabilityProviderId(cfg, resultProvider);
   if (!result.text) {
     if (isMissingMediaUnderstandingProvider(result)) {
       throw new Error(
-        "No audio transcription provider is configured or ready. Configure tools.media.audio.models, or pass --model <provider/model> after configuring that provider's auth/API key.",
+        "No audio transcription provider is configured or ready. Configure tools.media.audio.models, or pass an OpenAI --model after configuring subscription auth.",
       );
     }
     throw new Error(`No transcript returned for audio: ${path.resolve(params.file)}`);
@@ -1222,6 +1295,8 @@ async function runVideoGenerate(params: {
     commandName: "infer video.generate",
     targetIds: getModelsCommandSecretTargetIds(),
   });
+  assertSupportedCapabilityModelRef(cfg, params.model);
+  assertSupportedCapabilityModelConfig(cfg, cfg.agents?.defaults?.videoGenerationModel);
   const agentDir = resolveAgentDir(cfg, resolveDefaultAgentId(cfg));
   const result = await generateVideo({
     cfg,
@@ -1236,6 +1311,7 @@ async function runVideoGenerate(params: {
     watermark: params.watermark,
     timeoutMs: params.timeoutMs,
   });
+  assertSupportedCapabilityProviderId(cfg, result.provider);
   const outputs = await Promise.all(
     result.videos.map(async (video, index) => {
       if (!video.buffer && !video.url) {
@@ -1300,12 +1376,15 @@ async function runVideoDescribe(params: { file: string; model?: string }) {
     commandName: "infer video.describe",
     targetIds: getModelsCommandSecretTargetIds(),
   });
+  assertSupportedCapabilityModelRef(cfg, params.model);
+  assertSupportedCapabilityModelConfig(cfg, cfg.agents?.defaults?.imageModel);
   const activeModel = requireProviderModelOverride(params.model);
   const result = await describeVideoFile({
     filePath: path.resolve(params.file),
     cfg,
     activeModel,
   });
+  assertSupportedCapabilityProviderId(cfg, result.provider);
   if (!result.text) {
     throw new Error(`No description returned for video: ${path.resolve(params.file)}`);
   }
@@ -1330,8 +1409,11 @@ async function runTtsConvert(params: {
   transport: CapabilityTransport;
 }) {
   if (params.transport === "gateway") {
+    const gatewayConfig = getRuntimeConfig();
+    assertSupportedCapabilityChannelId(gatewayConfig, params.channel);
+    assertSupportedCapabilityProviderId(gatewayConfig, params.provider);
     const gatewayConnection = buildGatewayConnectionDetailsWithResolvers({
-      config: getRuntimeConfig(),
+      config: gatewayConfig,
     });
     const result: {
       audioPath?: string;
@@ -1349,6 +1431,7 @@ async function runTtsConvert(params: {
       },
       timeoutMs: 120_000,
     });
+    assertSupportedCapabilityProviderId(gatewayConfig, result.provider);
     let outputPath = result.audioPath;
     if (params.output && result.audioPath) {
       const gatewayHost = new URL(gatewayConnection.url).hostname;
@@ -1382,6 +1465,8 @@ async function runTtsConvert(params: {
     commandName: "infer tts convert",
     targetIds: getTtsCommandSecretTargetIds(),
   });
+  assertSupportedCapabilityChannelId(cfg, params.channel);
+  assertSupportedCapabilityProviderId(cfg, params.provider);
   const overrides = resolveExplicitTtsOverrides({
     cfg,
     provider: params.provider,
@@ -1400,6 +1485,7 @@ async function runTtsConvert(params: {
     overrides,
     disableFallback: hasExplicitSelection,
   });
+  assertSupportedCapabilityProviderId(cfg, result.provider);
   if (!result.success || !result.audioPath) {
     throw new Error(result.error ?? "TTS conversion failed");
   }
@@ -1428,6 +1514,7 @@ async function runTtsConvert(params: {
 
 async function runTtsProviders(transport: CapabilityTransport) {
   const cfg = getRuntimeConfig();
+  const supportsProvider = (providerId: string | undefined): boolean => Boolean(providerId);
   if (transport === "gateway") {
     const payload: {
       providers?: Array<Record<string, unknown>>;
@@ -1438,37 +1525,42 @@ async function runTtsProviders(transport: CapabilityTransport) {
     });
     return {
       ...payload,
-      providers: (payload.providers ?? []).map((provider) => {
-        const id = typeof provider.id === "string" ? provider.id : "";
-        return Object.assign(
-          {
-            available: true,
-            configured:
-              typeof provider.configured === `boolean`
-                ? provider.configured
-                : providerHasGenericConfig({ cfg, providerId: id }),
-            selected: Boolean(id && payload.active === id),
-          },
-          provider,
-        );
-      }),
+      active: supportsProvider(payload.active) ? payload.active : undefined,
+      providers: (payload.providers ?? [])
+        .filter((provider) => supportsProvider(typeof provider.id === "string" ? provider.id : ""))
+        .map((provider) => {
+          const id = typeof provider.id === "string" ? provider.id : "";
+          return Object.assign(
+            {
+              available: true,
+              configured:
+                typeof provider.configured === `boolean`
+                  ? provider.configured
+                  : providerHasGenericConfig({ cfg, providerId: id }),
+              selected: Boolean(id && payload.active === id),
+            },
+            provider,
+          );
+        }),
     };
   }
   const config = resolveTtsConfig(cfg);
   const prefsPath = resolveTtsPrefsPath(config);
   const active = getTtsProvider(config, prefsPath);
   return {
-    providers: listSpeechProviders(cfg).map((provider) => ({
-      available: true,
-      configured:
-        active === provider.id || providerHasGenericConfig({ cfg, providerId: provider.id }),
-      selected: active === provider.id,
-      id: provider.id,
-      name: provider.label,
-      models: [...(provider.models ?? [])],
-      voices: [...(provider.voices ?? [])],
-    })),
-    active,
+    providers: listSpeechProviders(cfg)
+      .filter((provider) => supportsProvider(provider.id))
+      .map((provider) => ({
+        available: true,
+        configured:
+          active === provider.id || providerHasGenericConfig({ cfg, providerId: provider.id }),
+        selected: active === provider.id,
+        id: provider.id,
+        name: provider.label,
+        models: [...(provider.models ?? [])],
+        voices: [...(provider.voices ?? [])],
+      })),
+    active: supportsProvider(active) ? active : undefined,
   };
 }
 
@@ -1509,6 +1601,7 @@ async function runTtsVoices(providerRaw?: string) {
   const config = resolveTtsConfig(cfg);
   const prefsPath = resolveTtsPrefsPath(config);
   const provider = normalizeOptionalString(providerRaw) || getTtsProvider(config, prefsPath);
+  assertSupportedCapabilityProviderId(cfg, provider);
   return await listSpeechVoices({
     provider,
     cfg,
@@ -1522,6 +1615,10 @@ async function runTtsStateMutation(params: {
   provider?: string;
   persona?: string | null;
 }) {
+  const cfg = getRuntimeConfig();
+  if (params.capability === "tts.set-provider") {
+    assertSupportedCapabilityProviderId(cfg, params.provider);
+  }
   if (params.transport === "gateway") {
     const method =
       params.capability === "tts.enable"
@@ -1544,7 +1641,6 @@ async function runTtsStateMutation(params: {
     return payload;
   }
 
-  const cfg = getRuntimeConfig();
   const config = resolveTtsConfig(cfg);
   const prefsPath = resolveTtsPrefsPath(config);
   if (params.capability === "tts.enable") {
@@ -1625,6 +1721,7 @@ async function runWebSearchCommand(params: { query: string; provider?: string; l
       : {}),
     config: rawConfig,
   });
+  assertSupportedCapabilityProviderId(cfg, params.provider);
   const result = await runWebSearch({
     config: cfg,
     providerId: params.provider,
@@ -1634,6 +1731,7 @@ async function runWebSearchCommand(params: { query: string; provider?: string; l
       limit: params.limit,
     },
   });
+  assertSupportedCapabilityProviderId(cfg, result.provider);
   return {
     ok: true,
     capability: "web.search",
@@ -1661,6 +1759,7 @@ async function runWebFetchCommand(params: { url: string; provider?: string; form
       : {}),
     config: rawConfig,
   });
+  assertSupportedCapabilityProviderId(cfg, params.provider);
   const resolved = resolveWebFetchDefinition({
     config: cfg,
     providerId: params.provider,
@@ -1668,6 +1767,7 @@ async function runWebFetchCommand(params: { url: string; provider?: string; form
   if (!resolved) {
     throw new Error("web.fetch is disabled or no provider is available.");
   }
+  assertSupportedCapabilityProviderId(cfg, resolved.provider.id);
   const result = await resolved.definition.execute({
     url: params.url,
     format: params.format,
@@ -1692,6 +1792,8 @@ async function runMemoryEmbeddingCreate(params: {
     commandName: "infer embedding create",
     targetIds: getMemoryEmbeddingCommandSecretTargetIds(),
   });
+  assertSupportedCapabilityModelRef(cfg, params.model);
+  assertSupportedCapabilityProviderId(cfg, params.provider);
   const modelRef = resolveModelRefOverride(params.model);
   const requestedProvider = normalizeOptionalString(params.provider) || modelRef.provider || "auto";
   const result = await createEmbeddingProvider({
@@ -1704,6 +1806,7 @@ async function runMemoryEmbeddingCreate(params: {
   if (!result.provider) {
     throw new Error(result.providerUnavailableReason ?? "No embedding provider available.");
   }
+  assertSupportedCapabilityProviderId(cfg, result.provider.id);
   const embeddings = await result.provider.embedBatch(params.texts);
   return {
     ok: true,
@@ -1772,7 +1875,7 @@ export function registerCapabilityCli(program: Command) {
   const capability = program
     .command("infer")
     .alias("capability")
-    .description("Run provider-backed inference commands through a stable CLI surface")
+    .description("Run OpenAI-backed inference commands through a stable CLI surface")
     .addHelpText(
       "after",
       () =>
@@ -1822,7 +1925,11 @@ export function registerCapabilityCli(program: Command) {
     .option("--json", "Output JSON", false)
     .action(async (opts) => {
       await runCommandWithRuntime(defaultRuntime, async () => {
-        const result = await loadModelCatalog({ config: getRuntimeConfig() });
+        const config = getRuntimeConfig();
+        const catalog = await loadModelCatalog({ config });
+        const result = shouldEnforceSupportedModelProviderIds(config)
+          ? catalog.filter((entry) => isSupportedModelProviderId(entry.provider))
+          : catalog;
         emitJsonOrText(defaultRuntime, Boolean(opts.json), result, providerSummaryText);
       });
     });
@@ -1835,7 +1942,14 @@ export function registerCapabilityCli(program: Command) {
     .action(async (opts) => {
       await runCommandWithRuntime(defaultRuntime, async () => {
         const target = normalizeStringifiedOptionalString(opts.model) ?? "";
-        const catalog = await loadModelCatalog({ config: getRuntimeConfig() });
+        const config = getRuntimeConfig();
+        if (shouldEnforceSupportedModelProviderIds(config) && !isSupportedModelRef(target)) {
+          throw new Error(formatUnsupportedModelRefMessage(target));
+        }
+        const loadedCatalog = await loadModelCatalog({ config });
+        const catalog = shouldEnforceSupportedModelProviderIds(config)
+          ? loadedCatalog.filter((candidate) => isSupportedModelProviderId(candidate.provider))
+          : loadedCatalog;
         const entry =
           catalog.find((candidate) => `${candidate.provider}/${candidate.id}` === target) ??
           catalog.find((candidate) => candidate.id === target);
@@ -1859,13 +1973,13 @@ export function registerCapabilityCli(program: Command) {
       });
     });
 
-  const modelAuth = model.command("auth").description("Provider auth helpers");
+  const modelAuth = model.command("auth").description("OpenAI subscription auth helpers");
 
   modelAuth
     .command("login")
-    .description("Run provider auth login")
+    .description("Run OpenAI subscription auth login")
     .requiredOption("--provider <id>", "Provider id")
-    .option("--method <id>", "Provider auth method id")
+    .option("--method <id>", "Auth method id")
     .action(async (opts) => {
       await runCommandWithRuntime(defaultRuntime, async () => {
         const { modelsAuthLoginCommand } = await import("../commands/models/auth.js");

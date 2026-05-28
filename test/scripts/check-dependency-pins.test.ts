@@ -2,7 +2,10 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { collectDependencyPinViolations } from "../../scripts/check-dependency-pins.mjs";
+import {
+  collectDependencyPinAudit,
+  collectDependencyPinViolations,
+} from "../../scripts/check-dependency-pins.mjs";
 import { cleanupTempDirs, makeTempRepoRoot } from "../helpers/temp-repo.js";
 
 const tempDirs: string[] = [];
@@ -141,6 +144,57 @@ packageExtensions:
         spec: "github:owner/repo#main",
       },
     ]);
+  });
+
+  it("limits package manifest checks to current pnpm workspace packages", () => {
+    const dir = makeRepo();
+    mkdirSync(path.join(dir, "extensions", "discord"), { recursive: true });
+    mkdirSync(path.join(dir, "extensions", "slack"), { recursive: true });
+    mkdirSync(path.join(dir, "packages", "shared"), { recursive: true });
+    writeJson(path.join(dir, "package.json"), {
+      dependencies: {
+        rootExact: "1.0.0",
+      },
+    });
+    writeJson(path.join(dir, "extensions", "discord", "package.json"), {
+      devDependencies: {
+        discordExact: "2.0.0",
+      },
+    });
+    writeJson(path.join(dir, "extensions", "slack", "package.json"), {
+      devDependencies: {
+        unsupportedFloating: "^3.0.0",
+      },
+    });
+    writeJson(path.join(dir, "packages", "shared", "package.json"), {
+      optionalDependencies: {
+        sharedExact: "4.0.0",
+      },
+    });
+    writeFileSync(
+      path.join(dir, "pnpm-workspace.yaml"),
+      `packages:
+  - .
+  - packages/*
+  - extensions/discord
+`,
+      "utf8",
+    );
+    git(dir, [
+      "add",
+      "package.json",
+      "extensions/discord/package.json",
+      "extensions/slack/package.json",
+      "packages/shared/package.json",
+      "pnpm-workspace.yaml",
+    ]);
+
+    expect(collectDependencyPinViolations(dir)).toEqual([]);
+    expect(collectDependencyPinAudit(dir)).toEqual({
+      packageManifestCount: 3,
+      packageSpecCount: 3,
+      violations: [],
+    });
   });
 
   it("reads tracked package manifests from the index when sparse checkout omits them", () => {

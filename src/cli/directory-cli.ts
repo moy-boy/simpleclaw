@@ -2,6 +2,11 @@ import type { Command } from "commander";
 import { resolveChannelDefaultAccountId } from "../channels/plugins/helpers.js";
 import { getChannelPlugin } from "../channels/plugins/index.js";
 import { resolveInstallableChannelPlugin } from "../commands/channel-setup/channel-plugin-resolution.js";
+import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+} from "../commands/supported-surface.js";
 import { getRuntimeConfig, readConfigFileSnapshot, replaceConfigFile } from "../config/config.js";
 import { applyPluginAutoEnable } from "../config/plugin-auto-enable.js";
 import { danger } from "../globals.js";
@@ -77,9 +82,9 @@ export function registerDirectoryCli(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["openclaw directory self --channel slack", "Show the connected account identity."],
+          ["openclaw directory self --channel discord", "Show the connected account identity."],
           [
-            'openclaw directory peers list --channel slack --query "alice"',
+            'openclaw directory peers list --channel telegram --query "alice"',
             "Search contact/user IDs by name.",
           ],
           ["openclaw directory groups list --channel discord", "List available groups/channels."],
@@ -110,6 +115,13 @@ export function registerDirectoryCli(program: Command) {
     });
     let cfg = autoEnabled.config;
     const explicitChannel = opts.channel?.trim();
+    if (
+      shouldEnforceSupportedChannelIds(cfg) &&
+      explicitChannel &&
+      !isSupportedChannelId(explicitChannel)
+    ) {
+      throw new Error(formatUnsupportedChannelMessage(explicitChannel));
+    }
     const resolvedExplicit = explicitChannel
       ? await resolveInstallableChannelPlugin({
           cfg,
@@ -141,6 +153,9 @@ export function registerDirectoryCli(program: Command) {
           channel: opts.channel ?? null,
         });
     const channelId = selection.channel;
+    if (shouldEnforceSupportedChannelIds(cfg) && channelId && !isSupportedChannelId(channelId)) {
+      throw new Error(formatUnsupportedChannelMessage(channelId));
+    }
     const plugin =
       resolvedExplicit?.plugin ?? (channelId ? getChannelPlugin(channelId) : undefined);
     if (!plugin) {

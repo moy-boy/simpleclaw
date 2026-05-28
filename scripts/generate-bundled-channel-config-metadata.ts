@@ -30,6 +30,12 @@ const { collectBundledPluginSources } = (await import(
   }) => BundledPluginSource[];
 };
 
+const { isSupportedChannelId } = (await import(
+  new URL("./lib/supported-surface.mjs", import.meta.url).href
+)) as {
+  isSupportedChannelId: (channelId: string) => boolean;
+};
+
 const { formatGeneratedModule } = (await import(
   new URL("./lib/format-generated-module.mjs", import.meta.url).href
 )) as {
@@ -187,7 +193,10 @@ export async function collectBundledChannelConfigMetadata(params?: { repoRoot?: 
   for (const source of sources) {
     const channelIds = Array.isArray(source.manifest?.channels)
       ? source.manifest.channels.filter(
-          (entry: unknown): entry is string => typeof entry === "string" && entry.trim().length > 0,
+          (entry: unknown): entry is string =>
+            typeof entry === "string" &&
+            entry.trim().length > 0 &&
+            isSupportedChannelId(entry.trim().toLowerCase()),
         )
       : [];
     if (channelIds.length === 0) {

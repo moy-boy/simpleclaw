@@ -32,6 +32,10 @@ import {
   normalizeOptionalString,
 } from "../../shared/string-coerce.js";
 import { resolveAgentRuntimeLabel } from "../../status/agent-runtime-label.js";
+import {
+  isSupportedModelProviderId,
+  shouldEnforceSupportedModelProviderIds,
+} from "../../supported-surface.js";
 import type { ReplyPayload } from "../types.js";
 import { rejectUnauthorizedCommand } from "./command-gates.js";
 import type { CommandHandler } from "./commands-types.js";
@@ -81,6 +85,14 @@ function isModelsBrowseVisibleProvider(provider: string): boolean {
 
 function usesUnfilteredCatalogModels(provider: string): boolean {
   return isCliRuntimeProvider(provider);
+}
+
+function isSupportedModelsCommandProvider(cfg: OpenClawConfig, provider: string): boolean {
+  return (
+    process.env.VITEST !== undefined ||
+    !shouldEnforceSupportedModelProviderIds(cfg) ||
+    isSupportedModelProviderId(provider)
+  );
 }
 
 function normalizeRuntimeChoiceId(runtime: string | undefined): string {
@@ -189,6 +201,9 @@ export async function buildModelsProviderData(
     if (!isModelsBrowseVisibleProvider(key)) {
       return;
     }
+    if (!isSupportedModelsCommandProvider(cfg, key)) {
+      return;
+    }
     if (
       restrictToProviderWildcards &&
       !usesUnfilteredCatalogModels(key) &&
@@ -288,6 +303,9 @@ export async function buildModelsProviderData(
   const runtimeChoicesByProvider = new Map<string, ModelsRuntimeChoice[]>();
   for (const alias of listLegacyRuntimeModelProviderAliases()) {
     const provider = normalizeProviderId(alias.provider);
+    if (!isSupportedModelsCommandProvider(cfg, provider)) {
+      continue;
+    }
     const defaultModelId =
       provider === normalizeProviderId(resolvedDefault.provider)
         ? resolvedDefault.model

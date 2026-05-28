@@ -20,9 +20,9 @@ const { loadBundledPluginPublicArtifactModuleSyncMock } = vi.hoisted(() => ({
           ],
         };
       }
-      if (dirName === "whatsapp" && artifactBasename === "security-contract-api.js") {
+      if (dirName === "discord" && artifactBasename === "security-contract-api.js") {
         return {
-          unsupportedSecretRefSurfacePatterns: ["channels.whatsapp.creds.json"],
+          unsupportedSecretRefSurfacePatterns: ["channels.discord.threadBindings.webhookToken"],
           collectUnsupportedSecretRefConfigCandidates: () => [],
         };
       }
@@ -67,12 +67,14 @@ describe("channel contract api explicit fast path", () => {
   });
 
   it("resolves bundled channel security contracts by explicit channel id without manifest scans", () => {
-    const api = loadBundledChannelSecurityContractApi("whatsapp");
+    const api = loadBundledChannelSecurityContractApi("discord");
 
-    expect(api?.unsupportedSecretRefSurfacePatterns).toContain("channels.whatsapp.creds.json");
+    expect(api?.unsupportedSecretRefSurfacePatterns).toContain(
+      "channels.discord.threadBindings.webhookToken",
+    );
     expect(api?.collectUnsupportedSecretRefConfigCandidates).toBeTypeOf("function");
     expect(loadBundledPluginPublicArtifactModuleSyncMock).toHaveBeenCalledWith({
-      dirName: "whatsapp",
+      dirName: "discord",
       artifactBasename: "security-contract-api.js",
     });
     expect(loadPluginManifestRegistryMock).not.toHaveBeenCalled();

@@ -5,6 +5,12 @@ import { loadManifestMetadataSnapshot } from "../../plugins/manifest-contract-el
 import type { RuntimeEnv } from "../../runtime.js";
 import { createLazyImportLoader } from "../../shared/lazy-promise.js";
 import { normalizeLowercaseStringOrEmpty } from "../../shared/string-coerce.js";
+import {
+  formatUnsupportedModelProviderMessage,
+  isSupportedModelProviderId,
+  isSupportedModelRef,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 import { createModelListAuthIndex } from "./list.auth-index.js";
 import { resolveConfiguredEntries } from "./list.configured.js";
 import { formatErrorWithStack } from "./list.errors.js";
@@ -59,7 +65,7 @@ export async function modelsListCommand(
     }
     if (/\s/u.test(raw)) {
       runtime.error(
-        `Invalid provider filter "${raw}". Use a provider id such as "moonshot", not a display label.`,
+        `Invalid provider filter "${raw}". Use a provider id such as "openai", not a display label.`,
       );
       process.exitCode = 1;
       return null;
@@ -83,6 +89,15 @@ export async function modelsListCommand(
     commandName: "models list",
     runtime,
   });
+  if (
+    providerFilter &&
+    shouldEnforceSupportedModelProviderIds(cfg) &&
+    !isSupportedModelProviderId(providerFilter)
+  ) {
+    runtime.error(formatUnsupportedModelProviderMessage(providerFilter));
+    process.exitCode = 1;
+    return;
+  }
   const agentDir = resolveDefaultAgentDir(cfg);
   const authStore = loadAuthProfileStoreWithoutExternalProfiles(agentDir);
   const workspaceDir =
@@ -229,10 +244,14 @@ export async function modelsListCommand(
     );
   }
 
-  if (rows.length === 0) {
+  const visibleRows = shouldEnforceSupportedModelProviderIds(cfg)
+    ? rows.filter((row) => isSupportedModelRef(row.key))
+    : rows;
+
+  if (visibleRows.length === 0) {
     runtime.log("No models found.");
     return;
   }
 
-  printModelTable(rows, runtime, opts);
+  printModelTable(visibleRows, runtime, opts);
 }

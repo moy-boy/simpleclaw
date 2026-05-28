@@ -53,6 +53,7 @@ import {
 import { promptRemoteGatewayConfig } from "./onboard-remote.js";
 import { setupSkills } from "./onboard-skills.js";
 import type { OnboardMode } from "./onboard-types.js";
+import { listSupportedChannelIds } from "./supported-surface.js";
 
 type ConfigureSectionChoice = WizardSection | "__continue";
 type SetupPluginConfigModule = typeof import("../wizard/setup.plugin-config.js");
@@ -625,6 +626,7 @@ export async function runConfigureWizard(
           deferStatusUntilSelection: true,
           skipConfirm: true,
           skipStatusNote: true,
+          channelIds: listSupportedChannelIds(),
         });
       } else {
         nextConfig = await removeChannelConfigWizard(nextConfig, runtime);

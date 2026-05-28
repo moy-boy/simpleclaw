@@ -3,13 +3,11 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BUNDLED_PLUGIN_ROOT_DIR } from "openclaw/plugin-sdk/test-fixtures";
 import { describe, expect, it } from "vitest";
-import YAML from "yaml";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const dockerfilePath = join(repoRoot, "Dockerfile");
 const dockerReleaseWorkflowPath = join(repoRoot, ".github/workflows/docker-release.yml");
 const dockerSetupDockerfilePaths = ["Dockerfile", "scripts/docker/sandbox/Dockerfile"] as const;
-const pnpmWorkspacePath = join(repoRoot, "pnpm-workspace.yaml");
 
 function collapseDockerContinuations(dockerfile: string): string {
   return dockerfile.replace(/\\\r?\n[ \t]*/g, " ");
@@ -190,11 +188,7 @@ describe("Dockerfile", () => {
     expect(dockerfile).toContain(
       "NODE_OPTIONS=--max-old-space-size=8192 pnpm_config_verify_deps_before_run=false pnpm build:docker",
     );
-    expect(dockerfile).toContain(
-      "pnpm_config_verify_deps_before_run=false pnpm canvas:a2ui:bundle",
-    );
     expect(dockerfile).toContain("pnpm_config_verify_deps_before_run=false pnpm ui:build");
-    expect(dockerfile).toContain("pnpm_config_verify_deps_before_run=false pnpm qa:lab:build");
   });
 
   it("prunes runtime dependencies and omitted plugin packages after the build stage", async () => {
@@ -241,21 +235,15 @@ describe("Dockerfile", () => {
     expect(dockerfile).toContain(
       "COPY --from=runtime-assets --chown=node:node /app/pnpm-workspace.yaml .",
     );
-    expect(dockerfile).toContain(
-      "COPY --from=runtime-assets --chown=node:node /app/patches ./patches",
-    );
+    expect(dockerfile).not.toContain("COPY --from=runtime-assets --chown=node:node /app/patches");
   });
 
-  it("keeps package manager patch files in runtime images", async () => {
+  it("does not require package manager patch files in runtime images", async () => {
     const dockerfile = collapseDockerContinuations(await readFile(dockerfilePath, "utf8"));
-    const pnpmWorkspace = YAML.parse(await readFile(pnpmWorkspacePath, "utf8")) as {
-      patchedDependencies?: Record<string, string>;
-    };
     const pruneProd = "CI=true pnpm prune --prod";
     const finalWorkspaceCopy =
       "COPY --from=runtime-assets --chown=node:node /app/pnpm-workspace.yaml .";
 
-    expect(Object.keys(pnpmWorkspace.patchedDependencies ?? {})).not.toHaveLength(0);
     expect(dockerfile).not.toContain("pnpm-workspace.runtime.yaml");
     expect(dockerfile).not.toContain("write-runtime-pnpm-workspace");
     expect(dockerfile).not.toContain("pnpm_config_frozen_lockfile=false");
@@ -264,9 +252,7 @@ describe("Dockerfile", () => {
     expect(dockerfile).toContain(
       "COPY --from=runtime-assets --chown=node:node /app/pnpm-workspace.yaml .",
     );
-    expect(dockerfile).toContain(
-      "COPY --from=runtime-assets --chown=node:node /app/patches ./patches",
-    );
+    expect(dockerfile).not.toContain("COPY --from=runtime-assets --chown=node:node /app/patches");
   });
 
   it("keeps the Codex plugin in official Docker release images", async () => {

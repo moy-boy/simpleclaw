@@ -128,7 +128,7 @@ describe("models.list", () => {
     }
   });
 
-  it("loads the full catalog for provider-scoped configured view and filters only providers", async () => {
+  it("filters unsupported providers from provider-scoped and all views", async () => {
     const catalog = [
       { id: "claude-test", name: "Claude Test", provider: "anthropic" },
       { id: "gpt-5.4-codex", name: "GPT-5.4 Codex", provider: "openai-codex" },
@@ -181,8 +181,6 @@ describe("models.list", () => {
         models: [
           { id: "gpt-5.4-codex", name: "GPT-5.4 Codex", provider: "openai-codex" },
           { id: "gpt-codex-test", name: "GPT Codex Test", provider: "openai-codex" },
-          { id: "llama-local", name: "Llama Local", provider: "vllm" },
-          { id: "qwen-local", name: "Qwen Local", provider: "vllm" },
         ],
       },
       undefined,
@@ -210,7 +208,16 @@ describe("models.list", () => {
       } as never,
     });
 
-    expect(allRespond).toHaveBeenCalledWith(true, { models: catalog }, undefined);
+    expect(allRespond).toHaveBeenCalledWith(
+      true,
+      {
+        models: [
+          { id: "gpt-5.4-codex", name: "GPT-5.4 Codex", provider: "openai-codex" },
+          { id: "gpt-codex-test", name: "GPT Codex Test", provider: "openai-codex" },
+        ],
+      },
+      undefined,
+    );
   });
 
   it("preserves catalog load errors before the timeout fallback wins", async () => {

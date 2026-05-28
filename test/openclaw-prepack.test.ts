@@ -5,7 +5,7 @@ describe("collectPreparedPrepackErrors", () => {
   it("accepts prepared release artifacts", () => {
     expect(
       collectPreparedPrepackErrors(
-        ["dist/index.mjs", "dist/control-ui/index.html"],
+        ["dist/index.mjs", "dist/plugin-sdk/index.d.ts", "dist/control-ui/index.html"],
         ["dist/control-ui/assets/index-Bu8rSoJV.js"],
       ),
     ).toStrictEqual([]);
@@ -14,6 +14,7 @@ describe("collectPreparedPrepackErrors", () => {
   it("reports missing build and control ui artifacts", () => {
     expect(collectPreparedPrepackErrors([], [])).toEqual([
       "missing required prepared artifact: dist/index.js or dist/index.mjs",
+      "missing required prepared artifact: dist/plugin-sdk/index.d.ts",
       "missing required prepared artifact: dist/control-ui/index.html",
       "missing prepared Control UI asset payload under dist/control-ui/assets/",
     ]);

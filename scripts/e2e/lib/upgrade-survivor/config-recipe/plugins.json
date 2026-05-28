@@ -1,14 +1,11 @@
 {
   "enabled": true,
-  "allow": ["discord", "memory", "telegram", "whatsapp"],
+  "allow": ["discord", "memory", "telegram"],
   "entries": {
     "discord": {
       "enabled": true
     },
     "telegram": {
-      "enabled": true
-    },
-    "whatsapp": {
       "enabled": true
     }
   }

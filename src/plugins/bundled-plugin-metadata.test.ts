@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { isSupportedBundledPluginId } from "../../scripts/lib/supported-surface.mjs";
 import { expectNoReaddirSyncDuring } from "../test-utils/fs-scan-assertions.js";
 import { listGitTrackedFiles, toRepoRelativePath } from "../test-utils/repo-files.js";
 import { collectBundledChannelConfigs } from "./bundled-channel-config-metadata.js";
@@ -29,40 +30,8 @@ import { collectBundledRuntimeSidecarPaths } from "./runtime-sidecar-paths-basel
 import { BUNDLED_RUNTIME_SIDECAR_PATHS } from "./runtime-sidecar-paths.js";
 
 const BUNDLED_PLUGIN_METADATA_TEST_TIMEOUT_MS = 300_000;
-const EXPECTED_BUNDLED_STARTUP_PLUGIN_IDS = [
-  "acpx",
-  "active-memory",
-  "bonjour",
-  "browser",
-  "canvas",
-  "device-pair",
-  "diagnostics-otel",
-  "diagnostics-prometheus",
-  "diffs",
-  "file-transfer",
-  "google-meet",
-  "llm-task",
-  "lobster",
-  "memory-wiki",
-  "openshell",
-  "phone-control",
-  "policy",
-  "skill-workshop",
-  "talk-voice",
-  "thread-ownership",
-  "voice-call",
-  "webhooks",
-] as const;
-const EXPECTED_EMPTY_CONFIG_GATEWAY_STARTUP_PLUGIN_IDS = [
-  "acpx",
-  "browser",
-  "canvas",
-  "device-pair",
-  "file-transfer",
-  "memory-core",
-  "phone-control",
-  "talk-voice",
-] as const;
+const EXPECTED_BUNDLED_STARTUP_PLUGIN_IDS = [] as const;
+const EXPECTED_EMPTY_CONFIG_GATEWAY_STARTUP_PLUGIN_IDS = [] as const;
 
 installGeneratedPluginTempRootCleanup();
 
@@ -151,6 +120,7 @@ function listRepoBundledPluginManifestDirs(): string[] {
     .readdirSync(bundledPluginsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
+    .filter((dirName) => isSupportedBundledPluginId(dirName))
     .toSorted();
 }
 
@@ -165,6 +135,7 @@ function listExternalRepoBundledPluginManifestDirs(): string[] | null {
       const match = /^extensions\/([^/]+)\/openclaw\.plugin\.json$/u.exec(file);
       return match?.[1] ? [match[1]] : [];
     })
+    .filter((dirName) => isSupportedBundledPluginId(dirName))
     .toSorted();
 }
 
@@ -374,6 +345,16 @@ describe("bundled plugin metadata", () => {
     }
   });
 
+  it("keeps the packaged runtime sidecar baseline on supported bundled plugin roots", () => {
+    for (const relativePath of BUNDLED_RUNTIME_SIDECAR_PATHS) {
+      const match = /^dist\/extensions\/([^/]+)\//u.exec(relativePath);
+      if (!match?.[1]) {
+        throw new Error(`Unexpected runtime sidecar path shape: ${relativePath}`);
+      }
+      expect(isSupportedBundledPluginId(match[1])).toBe(true);
+    }
+  });
+
   it("captures setup-entry metadata for bundled channel plugins", () => {
     const discord = listRepoBundledPluginMetadata().find((entry) => entry.dirName === "discord");
     expect(discord?.source).toEqual({ source: "./index.ts", built: "index.js" });
@@ -390,31 +371,6 @@ describe("bundled plugin metadata", () => {
       | { schema?: { type?: unknown } }
       | undefined;
     expect(discordChannelConfig?.schema?.type).toBe("object");
-  });
-
-  it("keeps Slack's doctor contract sidecar on the bundled public surface", () => {
-    const slack = listRepoBundledPluginMetadata().find((entry) => entry.dirName === "slack");
-    expectArtifactPresence(slack?.publicSurfaceArtifacts, {
-      contains: ["doctor-contract-api.js"],
-    });
-  });
-
-  it("keeps iMessage message-tool discovery on a narrow public surface", () => {
-    const imessage = listRepoBundledPluginMetadata().find((entry) => entry.dirName === "imessage");
-    expectArtifactPresence(imessage?.publicSurfaceArtifacts, {
-      contains: ["message-tool-api.js"],
-    });
-  });
-
-  it("keeps Slack's narrow runtime-setter sidecar on the bundled public surface", () => {
-    // Regression for #69317: the bundled channel entry now points its
-    // runtime.specifier at runtime-setter-api.js to avoid loading the full
-    // runtime-api barrel during register(). The setter file must therefore
-    // be discoverable as part of Slack's public surface.
-    const slack = listRepoBundledPluginMetadata().find((entry) => entry.dirName === "slack");
-    expectArtifactPresence(slack?.publicSurfaceArtifacts, {
-      contains: ["runtime-setter-api.js"],
-    });
   });
 
   it("keeps Telegram's narrow runtime setter on the bundled runtime sidecar surface", () => {
@@ -437,37 +393,9 @@ describe("bundled plugin metadata", () => {
     });
   });
 
-  it("loads tlon channel config metadata from the lightweight schema surface", () => {
-    const tlonChannelConfig = collectRepoBundledChannelConfigsForTest("tlon")?.tlon as
-      | { schema?: { type?: unknown } }
-      | undefined;
-    expect(tlonChannelConfig?.schema?.type).toBe("object");
-  });
-
-  it("keeps bundled persisted-auth metadata on channel package manifests", () => {
-    const whatsapp = listRepoBundledPluginMetadata().find((entry) => entry.dirName === "whatsapp");
-    expect(whatsapp?.packageManifest?.channel?.persistedAuthState).toEqual({
-      specifier: "./auth-presence",
-      exportName: "hasAnyWhatsAppAuth",
-    });
-
-    const matrix = listRepoBundledPluginMetadata().find((entry) => entry.dirName === "matrix");
-    expect(matrix?.packageManifest?.channel?.persistedAuthState).toEqual({
-      specifier: "./auth-presence",
-      exportName: "hasAnyMatrixAuth",
-    });
-  });
-
-  it("keeps Matrix's narrow runtime-setter sidecar on the bundled public surface", () => {
-    const matrix = listRepoBundledPluginMetadata().find((entry) => entry.dirName === "matrix");
-    expectArtifactPresence(matrix?.publicSurfaceArtifacts, {
-      contains: ["runtime-setter-api.js"],
-    });
-  });
-
   it("keeps bundled configured-state metadata on channel package manifests", () => {
     const configuredChannels = listRepoBundledPluginMetadata()
-      .filter((entry) => ["discord", "irc", "slack", "telegram"].includes(entry.dirName))
+      .filter((entry) => ["discord", "telegram"].includes(entry.dirName))
       .map((entry) => ({
         dir: entry.dirName,
         configuredState: entry.packageManifest?.channel?.configuredState,
@@ -481,26 +409,6 @@ describe("bundled plugin metadata", () => {
           },
           specifier: "./configured-state",
           exportName: "hasDiscordConfiguredState",
-        },
-      },
-      {
-        dir: "irc",
-        configuredState: {
-          env: {
-            allOf: ["IRC_HOST", "IRC_NICK"],
-          },
-          specifier: "./configured-state",
-          exportName: "hasIrcConfiguredState",
-        },
-      },
-      {
-        dir: "slack",
-        configuredState: {
-          env: {
-            anyOf: ["SLACK_APP_TOKEN", "SLACK_BOT_TOKEN", "SLACK_USER_TOKEN"],
-          },
-          specifier: "./configured-state",
-          exportName: "hasSlackConfiguredState",
         },
       },
       {
@@ -548,15 +456,6 @@ describe("bundled plugin metadata", () => {
     );
   });
 
-  it("scopes Voice Call CLI activation to the voicecall command", () => {
-    const entry = listRepoBundledPluginManifests().find(
-      ({ manifest }) => manifest.id === "voice-call",
-    );
-
-    expect(entry?.manifest.commandAliases).toStrictEqual([{ name: "voicecall" }]);
-    expect(entry?.manifest.activation?.onCommands).toStrictEqual(["voicecall"]);
-  });
-
   it("keeps empty-config Gateway startup narrower than declared startup sidecars", () => {
     const manifestRegistry = createRepoBundledManifestRegistry();
     const index = createInstalledPluginIndexForManifests(manifestRegistry);
@@ -570,36 +469,6 @@ describe("bundled plugin metadata", () => {
         platform: "linux",
       }),
     ).toEqual(EXPECTED_EMPTY_CONFIG_GATEWAY_STARTUP_PLUGIN_IDS);
-  });
-
-  it("auto-starts Bonjour for empty-config macOS Gateway startup", () => {
-    const manifestRegistry = createRepoBundledManifestRegistry();
-    const index = createInstalledPluginIndexForManifests(manifestRegistry);
-
-    expect(
-      resolveGatewayStartupPluginIdsFromRegistry({
-        config: {},
-        env: process.env,
-        index,
-        manifestRegistry,
-        platform: "darwin",
-      }),
-    ).toContain("bonjour");
-  });
-
-  it("starts Bonjour when explicitly enabled", () => {
-    const manifestRegistry = createRepoBundledManifestRegistry();
-    const index = createInstalledPluginIndexForManifests(manifestRegistry);
-
-    expect(
-      resolveGatewayStartupPluginIdsFromRegistry({
-        config: { plugins: { entries: { bonjour: { enabled: true } } } },
-        env: process.env,
-        index,
-        manifestRegistry,
-        platform: "linux",
-      }),
-    ).toContain("bonjour");
   });
 
   it("prefers built generated paths when present and falls back to source paths", () => {

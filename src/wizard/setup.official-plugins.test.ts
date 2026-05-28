@@ -21,16 +21,10 @@ import {
 } from "./setup.official-plugins.js";
 
 describe("resolveOfficialPluginOnboardingInstallEntries", () => {
-  it("lists optional generic official plugins without channel, provider, or search-owned entries", () => {
+  it("does not list optional generic official plugins in the simplified catalog", () => {
     const entries = resolveOfficialPluginOnboardingInstallEntries({ config: {} });
-    const pluginIds = entries.map((entry) => entry.pluginId);
 
-    expect(pluginIds).toContain("diagnostics-otel");
-    expect(pluginIds).toContain("diagnostics-prometheus");
-    expect(pluginIds).toContain("acpx");
-    expect(pluginIds).not.toContain("brave");
-    expect(pluginIds).not.toContain("codex");
-    expect(pluginIds).not.toContain("discord");
+    expect(entries).toEqual([]);
   });
 
   it("hides already configured official plugins", () => {
@@ -52,9 +46,20 @@ describe("resolveOfficialPluginOnboardingInstallEntries", () => {
     });
     const pluginIds = entries.map((entry) => entry.pluginId);
 
-    expect(pluginIds).not.toContain("acpx");
     expect(pluginIds).not.toContain("diagnostics-otel");
-    expect(pluginIds).toContain("diagnostics-prometheus");
+    expect(pluginIds).toEqual([]);
+  });
+
+  it("honors restrictive plugin allowlists during onboarding", () => {
+    const entries = resolveOfficialPluginOnboardingInstallEntries({
+      config: {
+        plugins: {
+          allow: ["telegram", "discord", "openai", "codex"],
+        },
+      },
+    });
+
+    expect(entries).toEqual([]);
   });
 });
 
@@ -90,94 +95,23 @@ describe("setupOfficialPluginInstalls", () => {
     }));
   });
 
-  it("installs selected optional official plugins through the shared onboarding installer", async () => {
+  it("skips the optional plugin prompt when the simplified catalog has no generic plugins", async () => {
     const multiselect = vi.fn(async () => ["diagnostics-otel"]);
     const prompter = createWizardPrompter({
       multiselect: multiselect as WizardPrompter["multiselect"],
     });
     const runtime = createNonExitingRuntime();
 
-    await setupOfficialPluginInstalls({
+    const next = await setupOfficialPluginInstalls({
       config: {},
       prompter,
       runtime,
       workspaceDir: "/tmp/workspace",
     });
 
-    expect(multiselect).toHaveBeenCalledExactlyOnceWith({
-      message: "Install optional plugins",
-      options: [
-        {
-          value: "__skip__",
-          label: "Skip for now",
-          hint: "Continue without installing optional plugins",
-        },
-        {
-          value: "acpx",
-          label: "ACPX Runtime",
-          hint: "OpenClaw ACP runtime backend",
-        },
-        {
-          value: "diagnostics-otel",
-          label: "Diagnostics OpenTelemetry",
-          hint: "OpenClaw diagnostics OpenTelemetry exporter",
-        },
-        {
-          value: "diagnostics-prometheus",
-          label: "Diagnostics Prometheus",
-          hint: "OpenClaw diagnostics Prometheus exporter",
-        },
-        {
-          value: "diffs",
-          label: "Diffs",
-          hint: "OpenClaw diff viewer plugin",
-        },
-        {
-          value: "google-meet",
-          label: "Google Meet",
-          hint: "OpenClaw Google Meet participant plugin",
-        },
-        {
-          value: "lobster",
-          label: "Lobster",
-          hint: "Lobster workflow tool plugin (typed pipelines + resumable approvals)",
-        },
-        {
-          value: "memory-lancedb",
-          label: "Memory LanceDB",
-          hint: "OpenClaw LanceDB-backed long-term memory plugin with auto-recall/capture",
-        },
-        {
-          value: "openshell",
-          label: "OpenShell Sandbox",
-          hint: "OpenClaw OpenShell sandbox backend",
-        },
-        {
-          value: "voice-call",
-          label: "Voice Call",
-          hint: "OpenClaw voice-call plugin",
-        },
-      ],
-    });
-    expect(ensureOnboardingPluginInstalled).toHaveBeenCalledExactlyOnceWith({
-      cfg: {},
-      entry: {
-        pluginId: "diagnostics-otel",
-        label: "Diagnostics OpenTelemetry",
-        description: "OpenClaw diagnostics OpenTelemetry exporter",
-        install: {
-          clawhubSpec: "clawhub:@openclaw/diagnostics-otel",
-          npmSpec: "@openclaw/diagnostics-otel",
-          defaultChoice: "npm",
-          minHostVersion: ">=2026.4.25",
-        },
-        trustedSourceLinkedOfficialInstall: true,
-      },
-      prompter,
-      runtime,
-      workspaceDir: "/tmp/workspace",
-      promptInstall: false,
-    });
+    expect(next).toEqual({});
+    expect(multiselect).not.toHaveBeenCalled();
+    expect(ensureOnboardingPluginInstalled).not.toHaveBeenCalled();
   });
 
   it("does not install when the user skips optional plugins", async () => {

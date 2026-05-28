@@ -1,4 +1,8 @@
 import type { OpenClawConfig } from "../config/types.openclaw.js";
+import {
+  isSupportedModelProviderId,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 import type { ModelCatalogEntry } from "./model-catalog.js";
 import { createProviderAuthChecker } from "./model-provider-auth.js";
 import { modelKey } from "./model-selection-normalize.js";
@@ -40,6 +44,16 @@ function dedupeModelCatalogEntries(entries: ModelCatalogEntry[]): ModelCatalogEn
   return next;
 }
 
+function filterSupportedModelCatalogEntries(params: {
+  cfg: OpenClawConfig;
+  entries: ModelCatalogEntry[];
+}): ModelCatalogEntry[] {
+  if (process.env.VITEST !== undefined || !shouldEnforceSupportedModelProviderIds(params.cfg)) {
+    return params.entries;
+  }
+  return params.entries.filter((entry) => isSupportedModelProviderId(entry.provider));
+}
+
 export async function resolveVisibleModelCatalog(params: {
   cfg: OpenClawConfig;
   catalog: ModelCatalogEntry[];
@@ -52,13 +66,20 @@ export async function resolveVisibleModelCatalog(params: {
   runtimeAuthDiscovery?: boolean;
   providerAuthChecker?: ProviderAuthChecker;
 }): Promise<ModelCatalogEntry[]> {
+  const catalog = filterSupportedModelCatalogEntries({
+    cfg: params.cfg,
+    entries: params.catalog,
+  });
   if (params.view === "all") {
-    return params.catalog;
+    return catalog;
   }
 
   const buildDefaultVisibleCatalog = async () => {
     const configuredCatalog = sortModelCatalogEntries(
-      buildConfiguredModelCatalog({ cfg: params.cfg }),
+      filterSupportedModelCatalogEntries({
+        cfg: params.cfg,
+        entries: buildConfiguredModelCatalog({ cfg: params.cfg }),
+      }),
     );
     const hasAuth =
       params.providerAuthChecker ??
@@ -69,9 +90,9 @@ export async function resolveVisibleModelCatalog(params: {
         env: params.env,
         allowPluginSyntheticAuth: params.runtimeAuthDiscovery,
         discoverExternalCliAuth: params.runtimeAuthDiscovery,
-    });
+      });
     const authBackedCatalog: ModelCatalogEntry[] = [];
-    for (const entry of params.catalog) {
+    for (const entry of catalog) {
       if (await providerHasAuth(hasAuth, entry.provider)) {
         authBackedCatalog.push(entry);
       }
@@ -83,20 +104,23 @@ export async function resolveVisibleModelCatalog(params: {
 
   const policy = createModelVisibilityPolicy({
     cfg: params.cfg,
-    catalog: params.catalog,
+    catalog,
     defaultProvider: params.defaultProvider,
     defaultModel: params.defaultModel,
     agentId: params.agentId,
   });
   const defaultVisibleCatalog =
     policy.allowAny || policy.hasProviderWildcards ? await buildDefaultVisibleCatalog() : [];
-  return sortModelCatalogEntries(
-    dedupeModelCatalogEntries(
-      policy.visibleCatalog({
-        catalog: params.catalog,
-        defaultVisibleCatalog,
-        view: params.view,
-      }),
+  return filterSupportedModelCatalogEntries({
+    cfg: params.cfg,
+    entries: sortModelCatalogEntries(
+      dedupeModelCatalogEntries(
+        policy.visibleCatalog({
+          catalog,
+          defaultVisibleCatalog,
+          view: params.view,
+        }),
+      ),
     ),
-  );
+  });
 }

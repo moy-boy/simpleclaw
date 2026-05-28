@@ -11,6 +11,11 @@ import {
 import { normalizeProviderId } from "../../agents/model-selection.js";
 import { type RuntimeEnv, writeRuntimeJson } from "../../runtime.js";
 import { shortenHomePath } from "../../utils.js";
+import {
+  formatUnsupportedModelProviderMessage,
+  isSupportedModelProviderId,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 import { loadModelsConfig } from "./load-config.js";
 import { resolveKnownAgentId } from "./shared.js";
 
@@ -124,6 +129,16 @@ export async function modelsAuthListCommand(
   const cfg = await loadModelsConfig({ commandName: "models auth list", runtime });
   const { agentId, agentDir } = resolveTargetAgent(cfg, opts.agent);
   const providerFilter = resolveProviderFilter(opts.provider);
+  const enforceSupportedProviders = shouldEnforceSupportedModelProviderIds(cfg);
+  if (
+    enforceSupportedProviders &&
+    providerFilter.provider &&
+    !isSupportedModelProviderId(providerFilter.provider)
+  ) {
+    runtime.error(formatUnsupportedModelProviderMessage(providerFilter.provider));
+    process.exitCode = 1;
+    return;
+  }
   const store = ensureAuthProfileStore(
     agentDir,
     providerFilter.externalCliProvider
@@ -146,6 +161,7 @@ export async function modelsAuthListCommand(
       }),
     )
     .filter((profile) => providerFilter.matches(profile))
+    .filter((profile) => !enforceSupportedProviders || isSupportedModelProviderId(profile.provider))
     .toSorted((a, b) => a.provider.localeCompare(b.provider) || a.id.localeCompare(b.id));
 
   if (opts.json) {

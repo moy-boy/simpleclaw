@@ -247,14 +247,18 @@ describe("parseAt", () => {
 });
 
 describe("getCronChannelOptions", () => {
-  it("falls back to a generic channel placeholder when no plugins are loaded", () => {
+  it("falls back to the supported channel ids when no plugins are loaded", () => {
     hoisted.listChannelPluginsMock.mockReturnValue([]);
-    expect(getCronChannelOptions()).toBe("last|<channel-id>");
+    expect(getCronChannelOptions()).toBe("last|telegram|discord");
   });
 
-  it("lists discovered channel plugin ids when plugins are available", () => {
-    hoisted.listChannelPluginsMock.mockReturnValue([{ id: "quietchat" }, { id: "forum" }]);
-    expect(getCronChannelOptions()).toBe("last|quietchat|forum");
+  it("lists only supported discovered channel plugin ids when plugins are available", () => {
+    hoisted.listChannelPluginsMock.mockReturnValue([
+      { id: "quietchat" },
+      { id: "telegram" },
+      { id: "discord" },
+    ]);
+    expect(getCronChannelOptions()).toBe("last|telegram|discord");
   });
 });
 

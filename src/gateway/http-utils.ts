@@ -9,6 +9,11 @@ import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
 } from "../shared/string-coerce.js";
+import {
+  formatUnsupportedModelRefMessage,
+  isSupportedModelRef,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 import { normalizeMessageChannel } from "../utils/message-channel.js";
 import { getHeader } from "./http-auth-utils.js";
 import { loadGatewayModelCatalog } from "./server-model-catalog.js";
@@ -100,6 +105,9 @@ export async function resolveOpenAiCompatModelOverride(params: {
     agentId: params.agentId,
   });
   const normalized = modelKey(parsed.provider, parsed.model);
+  if (shouldEnforceSupportedModelProviderIds(cfg) && !isSupportedModelRef(normalized)) {
+    return { errorMessage: formatUnsupportedModelRefMessage(normalized) };
+  }
   if (!policy.allowsKey(normalized)) {
     return {
       errorMessage: `Model '${normalized}' is not allowed for agent '${params.agentId}'.`,

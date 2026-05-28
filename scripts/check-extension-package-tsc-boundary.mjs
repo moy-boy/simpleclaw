@@ -13,6 +13,7 @@ import {
 import { createRequire } from "node:module";
 import os from "node:os";
 import path, { dirname, join, resolve } from "node:path";
+import { shouldIncludeBundledPluginId } from "./lib/supported-surface.mjs";
 
 const require = createRequire(import.meta.url);
 const repoRoot = resolve(import.meta.dirname, "..");
@@ -167,6 +168,7 @@ function collectBundledExtensionIds() {
   return readdirSync(join(repoRoot, "extensions"), { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
+    .filter((extensionId) => shouldIncludeBundledPluginId(extensionId))
     .toSorted();
 }
 

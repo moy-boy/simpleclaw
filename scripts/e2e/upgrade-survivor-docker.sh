@@ -159,8 +159,6 @@ export GATEWAY_AUTH_TOKEN_REF="upgrade-survivor-token"
 export OPENAI_API_KEY="sk-openclaw-upgrade-survivor"
 export DISCORD_BOT_TOKEN="upgrade-survivor-discord-token"
 export TELEGRAM_BOT_TOKEN="123456:upgrade-survivor-telegram-token"
-export FEISHU_APP_SECRET="upgrade-survivor-feishu-secret"
-export BRAVE_API_KEY="BSA_upgrade_survivor_brave_key"
 
 UPDATE_RESTART_MODE="${OPENCLAW_UPGRADE_SURVIVOR_UPDATE_RESTART_MODE:-manual}"
 PORT=18789
@@ -179,103 +177,13 @@ export OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SERVICE_INSTALL_JSON="$BASELINE_SERVIC
 export OPENCLAW_UPGRADE_SURVIVOR_BASELINE_SERVICE_INSTALL_ERR="$BASELINE_SERVICE_INSTALL_ERR"
 
 gateway_pid=""
-plugin_registry_pid=""
 cleanup() {
-  if [ -n "${plugin_registry_pid:-}" ]; then
-    kill "$plugin_registry_pid" >/dev/null 2>&1 || true
-  fi
   openclaw_e2e_terminate_gateways "${gateway_pid:-}"
   if [ -s "$SYSTEMCTL_SHIM_PID_FILE" ]; then
     openclaw_e2e_terminate_gateways "$(cat "$SYSTEMCTL_SHIM_PID_FILE" 2>/dev/null || true)"
   fi
 }
 trap cleanup EXIT
-
-configure_configured_plugin_install_fixture_registry() {
-  [ "${OPENCLAW_UPGRADE_SURVIVOR_SCENARIO:-base}" = "configured-plugin-installs" ] || return 0
-
-  local fixture_root="$OPENCLAW_UPGRADE_SURVIVOR_ARTIFACT_ROOT/configured-plugin-installs-npm-fixture"
-  local package_dir="$fixture_root/package"
-  local tarball="$fixture_root/openclaw-brave-plugin-2026.5.2.tgz"
-  local port_file="$fixture_root/npm-registry-port"
-  local log_file="$fixture_root/npm-registry.log"
-  mkdir -p "$package_dir"
-  FIXTURE_PACKAGE_DIR="$package_dir" node <<'"'"'NODE'"'"'
-const fs = require("node:fs");
-const path = require("node:path");
-const root = process.env.FIXTURE_PACKAGE_DIR;
-fs.mkdirSync(root, { recursive: true });
-fs.writeFileSync(
-  path.join(root, "package.json"),
-  `${JSON.stringify(
-    {
-      name: "@openclaw/brave-plugin",
-      version: "2026.5.2",
-      openclaw: { extensions: ["./index.js"] },
-    },
-    null,
-    2,
-  )}\n`,
-);
-fs.writeFileSync(
-  path.join(root, "openclaw.plugin.json"),
-  `${JSON.stringify(
-    {
-      id: "brave",
-      activation: { onStartup: false },
-      providerAuthEnvVars: { brave: ["BRAVE_API_KEY"] },
-      contracts: { webSearchProviders: ["brave"] },
-      configSchema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          webSearch: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              apiKey: { type: ["string", "object"] },
-              mode: { type: "string", enum: ["web", "llm-context"] },
-              baseUrl: { type: ["string", "object"] },
-            },
-          },
-        },
-      },
-    },
-    null,
-    2,
-  )}\n`,
-);
-fs.writeFileSync(
-  path.join(root, "index.js"),
-  `module.exports = { id: "brave", name: "Brave Fixture", register() {} };\n`,
-);
-NODE
-  tar -czf "$tarball" -C "$fixture_root" package
-  node scripts/e2e/lib/plugins/npm-registry-server.mjs \
-    "$port_file" \
-    "@openclaw/brave-plugin" \
-    "2026.5.2" \
-    "$tarball" \
-    >"$log_file" 2>&1 &
-  plugin_registry_pid="$!"
-
-  for _ in $(seq 1 100); do
-    if [ -s "$port_file" ]; then
-      export NPM_CONFIG_REGISTRY="http://127.0.0.1:$(cat "$port_file")"
-      export npm_config_registry="$NPM_CONFIG_REGISTRY"
-      return 0
-    fi
-    if ! kill -0 "$plugin_registry_pid" 2>/dev/null; then
-      cat "$log_file" >&2 || true
-      return 1
-    fi
-    sleep 0.1
-  done
-
-  cat "$log_file" >&2 || true
-  echo "Timed out waiting for configured plugin install npm fixture registry." >&2
-  return 1
-}
 
 openclaw_e2e_eval_test_state_from_b64 "${OPENCLAW_TEST_STATE_SCRIPT_B64:?missing OPENCLAW_TEST_STATE_SCRIPT_B64}"
 node scripts/e2e/lib/upgrade-survivor/assertions.mjs seed
@@ -317,7 +225,6 @@ if [ "$UPDATE_RESTART_MODE" = "auto-auth" ]; then
   echo "Skipping doctor repair until after restart proof."
 else
   echo "Running non-interactive doctor repair..."
-  configure_configured_plugin_install_fixture_registry
   if ! openclaw doctor --fix --non-interactive >/tmp/openclaw-upgrade-survivor-doctor.log 2>&1; then
     echo "openclaw doctor failed" >&2
     cat /tmp/openclaw-upgrade-survivor-doctor.log >&2 || true
@@ -361,7 +268,7 @@ node scripts/e2e/lib/upgrade-survivor/probe-gateway.mjs \
   --base-url "http://127.0.0.1:$PORT" \
   --path /readyz \
   --expect ready \
-  --allow-failing discord,telegram,whatsapp,feishu,matrix \
+  --allow-failing discord,telegram \
   --out /tmp/openclaw-upgrade-survivor-readyz.json
 
 echo "Checking gateway RPC status..."

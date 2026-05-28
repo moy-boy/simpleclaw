@@ -162,10 +162,13 @@ function isExtensionInRange(file, start, end) {
 function isGatewayBackendLiveTest(file) {
   return (
     file === "src/gateway/gateway-acp-bind.live.test.ts" ||
-    file === "src/gateway/gateway-cli-backend.live.test.ts" ||
     file === "src/gateway/gateway-codex-bind.live.test.ts" ||
     file === "src/gateway/gateway-codex-harness.live.test.ts"
   );
+}
+
+function isRetiredLiveTest(file) {
+  return file === "src/gateway/gateway-cli-backend.live.test.ts";
 }
 
 function isGatewayProfilesLiveTest(file) {
@@ -208,28 +211,29 @@ function isMoonshotLiveTest(file) {
 }
 
 export function selectLiveShardFiles(shard, files = collectAllLiveTestFiles()) {
+  const runnableFiles = files.filter((file) => !isRetiredLiveTest(file));
   switch (shard) {
     case "native-live-src-agents":
-      return files.filter((file) => file.startsWith("src/agents/"));
+      return runnableFiles.filter((file) => file.startsWith("src/agents/"));
     case "native-live-src-gateway":
-      return files.filter(
+      return runnableFiles.filter(
         (file) => file.startsWith("src/gateway/") || file.startsWith("src/crestodian/"),
       );
     case "native-live-src-gateway-core":
-      return files.filter(
+      return runnableFiles.filter(
         (file) =>
           (file.startsWith("src/gateway/") || file.startsWith("src/crestodian/")) &&
           !isGatewayBackendLiveTest(file) &&
           !isGatewayProfilesLiveTest(file),
       );
     case "native-live-src-gateway-profiles":
-      return files.filter(isGatewayProfilesLiveTest);
+      return runnableFiles.filter(isGatewayProfilesLiveTest);
     case "native-live-src-gateway-backends":
-      return files.filter(isGatewayBackendLiveTest);
+      return runnableFiles.filter(isGatewayBackendLiveTest);
     case "native-live-src-infra":
-      return files.filter((file) => file.startsWith("src/infra/"));
+      return runnableFiles.filter((file) => file.startsWith("src/infra/"));
     case "native-live-test":
-      return files.filter((file) => file.startsWith("test/"));
+      return runnableFiles.filter((file) => file.startsWith("test/"));
     case "native-live-extensions-a-k":
       return files.filter((file) => isExtensionInRange(file, "a", "k"));
     case "native-live-extensions-l-n":

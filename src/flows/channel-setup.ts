@@ -118,6 +118,9 @@ export async function setupChannels(
   let next = cfg;
   const deferStatusUntilSelection = options?.deferStatusUntilSelection === true;
   const forceAllowFromChannels = new Set(options?.forceAllowFromChannels ?? []);
+  const allowedChannelIds = new Set(options?.channelIds ?? []);
+  const includeChannel = (channel: ChannelChoice) =>
+    allowedChannelIds.size === 0 || allowedChannelIds.has(channel);
   const accountOverrides: Partial<Record<ChannelChoice, string>> = {
     ...options?.accountIds,
   };
@@ -139,23 +142,42 @@ export async function setupChannels(
     const merged = new Map<string, ChannelSetupPlugin>();
     const registryPlugins = listActiveChannelSetupPlugins().map(rememberActivePlugin);
     for (const plugin of registryPlugins) {
-      if (shouldShowChannelInSetup(plugin.meta)) {
+      if (includeChannel(plugin.id) && shouldShowChannelInSetup(plugin.meta)) {
         merged.set(plugin.id, plugin);
       }
     }
     for (const plugin of scopedPluginsById.values()) {
-      if (shouldShowChannelInSetup(plugin.meta)) {
+      if (includeChannel(plugin.id) && shouldShowChannelInSetup(plugin.meta)) {
         merged.set(plugin.id, plugin);
       }
     }
     return Array.from(merged.values());
   };
+  const filterChannelEntries = (resolved: ReturnType<typeof resolveChannelSetupEntries>) => {
+    if (allowedChannelIds.size === 0) {
+      return resolved;
+    }
+    const filterEntry = (entry: { id: string }) => allowedChannelIds.has(entry.id as ChannelChoice);
+    return {
+      entries: resolved.entries.filter(filterEntry),
+      installedCatalogEntries: resolved.installedCatalogEntries.filter(filterEntry),
+      installableCatalogEntries: resolved.installableCatalogEntries.filter(filterEntry),
+      installedCatalogById: new Map(
+        [...resolved.installedCatalogById].filter(([channel]) => allowedChannelIds.has(channel)),
+      ),
+      installableCatalogById: new Map(
+        [...resolved.installableCatalogById].filter(([channel]) => allowedChannelIds.has(channel)),
+      ),
+    };
+  };
   const resolveVisibleChannelEntries = () =>
-    resolveChannelSetupEntries({
-      cfg: next,
-      installedPlugins: listVisibleInstalledPlugins(),
-      workspaceDir: resolveWorkspaceDir(),
-    });
+    filterChannelEntries(
+      resolveChannelSetupEntries({
+        cfg: next,
+        installedPlugins: listVisibleInstalledPlugins(),
+        workspaceDir: resolveWorkspaceDir(),
+      }),
+    );
   const loadScopedChannelPlugin = async (
     channel: ChannelChoice,
     pluginId?: string,
@@ -206,6 +228,9 @@ export async function setupChannels(
     // falling back from untrusted workspace shadows to the non-workspace entry.
     for (const entry of listTrustedChannelPluginCatalogEntries({ cfg: next, workspaceDir })) {
       const channel = entry.id as ChannelChoice;
+      if (!includeChannel(channel)) {
+        continue;
+      }
       if (getVisibleChannelPlugin(channel)) {
         continue;
       }
@@ -668,8 +693,7 @@ export async function setupChannels(
       // `installableCatalogEntries` bucket, while a missing/pruned plugin on
       // disk keeps it out of `installedCatalogEntries`. Before falling back
       // to the bundled-plugin enable path, consult the catalog directly so
-      // users with a stale config entry for an externalized channel (qqbot,
-      // imessage, discord, whatsapp, ...) still get auto-install instead
+      // users with a stale config entry for an externalized channel still get auto-install instead
       // of a dead-end "plugin not available" note.
       const fallbackCatalogEntry = getTrustedChannelPluginCatalogEntry(channel, {
         cfg: next,

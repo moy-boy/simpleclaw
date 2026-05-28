@@ -4,11 +4,8 @@ import path from "node:path";
 const command = process.argv[2];
 const SCENARIOS = new Set([
   "base",
-  "feishu-channel",
   "bootstrap-persona",
-  "channel-post-core-restore",
   "plugin-deps-cleanup",
-  "configured-plugin-installs",
   "stale-source-plugin-shadow",
   "tilde-log-path",
   "versioned-runtime-deps",
@@ -31,24 +28,6 @@ function requireEnv(name) {
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
-}
-
-function resolveHomePath(value) {
-  if (typeof value !== "string" || value.length === 0) {
-    return "";
-  }
-  if (value === "~") {
-    return process.env.HOME || value;
-  }
-  if (value.startsWith("~/")) {
-    return path.join(process.env.HOME || "", value.slice(2));
-  }
-  return value;
-}
-
-function isPathInside(parent, child) {
-  const relative = path.relative(parent, child);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
 }
 
 function write(file, contents) {
@@ -124,7 +103,7 @@ function seedState() {
   });
 
   const runtimeRoot = path.join(stateDir, "plugin-runtime-deps");
-  for (const plugin of ["discord", "telegram", "whatsapp"]) {
+  for (const plugin of ["discord", "telegram"]) {
     writeJson(path.join(runtimeRoot, plugin, ".openclaw-runtime-deps-stamp.json"), {
       version: 0,
       plugin,
@@ -144,7 +123,7 @@ function seedState() {
   }
   if (scenario === "versioned-runtime-deps") {
     const version = process.env.OPENCLAW_UPGRADE_SURVIVOR_BASELINE_VERSION || "2026.4.24";
-    for (const plugin of ["discord", "feishu", "telegram", "whatsapp"]) {
+    for (const plugin of ["discord", "telegram"]) {
       writeJson(
         path.join(
           runtimeRoot,
@@ -175,7 +154,6 @@ function seedState() {
     discordGuild: "222222222222222222",
     discordChannel: "333333333333333333",
     telegramGroup: "-1001234567890",
-    whatsappGroup: "120363000000000000@g.us",
     workspaceIdentity: path.join(workspace, "IDENTITY.md"),
     scenario,
   });
@@ -231,25 +209,9 @@ function assertConfigSurvived() {
     const pluginAllow = config.plugins?.allow ?? [];
     assert(pluginAllow.includes("discord"), "discord plugin allow entry missing");
     assert(pluginAllow.includes("telegram"), "telegram plugin allow entry missing");
-    if (getScenario() === "configured-plugin-installs") {
-      assert(pluginAllow.includes("matrix"), "matrix plugin allow entry missing");
-    } else {
-      assert(pluginAllow.includes("whatsapp"), "whatsapp plugin allow entry missing");
+    if (!hasCoverage(coverage) || !coverage.skippedIntents?.includes("memory-plugin-allow")) {
+      assert(pluginAllow.includes("memory"), "memory plugin allow entry missing");
     }
-    if (hasCoverage(coverage) && acceptsIntent(coverage, "feishu-channel")) {
-      assert(pluginAllow.includes("feishu"), "feishu plugin allow entry missing");
-    }
-  }
-
-  if (hasCoverage(coverage) && acceptsIntent(coverage, "configured-plugin-installs")) {
-    const pluginAllow = config.plugins?.allow ?? [];
-    assert(pluginAllow.includes("discord"), "configured install discord allow entry missing");
-    assert(pluginAllow.includes("telegram"), "configured install telegram allow entry missing");
-    assert(pluginAllow.includes("matrix"), "configured install matrix allow entry missing");
-    assert(
-      config.plugins?.entries?.matrix?.enabled === true,
-      "configured install matrix entry changed",
-    );
   }
 
   if (acceptsIntent(coverage, "discord-channel")) {
@@ -276,55 +238,6 @@ function assertConfigSurvived() {
     assert(
       telegram.groups?.["-1001234567890"]?.requireMention === true,
       "telegram group policy changed",
-    );
-  }
-
-  if (
-    acceptsIntent(coverage, "whatsapp-channel") &&
-    getScenario() !== "configured-plugin-installs"
-  ) {
-    const whatsapp = config.channels?.whatsapp;
-    assert(whatsapp?.enabled === true, "whatsapp enabled flag changed");
-    const whatsappGroup = whatsapp.groups?.["120363000000000000@g.us"];
-    if (hasCoverage(coverage)) {
-      assert(whatsappGroup?.requireMention === true, "whatsapp group policy changed");
-    } else {
-      assert(
-        whatsappGroup?.systemPrompt === "Use the existing WhatsApp group prompt.",
-        "whatsapp group policy changed",
-      );
-    }
-  }
-
-  if (getScenario() === "channel-post-core-restore") {
-    const whatsapp = config.channels?.whatsapp;
-    assert(whatsapp?.enabled === true, "post-core channel restore dropped WhatsApp");
-    assert(
-      whatsapp.groups?.["120363000000000000@g.us"]?.requireMention === true,
-      "post-core channel restore changed WhatsApp group config",
-    );
-  }
-
-  if (hasCoverage(coverage) && acceptsIntent(coverage, "configured-plugin-installs")) {
-    const matrix = config.channels?.matrix;
-    assert(matrix?.enabled === true, "matrix enabled flag changed");
-    assert(matrix?.homeserver === "https://matrix.example.invalid", "matrix homeserver changed");
-    assert(matrix?.userId === "@upgrade-survivor:matrix.example.invalid", "matrix userId changed");
-    assert(
-      !config.channels?.whatsapp,
-      "whatsapp channel config should be absent in matrix scenario",
-    );
-  }
-
-  if (hasCoverage(coverage) && acceptsIntent(coverage, "feishu-channel")) {
-    const feishu = config.channels?.feishu;
-    assert(feishu?.enabled === true, "feishu enabled flag changed");
-    assert(feishu?.connectionMode === "webhook", "feishu connection mode changed");
-    assert(feishu?.defaultAccount === "default", "feishu default account changed");
-    assert(feishu?.accounts?.default?.appId === "cli_upgrade_survivor", "feishu account changed");
-    assert(
-      feishu.groups?.oc_upgrade_survivor?.requireMention === true,
-      "feishu group mention policy changed",
     );
   }
 
@@ -389,107 +302,6 @@ function assertStateSurvived() {
   }
 }
 
-function readInstalledPluginIndex() {
-  const stateDir = requireEnv("OPENCLAW_STATE_DIR");
-  const file = path.join(stateDir, "plugins", "installs.json");
-  assert(fs.existsSync(file), `installed plugin index missing: ${file}`);
-  return readJson(file);
-}
-
-function assertExternalPluginInstall(records, pluginId, packageName) {
-  const record = records[pluginId];
-  assert(record, `configured external ${pluginId} plugin install record missing`);
-  const installedFromNpm = record.source === "npm";
-  const installedFromOfficialClawHubNpmPack =
-    record.source === "clawhub" &&
-    record.clawhubChannel === "official" &&
-    record.artifactKind === "npm-pack";
-  assert(
-    installedFromNpm || installedFromOfficialClawHubNpmPack,
-    `configured external ${pluginId} plugin must be installed from npm or official ClawHub npm-pack, got: ${record.source}`,
-  );
-  const installPath = resolveHomePath(record.installPath);
-  assert(
-    installPath,
-    `configured external ${pluginId} plugin installPath missing: ${JSON.stringify(record)}`,
-  );
-  assert(
-    fs.existsSync(installPath),
-    `configured external ${pluginId} plugin installPath missing on disk: ${installPath}`,
-  );
-  assert(
-    fs.existsSync(path.join(installPath, "package.json")),
-    `configured external ${pluginId} plugin package.json missing: ${installPath}`,
-  );
-  const packageJson = readJson(path.join(installPath, "package.json"));
-  assert(
-    packageJson.name === packageName,
-    `configured external ${pluginId} package name changed: ${packageJson.name}`,
-  );
-  if (installedFromNpm) {
-    const npmRoot = path.join(requireEnv("OPENCLAW_STATE_DIR"), "npm", "node_modules");
-    assert(
-      isPathInside(npmRoot, installPath),
-      `configured external ${pluginId} npm install path outside managed npm root: ${installPath}`,
-    );
-    assert(
-      String(record.spec ?? record.resolvedSpec ?? "").startsWith(packageName),
-      `configured external ${pluginId} plugin npm spec changed`,
-    );
-    return;
-  }
-  assert(
-    record.clawhubPackage === packageName,
-    `configured external ${pluginId} ClawHub package changed: ${record.clawhubPackage}`,
-  );
-  const extensionsRoot = path.join(requireEnv("OPENCLAW_STATE_DIR"), "extensions");
-  assert(
-    isPathInside(extensionsRoot, installPath),
-    `configured external ${pluginId} ClawHub install path outside managed extensions root: ${installPath}`,
-  );
-}
-
-function assertConfiguredPluginInstalls() {
-  const coverage = getCoverage();
-  const stage = process.env.OPENCLAW_UPGRADE_SURVIVOR_ASSERT_STAGE || "survival";
-  if (!hasCoverage(coverage) || !acceptsIntent(coverage, "configured-plugin-installs")) {
-    return;
-  }
-  if (stage === "baseline") {
-    return;
-  }
-  const index = readInstalledPluginIndex();
-  const records = index.installRecords ?? {};
-  assertOptionalConfiguredPluginIndex(records, index.plugins ?? [], {
-    bundled: true,
-    packageName: "@openclaw/matrix",
-    pluginId: "matrix",
-  });
-  assertOptionalConfiguredPluginIndex(records, index.plugins ?? [], {
-    packageName: "@openclaw/brave-plugin",
-    pluginId: "brave",
-  });
-  assert(!records.telegram, "internal telegram plugin should not be installed externally");
-}
-
-function assertOptionalConfiguredPluginIndex(
-  records,
-  plugins,
-  { bundled = false, packageName, pluginId },
-) {
-  const record = records[pluginId];
-  const plugin = plugins.find((entry) => entry?.pluginId === pluginId);
-  if (record) {
-    assertExternalPluginInstall(records, pluginId, packageName);
-  }
-  if (plugin) {
-    assert(
-      plugin.enabled !== false,
-      `configured ${bundled ? "bundled" : "external"} ${pluginId} plugin is disabled`,
-    );
-  }
-}
-
 function assertStatusJson([file]) {
   const status = readJson(file);
   assert(status && typeof status === "object", "gateway status JSON was not an object");
@@ -503,7 +315,6 @@ if (command === "seed") {
   assertConfigSurvived();
 } else if (command === "assert-state") {
   assertStateSurvived();
-  assertConfiguredPluginInstalls();
 } else if (command === "assert-status-json") {
   assertStatusJson(process.argv.slice(3));
 } else {

@@ -5,7 +5,13 @@ import {
   type ModelCatalogBrowseView,
 } from "../../agents/model-catalog-browse.js";
 import { resolveVisibleModelCatalog } from "../../agents/model-catalog-visibility.js";
+import type { ModelCatalogEntry } from "../../agents/model-catalog.js";
 import { resolveDefaultAgentWorkspaceDir } from "../../agents/workspace.js";
+import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import {
+  isSupportedModelProviderId,
+  shouldEnforceSupportedModelProviderIds,
+} from "../../supported-surface.js";
 import {
   ErrorCodes,
   errorShape,
@@ -20,6 +26,16 @@ let loggedSlowModelsListCatalog = false;
 
 function resolveModelsListView(params: Record<string, unknown>): ModelsListView {
   return typeof params.view === "string" ? (params.view as ModelsListView) : "default";
+}
+
+function filterSupportedCatalog(
+  cfg: OpenClawConfig,
+  catalog: ModelCatalogEntry[],
+): ModelCatalogEntry[] {
+  if (!shouldEnforceSupportedModelProviderIds(cfg)) {
+    return catalog;
+  }
+  return catalog.filter((entry) => isSupportedModelProviderId(entry.provider));
 }
 
 export const modelsHandlers: GatewayRequestHandlers = {
@@ -41,32 +57,38 @@ export const modelsHandlers: GatewayRequestHandlers = {
         resolveAgentWorkspaceDir(cfg, resolveDefaultAgentId(cfg)) ??
         resolveDefaultAgentWorkspaceDir();
       const view = resolveModelsListView(params);
-      const catalog = await loadModelCatalogForBrowse({
+      const catalog = filterSupportedCatalog(
         cfg,
-        view,
-        loadCatalog: context.loadGatewayModelCatalog,
-        onTimeout: (timeoutMs) => {
-          if (loggedSlowModelsListCatalog) {
-            return;
-          }
-          loggedSlowModelsListCatalog = true;
-          context.logGateway.debug(
-            `models.list continuing without model catalog after ${timeoutMs}ms`,
-          );
-        },
-      });
+        await loadModelCatalogForBrowse({
+          cfg,
+          view,
+          loadCatalog: context.loadGatewayModelCatalog,
+          onTimeout: (timeoutMs) => {
+            if (loggedSlowModelsListCatalog) {
+              return;
+            }
+            loggedSlowModelsListCatalog = true;
+            context.logGateway.debug(
+              `models.list continuing without model catalog after ${timeoutMs}ms`,
+            );
+          },
+        }),
+      );
       if (view === "all") {
         respond(true, { models: catalog }, undefined);
         return;
       }
-      const models = await resolveVisibleModelCatalog({
+      const models = filterSupportedCatalog(
         cfg,
-        catalog,
-        defaultProvider: DEFAULT_PROVIDER,
-        workspaceDir,
-        view,
-        runtimeAuthDiscovery: false,
-      });
+        await resolveVisibleModelCatalog({
+          cfg,
+          catalog,
+          defaultProvider: DEFAULT_PROVIDER,
+          workspaceDir,
+          view,
+          runtimeAuthDiscovery: false,
+        }),
+      );
       respond(true, { models }, undefined);
     } catch (err) {
       respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, String(err)));

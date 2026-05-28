@@ -25,7 +25,7 @@ export function registerMessagePollCommand(message: Command, helpers: MessageCli
       "Send poll silently without notification (Telegram + Discord where supported)",
       false,
     )
-    .option("--thread-id <id>", "Thread id (Telegram forum topic / Slack thread ts)")
+    .option("--thread-id <id>", "Thread id (Telegram forum topic)")
     .action(async (opts) => {
       await helpers.runMessageAction("poll", opts);
     });

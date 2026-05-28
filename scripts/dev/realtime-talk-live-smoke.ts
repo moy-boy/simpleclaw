@@ -2,7 +2,6 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { GoogleGenAI, Modality } from "@google/genai";
 import { chromium, type Browser } from "playwright";
 import { createServer, type ViteDevServer } from "vite";
 import { buildOpenAIRealtimeVoiceProvider } from "../../extensions/openai/realtime-voice-provider.ts";
@@ -11,12 +10,6 @@ import { previewForDevToolLog, redactJsonValueForDevToolLog } from "../lib/dev-t
 const OPENAI_REALTIME_MODEL =
   process.env.OPENCLAW_REALTIME_OPENAI_MODEL?.trim() || "gpt-realtime-2";
 const OPENAI_REALTIME_VOICE = process.env.OPENCLAW_REALTIME_OPENAI_VOICE?.trim() || "alloy";
-const GOOGLE_REALTIME_MODEL =
-  process.env.OPENCLAW_REALTIME_GOOGLE_MODEL?.trim() ||
-  "gemini-2.5-flash-native-audio-preview-12-2025";
-const GOOGLE_REALTIME_VOICE = process.env.OPENCLAW_REALTIME_GOOGLE_VOICE?.trim() || "Kore";
-const GOOGLE_LIVE_WS_URL =
-  "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained";
 
 type SmokeResult = {
   name: string;
@@ -203,135 +196,6 @@ async function smokeOpenAIWebRtc(browser: Browser, apiKey: string): Promise<Smok
     };
   } catch (error) {
     return { name: "openai-webrtc-browser", ok: false, details: { error: shortError(error) } };
-  }
-}
-
-async function createGoogleLiveToken(apiKey: string): Promise<string> {
-  const ai = new GoogleGenAI({
-    apiKey,
-    httpOptions: { apiVersion: "v1alpha" },
-  });
-  const now = Date.now();
-  const token = await ai.authTokens.create({
-    config: {
-      uses: 1,
-      expireTime: new Date(now + 30 * 60 * 1000).toISOString(),
-      newSessionExpireTime: new Date(now + 60 * 1000).toISOString(),
-      liveConnectConstraints: {
-        model: GOOGLE_REALTIME_MODEL,
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: GOOGLE_REALTIME_VOICE },
-            },
-          },
-          systemInstruction: "OpenClaw browser Talk live smoke.",
-          inputAudioTranscription: {},
-          outputAudioTranscription: {},
-        },
-      },
-    },
-  });
-  const name = token.name?.trim();
-  if (!name) {
-    throw new Error("Google Live auth token response did not include a token name");
-  }
-  return name;
-}
-
-async function smokeGoogleLiveBrowserWs(browser: Browser, apiKey: string): Promise<SmokeResult> {
-  try {
-    const token = await createGoogleLiveToken(apiKey);
-    const page = await browser.newPage();
-    await page.evaluate("globalThis.__name = (fn) => fn");
-    const result = await page.evaluate(
-      async ({ model, tokenName, websocketUrl }) => {
-        const debug: {
-          opened: boolean;
-          messages: string[];
-          close?: { code: number; reason: string };
-          error: boolean;
-        } = { opened: false, messages: [], error: false };
-        const dataToText = async (data: unknown): Promise<string> => {
-          if (typeof data === "string") {
-            return data;
-          }
-          if (data instanceof Blob) {
-            return await data.text();
-          }
-          if (data instanceof ArrayBuffer) {
-            return new TextDecoder().decode(data);
-          }
-          return String(data);
-        };
-        const url = new URL(websocketUrl);
-        url.searchParams.set("access_token", tokenName);
-        const ws = new WebSocket(url.toString());
-        const done = new Promise<Record<string, unknown>>((resolve, reject) => {
-          const timeout = window.setTimeout(
-            () => reject(new Error(`Google Live setup timed out: ${JSON.stringify(debug)}`)),
-            15_000,
-          );
-          ws.addEventListener("open", () => {
-            debug.opened = true;
-            ws.send(
-              JSON.stringify({
-                setup: {
-                  model: model.startsWith("models/") ? model : `models/${model}`,
-                  generationConfig: { responseModalities: ["AUDIO"] },
-                  inputAudioTranscription: {},
-                  outputAudioTranscription: {},
-                },
-              }),
-            );
-          });
-          ws.addEventListener("message", (event) => {
-            void (async () => {
-              const text = await dataToText(event.data);
-              debug.messages.push(text.slice(0, 300));
-              const message = JSON.parse(text) as { setupComplete?: unknown };
-              if (!message.setupComplete) {
-                return;
-              }
-              window.clearTimeout(timeout);
-              resolve({ setupComplete: true, readyState: ws.readyState });
-            })().catch((error) => {
-              window.clearTimeout(timeout);
-              reject(error);
-            });
-          });
-          ws.addEventListener("error", () => {
-            debug.error = true;
-            window.clearTimeout(timeout);
-            reject(new Error("Google Live browser WebSocket errored"));
-          });
-          ws.addEventListener("close", (event) => {
-            debug.close = { code: event.code, reason: event.reason };
-            if (event.code !== 1000) {
-              window.clearTimeout(timeout);
-              reject(new Error(`Google Live browser WebSocket closed: ${JSON.stringify(debug)}`));
-            }
-          });
-        });
-        const value = await done;
-        ws.close(1000);
-        return value;
-      },
-      {
-        model: GOOGLE_REALTIME_MODEL,
-        tokenName: token,
-        websocketUrl: GOOGLE_LIVE_WS_URL,
-      },
-    );
-    await page.close();
-    return {
-      name: "google-live-browser-ws",
-      ok: result.setupComplete === true,
-      details: { model: GOOGLE_REALTIME_MODEL, setupComplete: result.setupComplete === true },
-    };
-  } catch (error) {
-    return { name: "google-live-browser-ws", ok: false, details: { error: shortError(error) } };
   }
 }
 
@@ -524,7 +388,6 @@ try {
 
 async function main(): Promise<void> {
   const openAIKey = getEnv("OPENAI_API_KEY");
-  const googleKey = getEnv("GEMINI_API_KEY") ?? getEnv("GOOGLE_API_KEY");
   const browser = await chromium.launch({
     headless: true,
     args: [
@@ -550,15 +413,6 @@ async function main(): Promise<void> {
     } else {
       results.push(await smokeOpenAIBackendBridge(openAIKey));
       results.push(await smokeOpenAIWebRtc(browser, openAIKey));
-    }
-    if (!googleKey) {
-      results.push({
-        name: "google-live-browser-ws",
-        ok: false,
-        details: { error: "GEMINI_API_KEY or GOOGLE_API_KEY missing" },
-      });
-    } else {
-      results.push(await smokeGoogleLiveBrowserWs(browser, googleKey));
     }
     results.push(await smokeGatewayRelayBrowser(browser));
   } finally {

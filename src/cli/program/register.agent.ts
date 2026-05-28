@@ -67,7 +67,7 @@ export function registerAgentCommands(
     .command("agent")
     .description("Run an agent turn via the Gateway (use --local for embedded)")
     .requiredOption("-m, --message <text>", "Message body for the agent")
-    .option("-t, --to <number>", "Recipient number in E.164 used to derive the session key")
+    .option("-t, --to <target>", "Recipient target used to derive the session key")
     .option("--session-key <key>", "Explicit session key (agent:<id>:<key>, or scoped to --agent)")
     .option("--session-id <id>", "Use an explicit session id")
     .option("--agent <id>", "Agent id (overrides routing bindings)")
@@ -86,7 +86,7 @@ export function registerAgentCommands(
     .option("--reply-account <id>", "Delivery account id override")
     .option(
       "--local",
-      "Run the embedded agent locally (requires model provider API keys in your shell)",
+      "Run the embedded agent locally (requires configured OpenAI subscription auth)",
       false,
     )
     .option("--deliver", "Send the agent's reply back to the selected channel", false)
@@ -101,7 +101,10 @@ export function registerAgentCommands(
         `
 ${theme.heading("Examples:")}
 ${formatHelpExamples([
-  ['openclaw agent --to +15555550123 --message "status update"', "Start a new session."],
+  [
+    'openclaw agent --channel telegram --to @mychat --message "status update"',
+    "Start a new session.",
+  ],
   ['openclaw agent --agent ops --message "Summarize logs"', "Use a specific agent."],
   [
     'openclaw agent --session-key agent:ops:incident-42 --message "Summarize status"',
@@ -112,12 +115,15 @@ ${formatHelpExamples([
     "Target a session with explicit thinking level.",
   ],
   [
-    'openclaw agent --to +15555550123 --message "Trace logs" --verbose on --json',
+    'openclaw agent --channel telegram --to @mychat --message "Trace logs" --verbose on --json',
     "Enable verbose logging and JSON output.",
   ],
-  ['openclaw agent --to +15555550123 --message "Summon reply" --deliver', "Deliver reply."],
   [
-    'openclaw agent --agent ops --message "Generate report" --deliver --reply-channel slack --reply-to "#reports"',
+    'openclaw agent --channel telegram --to @mychat --message "Summon reply" --deliver',
+    "Deliver reply.",
+  ],
+  [
+    'openclaw agent --agent ops --message "Generate report" --deliver --reply-channel discord --reply-to "channel:123"',
     "Send reply to a different channel/target.",
   ],
 ])}

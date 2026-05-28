@@ -110,7 +110,7 @@ Options:
                              Aliases like beta3 resolve to the latest *-beta.3 version.
   --platform <list>           Comma-separated platforms to run: all, macos, windows, linux.
                              Default: all
-  --provider <openai|anthropic|minimax>
+  --provider <openai>
   --model <provider/model>    Override the model used for agent-turn smoke checks.
   --host-ip <ip>             Override Parallels host IP.
   --api-key-env <var>        Host env var name for provider API key.

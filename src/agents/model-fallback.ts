@@ -16,6 +16,11 @@ import {
 import { isCommandLaneTaskTimeoutError } from "../process/command-queue.js";
 import { createLazyImportLoader } from "../shared/lazy-promise.js";
 import { normalizeOptionalString } from "../shared/string-coerce.js";
+import {
+  formatUnsupportedModelRefMessage,
+  isSupportedModelProviderId,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 import { sanitizeForLog } from "../terminal/ansi.js";
 import { externalCliDiscoveryForProviders } from "./auth-profiles/external-cli-discovery.js";
 import { hasAnyAuthProfileStoreSource } from "./auth-profiles/source-check.js";
@@ -121,6 +126,26 @@ type ModelFallbackRunFn<T> = (
   model: string,
   options?: ModelFallbackRunOptions,
 ) => Promise<T>;
+
+function assertSupportedModelFallbackCandidates(params: {
+  cfg: OpenClawConfig | undefined;
+  candidates: readonly ModelCandidate[];
+}): void {
+  if (
+    process.env.VITEST !== undefined ||
+    !params.cfg ||
+    !shouldEnforceSupportedModelProviderIds(params.cfg)
+  ) {
+    return;
+  }
+  const unsupported = params.candidates.find(
+    (candidate) => !isSupportedModelProviderId(candidate.provider),
+  );
+  if (!unsupported) {
+    return;
+  }
+  throw new Error(formatUnsupportedModelRefMessage(`${unsupported.provider}/${unsupported.model}`));
+}
 
 /**
  * Fallback abort check. Only treats explicit AbortError names as user aborts.
@@ -1065,6 +1090,7 @@ export async function runWithModelFallback<T>(
     fallbacksOverride: params.fallbacksOverride,
     manifestPlugins: params.manifestPlugins,
   });
+  assertSupportedModelFallbackCandidates({ cfg: params.cfg, candidates });
   const authRuntime =
     !params.skipAuthProfileRuntime && params.cfg && hasAnyAuthProfileStoreSource(params.agentDir)
       ? await loadModelFallbackAuthRuntime()

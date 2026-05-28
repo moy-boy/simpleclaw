@@ -18,6 +18,11 @@ import { normalizeAgentModelRefForConfig, toAgentModelListLike } from "../../con
 import type { AgentModelEntryConfig } from "../../config/types.agent-defaults.js";
 import type { AgentModelConfig } from "../../config/types.agents-shared.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
+import {
+  formatUnsupportedModelRefMessage,
+  isSupportedModelRef,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 export { normalizeAlias } from "./alias-name.js";
 export { isLocalBaseUrl } from "./list.local-url.js";
 
@@ -249,6 +254,13 @@ export function applyDefaultModelPrimaryUpdate(params: {
           raw: params.modelRaw,
           cfg: params.cfg,
         });
+  const resolvedKey = modelKey(resolved.provider, resolved.model);
+  if (
+    shouldEnforceSupportedModelProviderIds(params.resolveCfg ?? params.cfg) &&
+    !isSupportedModelRef(resolvedKey)
+  ) {
+    throw new Error(formatUnsupportedModelRefMessage(resolvedKey));
+  }
   const nextModels = {
     ...params.cfg.agents?.defaults?.models,
   } as Record<string, AgentModelEntryConfig>;
@@ -279,8 +291,7 @@ export { DEFAULT_MODEL, DEFAULT_PROVIDER };
  * Model key format: "provider/model"
  *
  * The model key is displayed in `/model status` and used to reference models.
- * When using `/model <key>`, use the exact format shown (e.g., "openrouter/moonshotai/kimi-k2").
+ * When using `/model <key>`, use the exact format shown (e.g., "openai/gpt-5.4").
  *
- * For providers with hierarchical model IDs (e.g., OpenRouter), the model ID may include
- * sub-providers (e.g., "moonshotai/kimi-k2"), resulting in a key like "openrouter/moonshotai/kimi-k2".
+ * Model IDs may include provider-specific hierarchy after the provider prefix.
  */

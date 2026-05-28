@@ -568,16 +568,16 @@ describe("updateNpmInstalledPlugins", () => {
 
   it("trusts official catalog npm updates when the installed package matches the catalog", async () => {
     const installPath = createInstalledPackageDir({
-      name: "@openclaw/acpx",
+      name: "@openclaw/codex",
       version: "2026.5.2-beta.1",
     });
     mockNpmViewMetadata({
-      name: "@openclaw/acpx",
+      name: "@openclaw/codex",
       version: "2026.5.2-beta.2",
     });
     installPluginFromNpmSpecMock.mockResolvedValue(
       createSuccessfulNpmUpdateResult({
-        pluginId: "acpx",
+        pluginId: "codex",
         targetDir: installPath,
         version: "2026.5.2-beta.2",
       }),
@@ -585,63 +585,63 @@ describe("updateNpmInstalledPlugins", () => {
 
     await updateNpmInstalledPlugins({
       config: createNpmInstallConfig({
-        pluginId: "acpx",
-        spec: "@openclaw/acpx",
+        pluginId: "codex",
+        spec: "@openclaw/codex",
         installPath,
-        resolvedName: "@openclaw/acpx",
-        resolvedSpec: "@openclaw/acpx@2026.5.2-beta.1",
+        resolvedName: "@openclaw/codex",
+        resolvedSpec: "@openclaw/codex@2026.5.2-beta.1",
         resolvedVersion: "2026.5.2-beta.1",
       }),
-      pluginIds: ["acpx"],
+      pluginIds: ["codex"],
     });
 
-    expect(npmInstallCall()?.spec).toBe("@openclaw/acpx");
-    expect(npmInstallCall()?.expectedPluginId).toBe("acpx");
+    expect(npmInstallCall()?.spec).toBe("@openclaw/codex");
+    expect(npmInstallCall()?.expectedPluginId).toBe("codex");
     expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).toBe(true);
   });
 
   it("does not skip trusted official default updates when latest resolves to the installed prerelease", async () => {
     const installPath = createInstalledPackageDir({
-      name: "@openclaw/acpx",
+      name: "@openclaw/codex",
       version: "2026.5.2-beta.2",
     });
     mockNpmViewMetadata({
-      name: "@openclaw/acpx",
+      name: "@openclaw/codex",
       version: "2026.5.2-beta.2",
       integrity: "sha512-beta",
       shasum: "beta",
     });
     installPluginFromNpmSpecMock.mockResolvedValue(
       createSuccessfulNpmUpdateResult({
-        pluginId: "acpx",
+        pluginId: "codex",
         targetDir: installPath,
         version: "2026.5.2",
         npmResolution: {
-          name: "@openclaw/acpx",
+          name: "@openclaw/codex",
           version: "2026.5.2",
-          resolvedSpec: "@openclaw/acpx@2026.5.2",
+          resolvedSpec: "@openclaw/codex@2026.5.2",
         },
       }),
     );
 
     const result = await updateNpmInstalledPlugins({
       config: createNpmInstallConfig({
-        pluginId: "acpx",
-        spec: "@openclaw/acpx",
+        pluginId: "codex",
+        spec: "@openclaw/codex",
         installPath,
         integrity: "sha512-beta",
         shasum: "beta",
-        resolvedName: "@openclaw/acpx",
-        resolvedSpec: "@openclaw/acpx@2026.5.2-beta.2",
+        resolvedName: "@openclaw/codex",
+        resolvedSpec: "@openclaw/codex@2026.5.2-beta.2",
         resolvedVersion: "2026.5.2-beta.2",
       }),
-      pluginIds: ["acpx"],
+      pluginIds: ["codex"],
     });
 
-    expect(npmInstallCall()?.spec).toBe("@openclaw/acpx");
-    expect(npmInstallCall()?.expectedPluginId).toBe("acpx");
+    expect(npmInstallCall()?.spec).toBe("@openclaw/codex");
+    expect(npmInstallCall()?.expectedPluginId).toBe("codex");
     expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).toBe(true);
-    expect(result.outcomes[0]?.pluginId).toBe("acpx");
+    expect(result.outcomes[0]?.pluginId).toBe("codex");
     expect(result.outcomes[0]?.status).toBe("updated");
     expect(result.outcomes[0]?.currentVersion).toBe("2026.5.2-beta.2");
     expect(result.outcomes[0]?.nextVersion).toBe("2026.5.2");
@@ -649,44 +649,44 @@ describe("updateNpmInstalledPlugins", () => {
 
   it("updates trusted official npm plugins when latest resolves to a stable correction release", async () => {
     const installPath = createInstalledPackageDir({
-      name: "@openclaw/acpx",
+      name: "@openclaw/codex",
       version: "2026.5.3",
     });
     mockNpmViewMetadata({
-      name: "@openclaw/acpx",
+      name: "@openclaw/codex",
       version: "2026.5.3-1",
       integrity: "sha512-correction",
       shasum: "correction",
     });
     installPluginFromNpmSpecMock.mockResolvedValue(
       createSuccessfulNpmUpdateResult({
-        pluginId: "acpx",
+        pluginId: "codex",
         targetDir: installPath,
         version: "2026.5.3-1",
         npmResolution: {
-          name: "@openclaw/acpx",
+          name: "@openclaw/codex",
           version: "2026.5.3-1",
-          resolvedSpec: "@openclaw/acpx@2026.5.3-1",
+          resolvedSpec: "@openclaw/codex@2026.5.3-1",
         },
       }),
     );
 
     const result = await updateNpmInstalledPlugins({
       config: createNpmInstallConfig({
-        pluginId: "acpx",
-        spec: "@openclaw/acpx",
+        pluginId: "codex",
+        spec: "@openclaw/codex",
         installPath,
-        resolvedName: "@openclaw/acpx",
-        resolvedSpec: "@openclaw/acpx@2026.5.3",
+        resolvedName: "@openclaw/codex",
+        resolvedSpec: "@openclaw/codex@2026.5.3",
         resolvedVersion: "2026.5.3",
       }),
-      pluginIds: ["acpx"],
+      pluginIds: ["codex"],
     });
 
-    expect(npmInstallCall()?.spec).toBe("@openclaw/acpx");
-    expect(npmInstallCall()?.expectedPluginId).toBe("acpx");
+    expect(npmInstallCall()?.spec).toBe("@openclaw/codex");
+    expect(npmInstallCall()?.expectedPluginId).toBe("codex");
     expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).toBe(true);
-    expect(result.outcomes[0]?.pluginId).toBe("acpx");
+    expect(result.outcomes[0]?.pluginId).toBe("codex");
     expect(result.outcomes[0]?.status).toBe("updated");
     expect(result.outcomes[0]?.currentVersion).toBe("2026.5.3");
     expect(result.outcomes[0]?.nextVersion).toBe("2026.5.3-1");
@@ -694,16 +694,16 @@ describe("updateNpmInstalledPlugins", () => {
 
   it("does not trust official npm updates when the install record package mismatches", async () => {
     const installPath = createInstalledPackageDir({
-      name: "@vendor/acpx-fork",
+      name: "@vendor/codex-fork",
       version: "1.0.0",
     });
     mockNpmViewMetadata({
-      name: "@vendor/acpx-fork",
+      name: "@vendor/codex-fork",
       version: "1.0.1",
     });
     installPluginFromNpmSpecMock.mockResolvedValue(
       createSuccessfulNpmUpdateResult({
-        pluginId: "acpx",
+        pluginId: "codex",
         targetDir: installPath,
         version: "1.0.1",
       }),
@@ -711,14 +711,14 @@ describe("updateNpmInstalledPlugins", () => {
 
     await updateNpmInstalledPlugins({
       config: createNpmInstallConfig({
-        pluginId: "acpx",
-        spec: "@vendor/acpx-fork",
+        pluginId: "codex",
+        spec: "@vendor/codex-fork",
         installPath,
-        resolvedName: "@vendor/acpx-fork",
-        resolvedSpec: "@vendor/acpx-fork@1.0.0",
+        resolvedName: "@vendor/codex-fork",
+        resolvedSpec: "@vendor/codex-fork@1.0.0",
         resolvedVersion: "1.0.0",
       }),
-      pluginIds: ["acpx"],
+      pluginIds: ["codex"],
     });
 
     expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).not.toBe(true);
@@ -1548,93 +1548,6 @@ describe("updateNpmInstalledPlugins", () => {
       currentVersion: "1.2.3",
       nextVersion: "1.2.3",
       message: "demo is up to date (1.2.3).",
-    });
-  });
-
-  it("updates disabled trusted official ClawHub installs through the catalog spec", async () => {
-    installPluginFromClawHubMock.mockResolvedValue(
-      createSuccessfulClawHubUpdateResult({
-        pluginId: "diagnostics-otel",
-        targetDir: "/tmp/diagnostics-otel",
-        version: "2026.5.4",
-        clawhubPackage: "@openclaw/diagnostics-otel",
-      }),
-    );
-
-    const config = createClawHubInstallConfig({
-      pluginId: "diagnostics-otel",
-      installPath: "/tmp/diagnostics-otel",
-      clawhubUrl: "https://clawhub.ai",
-      clawhubPackage: "@openclaw/diagnostics-otel",
-      clawhubFamily: "code-plugin",
-      clawhubChannel: "official",
-      spec: "clawhub:@openclaw/diagnostics-otel@2026.5.3",
-    });
-    const result = await updateNpmInstalledPlugins({
-      config: {
-        ...config,
-        plugins: {
-          ...config.plugins,
-          entries: {
-            "diagnostics-otel": {
-              enabled: false,
-              config: { preserved: true },
-            },
-          },
-        },
-      },
-      skipDisabledPlugins: true,
-      syncOfficialPluginInstalls: true,
-    });
-
-    expect(clawHubInstallCall()?.spec).toBe("clawhub:@openclaw/diagnostics-otel");
-    expect(clawHubInstallCall()?.expectedPluginId).toBe("diagnostics-otel");
-    expectRecordFields(result.config.plugins?.installs?.["diagnostics-otel"], {
-      source: "clawhub",
-      spec: "clawhub:@openclaw/diagnostics-otel",
-      version: "2026.5.4",
-      clawhubPackage: "@openclaw/diagnostics-otel",
-      clawhubChannel: "official",
-    });
-    expect(result.config.plugins?.entries?.["diagnostics-otel"]).toEqual({
-      enabled: false,
-      config: { preserved: true },
-    });
-  });
-
-  it("updates bare trusted official ClawHub installs through the catalog spec", async () => {
-    installPluginFromClawHubMock.mockResolvedValue(
-      createSuccessfulClawHubUpdateResult({
-        pluginId: "diagnostics-prometheus",
-        targetDir: "/tmp/diagnostics-prometheus",
-        version: "2026.5.4",
-        clawhubPackage: "@openclaw/diagnostics-prometheus",
-      }),
-    );
-
-    const result = await updateNpmInstalledPlugins({
-      config: {
-        plugins: {
-          installs: {
-            "diagnostics-prometheus": {
-              source: "clawhub",
-              spec: "clawhub:@openclaw/diagnostics-prometheus@2026.5.3",
-              installPath: "/tmp/diagnostics-prometheus",
-            },
-          },
-        },
-      },
-      syncOfficialPluginInstalls: true,
-    });
-
-    expect(clawHubInstallCall()?.spec).toBe("clawhub:@openclaw/diagnostics-prometheus");
-    expect(clawHubInstallCall()?.expectedPluginId).toBe("diagnostics-prometheus");
-    expectRecordFields(result.config.plugins?.installs?.["diagnostics-prometheus"], {
-      source: "clawhub",
-      spec: "clawhub:@openclaw/diagnostics-prometheus",
-      version: "2026.5.4",
-      clawhubPackage: "@openclaw/diagnostics-prometheus",
-      clawhubChannel: "official",
     });
   });
 
@@ -3178,8 +3091,8 @@ describe("syncPluginsForUpdateChannel", () => {
     resolveBundledPluginSourcesMock.mockReturnValue(new Map());
     installPluginFromNpmSpecMock.mockResolvedValue(
       createSuccessfulNpmUpdateResult({
-        pluginId: "voice-call",
-        targetDir: "/tmp/openclaw-plugins/voice-call",
+        pluginId: "discord",
+        targetDir: "/tmp/openclaw-plugins/discord",
         version: "0.0.2-beta.1",
       }),
     );
@@ -3188,32 +3101,32 @@ describe("syncPluginsForUpdateChannel", () => {
       channel: "stable",
       externalizedBundledPluginBridges: [
         {
-          bundledPluginId: "voice-call",
-          npmSpec: "@openclaw/voice-call",
-          channelIds: ["voice-call"],
+          bundledPluginId: "discord",
+          npmSpec: "@openclaw/discord",
+          channelIds: ["discord"],
         },
       ],
       config: {
         channels: {
-          "voice-call": {
+          discord: {
             enabled: true,
           },
         },
         plugins: {
-          load: { paths: [appBundledPluginRoot("voice-call")] },
+          load: { paths: [appBundledPluginRoot("discord")] },
           installs: {
-            "voice-call": {
+            discord: {
               source: "path",
-              sourcePath: appBundledPluginRoot("voice-call"),
-              installPath: appBundledPluginRoot("voice-call"),
+              sourcePath: appBundledPluginRoot("discord"),
+              installPath: appBundledPluginRoot("discord"),
             },
           },
         },
       },
     });
 
-    expect(npmInstallCall()?.spec).toBe("@openclaw/voice-call");
-    expect(npmInstallCall()?.expectedPluginId).toBe("voice-call");
+    expect(npmInstallCall()?.spec).toBe("@openclaw/discord");
+    expect(npmInstallCall()?.expectedPluginId).toBe("discord");
     expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).toBe(true);
   });
 
@@ -3413,8 +3326,8 @@ describe("syncPluginsForUpdateChannel", () => {
     });
     installPluginFromNpmSpecMock.mockResolvedValue(
       createSuccessfulNpmUpdateResult({
-        pluginId: "voice-call",
-        targetDir: "/tmp/openclaw-plugins/voice-call",
+        pluginId: "discord",
+        targetDir: "/tmp/openclaw-plugins/discord",
         version: "0.0.2-beta.1",
       }),
     );
@@ -3423,34 +3336,34 @@ describe("syncPluginsForUpdateChannel", () => {
       channel: "stable",
       externalizedBundledPluginBridges: [
         {
-          bundledPluginId: "voice-call",
+          bundledPluginId: "discord",
           preferredSource: "clawhub",
-          clawhubSpec: "clawhub:@openclaw/voice-call",
-          npmSpec: "@openclaw/voice-call",
-          channelIds: ["voice-call"],
+          clawhubSpec: "clawhub:@openclaw/discord",
+          npmSpec: "@openclaw/discord",
+          channelIds: ["discord"],
         },
       ],
       config: {
         channels: {
-          "voice-call": {
+          discord: {
             enabled: true,
           },
         },
         plugins: {
-          load: { paths: [appBundledPluginRoot("voice-call")] },
+          load: { paths: [appBundledPluginRoot("discord")] },
           installs: {
-            "voice-call": {
+            discord: {
               source: "path",
-              sourcePath: appBundledPluginRoot("voice-call"),
-              installPath: appBundledPluginRoot("voice-call"),
+              sourcePath: appBundledPluginRoot("discord"),
+              installPath: appBundledPluginRoot("discord"),
             },
           },
         },
       },
     });
 
-    expect(npmInstallCall()?.spec).toBe("@openclaw/voice-call");
-    expect(npmInstallCall()?.expectedPluginId).toBe("voice-call");
+    expect(npmInstallCall()?.spec).toBe("@openclaw/discord");
+    expect(npmInstallCall()?.expectedPluginId).toBe("discord");
     expect(npmInstallCall()?.trustedSourceLinkedOfficialInstall).toBe(true);
   });
 

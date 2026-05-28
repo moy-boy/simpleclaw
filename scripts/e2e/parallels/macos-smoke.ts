@@ -129,7 +129,7 @@ Options:
   --snapshot-hint <name>     Snapshot name substring/fuzzy match.
                              Default: "macOS 26.5 latest"
   --mode <fresh|upgrade|both>
-  --provider <openai|anthropic|minimax>
+  --provider <openai>
   --model <provider/model>    Override the model used for the agent-turn smoke.
   --api-key-env <var>        Host env var name for provider API key.
   --openai-api-key-env <var> Alias for --api-key-env (backward compatible)

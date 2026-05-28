@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { shouldIncludeBundledPluginId } from "../../scripts/lib/supported-surface.mjs";
 import { tryReadJsonSync } from "../infra/json-files.js";
 import { listBundledPluginMetadata } from "./bundled-plugin-metadata.js";
 
@@ -47,7 +48,11 @@ export function collectBundledRuntimeSidecarPaths(params?: {
     rootDir,
     includeChannelConfigs: false,
   })
-    .filter((entry) => !excludedRuntimeSidecarPluginDirs.has(entry.dirName))
+    .filter(
+      (entry) =>
+        shouldIncludeBundledPluginId(entry.dirName) &&
+        !excludedRuntimeSidecarPluginDirs.has(entry.dirName),
+    )
     .flatMap((entry) =>
       (entry.runtimeSidecarArtifacts ?? []).map((artifact) =>
         buildBundledDistArtifactPath(entry.dirName, artifact),

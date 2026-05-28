@@ -45,7 +45,7 @@ if (mode === "assert-image-providers") {
     throw new Error("image providers output is empty");
   }
   const ids = new Set(parsed.map((entry) => (typeof entry?.id === "string" ? entry.id : "")));
-  for (const expected of ["google", "openai", "xai"]) {
+  for (const expected of ["openai"]) {
     if (!ids.has(expected)) {
       throw new Error(`image providers output is missing bundled provider '${expected}'`);
     }

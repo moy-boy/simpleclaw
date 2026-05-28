@@ -3,6 +3,7 @@ import { resolveManifestProviderOnboardAuthFlags } from "../../../plugins/provid
 import { normalizeOptionalString } from "../../../shared/string-coerce.js";
 import { CORE_ONBOARD_AUTH_FLAGS } from "../../onboard-core-auth-flags.js";
 import type { AuthChoice, OnboardOptions } from "../../onboard-types.js";
+import { isSupportedSubscriptionAuthChoice } from "../../supported-surface.js";
 
 type AuthChoiceFlag = {
   optionKey: string;
@@ -13,6 +14,7 @@ type AuthChoiceFlag = {
 export type AuthChoiceInference = {
   choice?: AuthChoice;
   matches: AuthChoiceFlag[];
+  unsupportedMatches: AuthChoiceFlag[];
 };
 
 function hasStringValue(value: unknown): boolean {
@@ -41,20 +43,24 @@ export function inferAuthChoiceFromFlags(
     authChoice: string;
     cliFlag: string;
   }>;
-  const matches: AuthChoiceFlag[] = flags
+  const flagMatches: AuthChoiceFlag[] = flags
     .filter(({ optionKey }) => hasStringValue(opts[optionKey]))
     .map((flag) => ({
       optionKey: flag.optionKey,
       authChoice: flag.authChoice as AuthChoice,
       label: flag.cliFlag,
     }));
+  const matches = flagMatches.filter((flag) => isSupportedSubscriptionAuthChoice(flag.authChoice));
+  const unsupportedMatches = flagMatches.filter(
+    (flag) => !isSupportedSubscriptionAuthChoice(flag.authChoice),
+  );
 
   if (
     hasStringValue(opts.customBaseUrl) ||
     hasStringValue(opts.customModelId) ||
     hasStringValue(opts.customApiKey)
   ) {
-    matches.push({
+    unsupportedMatches.push({
       optionKey: "customBaseUrl",
       authChoice: "custom-api-key",
       label: "--custom-base-url/--custom-model-id/--custom-api-key",
@@ -64,5 +70,6 @@ export function inferAuthChoiceFromFlags(
   return {
     choice: matches[0]?.authChoice,
     matches,
+    unsupportedMatches,
   };
 }

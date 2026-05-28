@@ -23,6 +23,49 @@ function listTrackedPackageJsonFiles(cwd) {
     .toSorted((left, right) => left.localeCompare(right));
 }
 
+function readWorkspacePackagePatterns(cwd) {
+  const workspacePath = path.join(cwd, "pnpm-workspace.yaml");
+  if (!fs.existsSync(workspacePath)) {
+    return null;
+  }
+  const workspace = YAML.parse(fs.readFileSync(workspacePath, "utf8"));
+  return Array.isArray(workspace?.packages)
+    ? workspace.packages.filter((entry) => typeof entry === "string")
+    : null;
+}
+
+function packagePatternToPackageJsonMatcher(pattern) {
+  const normalized = pattern.replaceAll("\\", "/").replace(/\/+$/u, "");
+  if (normalized === ".") {
+    return (relativePath) => relativePath === "package.json";
+  }
+  const wildcardIndex = normalized.indexOf("*");
+  if (wildcardIndex === -1) {
+    return (relativePath) => relativePath === `${normalized}/package.json`;
+  }
+  const prefix = normalized.slice(0, wildcardIndex);
+  const suffix = normalized.slice(wildcardIndex + 1);
+  return (relativePath) => {
+    if (!relativePath.startsWith(prefix) || !relativePath.endsWith(`${suffix}/package.json`)) {
+      return false;
+    }
+    const wildcardValue = relativePath.slice(prefix.length, -`${suffix}/package.json`.length);
+    return wildcardValue !== "" && !wildcardValue.includes("/");
+  };
+}
+
+function listPackageJsonFilesForDependencyPins(cwd) {
+  const trackedPackageJsonFiles = listTrackedPackageJsonFiles(cwd);
+  const workspacePackagePatterns = readWorkspacePackagePatterns(cwd);
+  if (!workspacePackagePatterns) {
+    return trackedPackageJsonFiles;
+  }
+  const matchers = workspacePackagePatterns.map(packagePatternToPackageJsonMatcher);
+  return trackedPackageJsonFiles.filter((relativePath) =>
+    matchers.some((matches) => matches(relativePath)),
+  );
+}
+
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
@@ -58,7 +101,7 @@ function isAllowedPinnedSpec(spec) {
 
 function collectPackageJsonViolations(cwd) {
   const violations = [];
-  for (const relativePath of listTrackedPackageJsonFiles(cwd)) {
+  for (const relativePath of listPackageJsonFilesForDependencyPins(cwd)) {
     const packageJson = readTrackedJson(cwd, relativePath);
     for (const section of PACKAGE_DEPENDENCY_SECTIONS) {
       for (const [name, spec] of Object.entries(packageJson[section] ?? {})) {
@@ -106,7 +149,7 @@ export function collectDependencyPinViolations(cwd = process.cwd()) {
 }
 
 export function collectDependencyPinAudit(cwd = process.cwd()) {
-  const packageJsonFiles = listTrackedPackageJsonFiles(cwd);
+  const packageJsonFiles = listPackageJsonFilesForDependencyPins(cwd);
   let packageSpecCount = 0;
   for (const relativePath of packageJsonFiles) {
     const packageJson = readTrackedJson(cwd, relativePath);

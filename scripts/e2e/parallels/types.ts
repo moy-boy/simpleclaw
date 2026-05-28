@@ -1,4 +1,4 @@
-export type Provider = "openai" | "anthropic" | "minimax";
+export type Provider = "openai";
 export type Mode = "fresh" | "upgrade" | "both";
 export type Platform = "macos" | "windows" | "linux";
 

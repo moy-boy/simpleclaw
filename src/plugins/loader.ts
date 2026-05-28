@@ -18,6 +18,7 @@ import {
   resolveMemoryDreamingPluginConfig,
 } from "../memory-host-sdk/dreaming.js";
 import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
+import { isSupportedPluginId, shouldEnforceSupportedPluginIds } from "../supported-surface.js";
 import {
   clearDetachedTaskLifecycleRuntimeRegistration,
   getDetachedTaskLifecycleRuntimeRegistration,
@@ -1537,6 +1538,13 @@ function activatePluginRegistry(
   }
 }
 
+function shouldEnforceSupportedPluginRuntimeSurface(params: {
+  cfg: OpenClawConfig;
+  env: NodeJS.ProcessEnv;
+}): boolean {
+  return shouldEnforceSupportedPluginIds(params.cfg) && params.env.VITEST === undefined;
+}
+
 export function loadOpenClawPlugins(options: PluginLoadOptions = {}): PluginRegistry {
   const requestedOnlyPluginIds = normalizePluginIdScope(options.onlyPluginIds);
   const requestedOnlyPluginIdSet = createPluginIdScopeSet(requestedOnlyPluginIds);
@@ -1575,6 +1583,7 @@ export function loadOpenClawPlugins(options: PluginLoadOptions = {}): PluginRegi
   const logger = options.logger ?? defaultLogger();
   const validateOnly = options.mode === "validate";
   const onlyPluginIdSet = createPluginIdScopeSet(onlyPluginIds);
+  const enforceSupportedPlugins = shouldEnforceSupportedPluginRuntimeSurface({ cfg, env });
 
   const cacheEnabled = options.cache !== false;
   if (cacheEnabled) {
@@ -1755,7 +1764,11 @@ export function loadOpenClawPlugins(options: PluginLoadOptions = {}): PluginRegi
       // Keep warning input scoped as well so partial snapshot loads only mention the
       // plugins that were intentionally requested for this registry.
       discoverablePlugins: manifestRegistry.plugins
-        .filter((plugin) => !onlyPluginIdSet || onlyPluginIdSet.has(plugin.id))
+        .filter(
+          (plugin) =>
+            (!onlyPluginIdSet || onlyPluginIdSet.has(plugin.id)) &&
+            (!enforceSupportedPlugins || isSupportedPluginId(plugin.id)),
+        )
         .map((plugin) => ({
           id: plugin.id,
           source: plugin.source,
@@ -1802,6 +1815,9 @@ export function loadOpenClawPlugins(options: PluginLoadOptions = {}): PluginRegi
       // Filter again at import time as a final guard. The earlier manifest filter keeps
       // warnings scoped; this one prevents loading/registering anything outside the scope.
       if (!matchesRequestedScope) {
+        continue;
+      }
+      if (enforceSupportedPlugins && !isSupportedPluginId(pluginId)) {
         continue;
       }
       const activationState = resolveEffectivePluginActivationState({
@@ -2590,6 +2606,7 @@ export async function loadOpenClawPluginCliRegistry(
   });
   const logger = options.logger ?? defaultLogger();
   const onlyPluginIdSet = createPluginIdScopeSet(onlyPluginIds);
+  const enforceSupportedPlugins = shouldEnforceSupportedPluginRuntimeSurface({ cfg, env });
   const loadPluginModule = createPluginModuleLoader(options);
   const { registry, registerCli } = createPluginRegistry({
     logger,
@@ -2626,7 +2643,11 @@ export async function loadOpenClawPluginCliRegistry(
     warningCacheKey: `${cacheKey}::cli-metadata`,
     warningCache: pluginLoaderCacheState,
     discoverablePlugins: manifestRegistry.plugins
-      .filter((plugin) => !onlyPluginIdSet || onlyPluginIdSet.has(plugin.id))
+      .filter(
+        (plugin) =>
+          (!onlyPluginIdSet || onlyPluginIdSet.has(plugin.id)) &&
+          (!enforceSupportedPlugins || isSupportedPluginId(plugin.id)),
+      )
       .map((plugin) => ({
         id: plugin.id,
         source: plugin.source,
@@ -2668,6 +2689,9 @@ export async function loadOpenClawPluginCliRegistry(
         pluginId,
       })
     ) {
+      continue;
+    }
+    if (enforceSupportedPlugins && !isSupportedPluginId(pluginId)) {
       continue;
     }
     const activationState = resolveEffectivePluginActivationState({

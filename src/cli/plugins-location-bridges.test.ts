@@ -80,11 +80,11 @@ describe("listPersistedBundledPluginLocationBridges", () => {
   it("keeps persisted bundled relocations npm-first for launch", async () => {
     readPersistedInstalledPluginIndexMock.mockResolvedValue(
       makeIndex({
-        pluginId: "diagnostics-otel",
-        manifestPath: "/app/dist/extensions/diagnostics-otel/openclaw.plugin.json",
+        pluginId: "discord",
+        manifestPath: "/app/dist/extensions/discord/openclaw.plugin.json",
         manifestHash: "hash",
-        source: "/app/dist/extensions/diagnostics-otel/index.js",
-        rootDir: "/app/dist/extensions/diagnostics-otel",
+        source: "/app/dist/extensions/discord/index.js",
+        rootDir: "/app/dist/extensions/discord",
         origin: "bundled",
         enabled: true,
         startup: startupInfo,
@@ -92,13 +92,13 @@ describe("listPersistedBundledPluginLocationBridges", () => {
         packageInstall: {
           defaultChoice: "clawhub",
           clawhub: {
-            spec: "clawhub:@openclaw/diagnostics-otel",
-            packageName: "@openclaw/diagnostics-otel",
+            spec: "clawhub:@openclaw/discord",
+            packageName: "@openclaw/discord",
             exactVersion: false,
           },
           npm: {
-            spec: "@openclaw/diagnostics-otel",
-            packageName: "@openclaw/diagnostics-otel",
+            spec: "@openclaw/discord",
+            packageName: "@openclaw/discord",
             selectorKind: "none",
             exactVersion: false,
             pinState: "floating-without-integrity",
@@ -107,18 +107,15 @@ describe("listPersistedBundledPluginLocationBridges", () => {
         },
       }),
     );
-    loadPluginManifestRegistryForInstalledIndexMock.mockReturnValue(
-      makeRegistry("diagnostics-otel"),
-    );
+    loadPluginManifestRegistryForInstalledIndexMock.mockReturnValue(makeRegistry("discord"));
 
     await expect(listPersistedBundledPluginLocationBridges({})).resolves.toEqual([
       {
-        bundledPluginId: "diagnostics-otel",
-        pluginId: "diagnostics-otel",
+        bundledPluginId: "discord",
+        pluginId: "discord",
         preferredSource: "npm",
-        npmSpec: "@openclaw/diagnostics-otel",
-        clawhubSpec: "clawhub:@openclaw/diagnostics-otel",
-        channelIds: ["diagnostics-otel"],
+        npmSpec: "@openclaw/discord",
+        channelIds: ["discord"],
       },
     ]);
   });
@@ -126,11 +123,11 @@ describe("listPersistedBundledPluginLocationBridges", () => {
   it("uses official external catalog metadata when the persisted bundled row lacks npm metadata", async () => {
     readPersistedInstalledPluginIndexMock.mockResolvedValue(
       makeIndex({
-        pluginId: "diagnostics-otel",
-        manifestPath: "/app/dist/extensions/diagnostics-otel/openclaw.plugin.json",
+        pluginId: "discord",
+        manifestPath: "/app/dist/extensions/discord/openclaw.plugin.json",
         manifestHash: "hash",
-        source: "/app/dist/extensions/diagnostics-otel/index.js",
-        rootDir: "/app/dist/extensions/diagnostics-otel",
+        source: "/app/dist/extensions/discord/index.js",
+        rootDir: "/app/dist/extensions/discord",
         origin: "bundled",
         enabled: true,
         startup: startupInfo,
@@ -138,26 +135,23 @@ describe("listPersistedBundledPluginLocationBridges", () => {
         packageInstall: {
           defaultChoice: "clawhub",
           clawhub: {
-            spec: "clawhub:@openclaw/diagnostics-otel",
-            packageName: "@openclaw/diagnostics-otel",
+            spec: "clawhub:@openclaw/discord",
+            packageName: "@openclaw/discord",
             exactVersion: false,
           },
           warnings: [],
         },
       }),
     );
-    loadPluginManifestRegistryForInstalledIndexMock.mockReturnValue(
-      makeRegistry("diagnostics-otel"),
-    );
+    loadPluginManifestRegistryForInstalledIndexMock.mockReturnValue(makeRegistry("discord"));
 
     await expect(listPersistedBundledPluginLocationBridges({})).resolves.toEqual([
       {
-        bundledPluginId: "diagnostics-otel",
-        pluginId: "diagnostics-otel",
+        bundledPluginId: "discord",
+        pluginId: "discord",
         preferredSource: "npm",
-        npmSpec: "@openclaw/diagnostics-otel",
-        clawhubSpec: "clawhub:@openclaw/diagnostics-otel",
-        channelIds: ["diagnostics-otel"],
+        npmSpec: "@openclaw/discord",
+        channelIds: ["discord"],
       },
     ]);
   });

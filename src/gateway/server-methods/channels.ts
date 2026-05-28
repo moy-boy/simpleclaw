@@ -17,6 +17,11 @@ import { getCurrentPluginMetadataSnapshot } from "../../plugins/current-plugin-m
 import { DEFAULT_ACCOUNT_ID } from "../../routing/session-key.js";
 import { defaultRuntime } from "../../runtime.js";
 import { normalizeOptionalString } from "../../shared/string-coerce.js";
+import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+} from "../../supported-surface.js";
 import { runTasksWithConcurrency } from "../../utils/run-with-concurrency.js";
 import {
   DEFAULT_CHANNEL_CONNECT_GRACE_MS,
@@ -57,6 +62,14 @@ type ChannelStopPayload = {
 
 const CHANNEL_STATUS_MAX_TIMEOUT_MS = 30_000;
 const CHANNEL_STATUS_PROBE_CONCURRENCY = 5;
+
+function isSupportedGatewayChannel(cfg: OpenClawConfig, channelId: ChannelId): boolean {
+  return !shouldEnforceSupportedChannelIds(cfg) || isSupportedChannelId(channelId);
+}
+
+function unsupportedGatewayChannelError(channelId: string): ReturnType<typeof errorShape> {
+  return errorShape(ErrorCodes.INVALID_REQUEST, formatUnsupportedChannelMessage(channelId));
+}
 
 function channelStatusTimeoutPayload(step: string, timeoutMs: number): Record<string, unknown> {
   return {
@@ -303,6 +316,10 @@ export const channelsHandlers: GatewayRequestHandlers = {
     const requestedChannel =
       typeof rawChannel === "string" ? normalizeChannelId(rawChannel) : undefined;
     const runtimeConfig = context.getRuntimeConfig();
+    if (requestedChannel && !isSupportedGatewayChannel(runtimeConfig, requestedChannel)) {
+      respond(false, undefined, unsupportedGatewayChannelError(requestedChannel));
+      return;
+    }
     const currentSnapshot = getCurrentPluginMetadataSnapshot({
       config: runtimeConfig,
       env: process.env,
@@ -315,9 +332,9 @@ export const channelsHandlers: GatewayRequestHandlers = {
     }).config;
     const runtime = context.getRuntimeSnapshot();
     const plugins = listChannelPlugins();
-    const selectedPlugins = requestedChannel
-      ? plugins.filter((plugin) => plugin.id === requestedChannel)
-      : plugins;
+    const selectedPlugins = (
+      requestedChannel ? plugins.filter((plugin) => plugin.id === requestedChannel) : plugins
+    ).filter((plugin) => isSupportedGatewayChannel(runtimeConfig, plugin.id));
     if (rawChannel !== undefined && !requestedChannel) {
       respond(
         false,
@@ -578,6 +595,11 @@ export const channelsHandlers: GatewayRequestHandlers = {
       );
       return;
     }
+    const runtimeConfig = context.getRuntimeConfig();
+    if (!isSupportedGatewayChannel(runtimeConfig, channelId)) {
+      respond(false, undefined, unsupportedGatewayChannelError(channelId));
+      return;
+    }
     if (!plugin.gateway?.startAccount) {
       respond(
         false,
@@ -587,7 +609,6 @@ export const channelsHandlers: GatewayRequestHandlers = {
       return;
     }
     try {
-      const runtimeConfig = context.getRuntimeConfig();
       const currentSnapshot = getCurrentPluginMetadataSnapshot({
         config: runtimeConfig,
         env: process.env,
@@ -630,6 +651,11 @@ export const channelsHandlers: GatewayRequestHandlers = {
         undefined,
         errorShape(ErrorCodes.INVALID_REQUEST, "invalid channels.stop channel"),
       );
+      return;
+    }
+    const runtimeConfig = context.getRuntimeConfig();
+    if (!isSupportedGatewayChannel(runtimeConfig, channelId)) {
+      respond(false, undefined, unsupportedGatewayChannelError(channelId));
       return;
     }
     const plugin = getChannelPlugin(channelId);
@@ -676,6 +702,11 @@ export const channelsHandlers: GatewayRequestHandlers = {
         undefined,
         errorShape(ErrorCodes.INVALID_REQUEST, "invalid channels.logout channel"),
       );
+      return;
+    }
+    const runtimeConfig = context.getRuntimeConfig();
+    if (!isSupportedGatewayChannel(runtimeConfig, channelId)) {
+      respond(false, undefined, unsupportedGatewayChannelError(channelId));
       return;
     }
     const plugin = getChannelPlugin(channelId);

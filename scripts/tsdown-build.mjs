@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { BUNDLED_PLUGIN_PATH_PREFIX } from "./lib/bundled-plugin-paths.mjs";
+import { listSupportedBundledPluginRoots } from "./lib/supported-surface.mjs";
 import { resolvePnpmRunner } from "./pnpm-runner.mjs";
 import {
   isSourceCheckoutRoot,
@@ -23,7 +24,9 @@ const DEFAULT_TSDOWN_NODE_OPTIONS = "--max-old-space-size=6144";
 const DEFAULT_TSDOWN_MAX_OLD_SPACE_MB = 6144;
 const TERMINATION_GRACE_MS = 5_000;
 const TSDOWN_OUTPUT_ROOTS = ["dist", "dist-runtime"];
-const GENERATED_SOURCE_DECLARATION_PATHSPEC = ":(glob)extensions/**/*.d.ts";
+const GENERATED_SOURCE_DECLARATION_PATHSPECS = listSupportedBundledPluginRoots().map(
+  (root) => `:(glob)${root}/**/*.d.ts`,
+);
 const SOURCE_DECLARATION_SOURCE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
 
 function removeDistPluginNodeModulesSymlinks(rootDir) {
@@ -105,7 +108,13 @@ export function pruneUntrackedGeneratedSourceDeclarations(params = {}) {
   try {
     result = spawnSyncImpl(
       "git",
-      ["ls-files", "--others", "--exclude-standard", "--", GENERATED_SOURCE_DECLARATION_PATHSPEC],
+      [
+        "ls-files",
+        "--others",
+        "--exclude-standard",
+        "--",
+        ...GENERATED_SOURCE_DECLARATION_PATHSPECS,
+      ],
       {
         cwd,
         encoding: "utf8",

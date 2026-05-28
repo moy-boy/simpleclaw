@@ -16,9 +16,6 @@ export GATEWAY_AUTH_TOKEN_REF="upgrade-survivor-token"
 export OPENAI_API_KEY="sk-openclaw-upgrade-survivor"
 export DISCORD_BOT_TOKEN="upgrade-survivor-discord-token"
 export TELEGRAM_BOT_TOKEN="123456:upgrade-survivor-telegram-token"
-export FEISHU_APP_SECRET="upgrade-survivor-feishu-secret"
-export MATRIX_ACCESS_TOKEN="upgrade-survivor-matrix-token"
-export BRAVE_API_KEY="BSA_upgrade_survivor_brave_key"
 
 ARTIFACT_ROOT="$(dirname "${OPENCLAW_UPGRADE_SURVIVOR_SUMMARY_JSON:-/tmp/openclaw-upgrade-survivor-artifacts/summary.json}")"
 mkdir -p "$ARTIFACT_ROOT"
@@ -43,7 +40,6 @@ CURRENT_PHASE="setup"
 FAILURE_PHASE=""
 FAILURE_MESSAGE=""
 gateway_pid=""
-plugin_registry_pid=""
 baseline_spec=""
 baseline_version=""
 baseline_version_expected="0"
@@ -216,9 +212,6 @@ NODE
 }
 
 cleanup() {
-  if [ -n "${plugin_registry_pid:-}" ]; then
-    kill "$plugin_registry_pid" >/dev/null 2>&1 || true
-  fi
   openclaw_e2e_terminate_gateways "${gateway_pid:-}"
   if [ -s "$SYSTEMCTL_SHIM_PID_FILE" ]; then
     local shim_pid
@@ -312,10 +305,6 @@ plugin_deps_cleanup_plugin_dirs() {
     "$(package_root)/extensions/$plugin"
 }
 
-configured_plugin_installs_enabled() {
-  [ "$SCENARIO" = "configured-plugin-installs" ]
-}
-
 source_only_plugin_shadow_enabled() {
   [ "$SCENARIO" = "stale-source-plugin-shadow" ]
 }
@@ -355,92 +344,6 @@ export default {
 };
 TS
   echo "Seeded source-only plugin shadow: $shadow_root"
-}
-
-configure_configured_plugin_install_fixture_registry() {
-  configured_plugin_installs_enabled || return 0
-
-  local fixture_root="$ARTIFACT_ROOT/configured-plugin-installs-npm-fixture"
-  local package_dir="$fixture_root/package"
-  local tarball="$fixture_root/openclaw-brave-plugin-2026.5.2.tgz"
-  local port_file="$fixture_root/npm-registry-port"
-  local log_file="$fixture_root/npm-registry.log"
-  mkdir -p "$package_dir"
-  FIXTURE_PACKAGE_DIR="$package_dir" node <<'NODE'
-const fs = require("node:fs");
-const path = require("node:path");
-const root = process.env.FIXTURE_PACKAGE_DIR;
-fs.mkdirSync(root, { recursive: true });
-fs.writeFileSync(
-  path.join(root, "package.json"),
-  `${JSON.stringify(
-    {
-      name: "@openclaw/brave-plugin",
-      version: "2026.5.2",
-      openclaw: { extensions: ["./index.js"] },
-    },
-    null,
-    2,
-  )}\n`,
-);
-fs.writeFileSync(
-  path.join(root, "openclaw.plugin.json"),
-  `${JSON.stringify(
-    {
-      id: "brave",
-      activation: { onStartup: false },
-      providerAuthEnvVars: { brave: ["BRAVE_API_KEY"] },
-      contracts: { webSearchProviders: ["brave"] },
-      configSchema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          webSearch: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              apiKey: { type: ["string", "object"] },
-              mode: { type: "string", enum: ["web", "llm-context"] },
-              baseUrl: { type: ["string", "object"] },
-            },
-          },
-        },
-      },
-    },
-    null,
-    2,
-  )}\n`,
-);
-fs.writeFileSync(
-  path.join(root, "index.js"),
-  `module.exports = { id: "brave", name: "Brave Fixture", register() {} };\n`,
-);
-NODE
-  tar -czf "$tarball" -C "$fixture_root" package
-  node scripts/e2e/lib/plugins/npm-registry-server.mjs \
-    "$port_file" \
-    "@openclaw/brave-plugin" \
-    "2026.5.2" \
-    "$tarball" \
-    >"$log_file" 2>&1 &
-  plugin_registry_pid="$!"
-
-  for _ in $(seq 1 100); do
-    if [ -s "$port_file" ]; then
-      export NPM_CONFIG_REGISTRY="http://127.0.0.1:$(cat "$port_file")"
-      export npm_config_registry="$NPM_CONFIG_REGISTRY"
-      return 0
-    fi
-    if ! kill -0 "$plugin_registry_pid" 2>/dev/null; then
-      cat "$log_file" >&2 || true
-      return 1
-    fi
-    sleep 0.1
-  done
-
-  cat "$log_file" >&2 || true
-  echo "Timed out waiting for configured plugin install npm fixture registry." >&2
-  return 1
 }
 
 legacy_plugin_dependency_probe_paths() {
@@ -1206,7 +1109,7 @@ ensure_gateway_started() {
 
 check_gateway_probes() {
   healthz_seconds="$(probe_gateway_endpoint /healthz live "$HEALTHZ_JSON")"
-  export OPENCLAW_UPGRADE_SURVIVOR_READYZ_ALLOW_FAILING="discord,telegram,whatsapp,feishu,matrix"
+  export OPENCLAW_UPGRADE_SURVIVOR_READYZ_ALLOW_FAILING="discord,telegram"
   readyz_seconds="$(probe_gateway_endpoint /readyz ready "$READYZ_JSON")"
   unset OPENCLAW_UPGRADE_SURVIVOR_READYZ_ALLOW_FAILING
 }
@@ -1251,7 +1154,6 @@ phase prepare-update-restart-probe prepare_update_restart_probe
 phase update-candidate update_candidate
 phase root-managed-vps-cli-usable assert_root_managed_vps_cli_usable
 phase assert-legacy-plugin-dependency-debris-before-doctor assert_legacy_plugin_dependency_debris_before_doctor
-phase configure-configured-plugin-install-fixture-registry configure_configured_plugin_install_fixture_registry
 phase doctor run_doctor
 phase assert-legacy-plugin-dependency-debris-cleaned assert_legacy_plugin_dependency_debris_cleaned
 phase assert-legacy-runtime-deps-symlink-repaired assert_legacy_runtime_deps_symlink_repaired

@@ -20,16 +20,7 @@ export type AuthChoiceGroup = {
   options: AuthChoiceOption[];
 };
 
-export const CORE_AUTH_CHOICE_OPTIONS: ReadonlyArray<AuthChoiceOption> = [
-  {
-    value: "custom-api-key",
-    label: "Custom Provider",
-    hint: "Any OpenAI or Anthropic compatible endpoint",
-    groupId: "custom",
-    groupLabel: "Custom Provider",
-    groupHint: "Any OpenAI or Anthropic compatible endpoint",
-  },
-];
+export const CORE_AUTH_CHOICE_OPTIONS: ReadonlyArray<AuthChoiceOption> = [];
 
 export function formatStaticAuthChoiceChoicesForCli(params?: {
   includeSkip?: boolean;

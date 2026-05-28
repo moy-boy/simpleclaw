@@ -84,27 +84,9 @@ const representativeConfigSteps = [
     "channels.telegram",
     "channels-telegram.json",
   ),
-  configSetJsonFile(
-    "channels-whatsapp",
-    "whatsapp-channel",
-    "channels.whatsapp",
-    "channels-whatsapp.json",
-  ),
 ];
 
 const scenarioConfigSteps = new Map([
-  [
-    "feishu-channel",
-    [
-      configSetJsonFile("plugins-feishu", "plugins", "plugins", "plugins-feishu.json"),
-      configSetJsonFile(
-        "channels-feishu",
-        "feishu-channel",
-        "channels.feishu",
-        "channels-feishu.json",
-      ),
-    ],
-  ],
   [
     "tilde-log-path",
     [
@@ -113,28 +95,6 @@ const scenarioConfigSteps = new Map([
         intent: "logging",
         argv: ["config", "set", "logging.file", "~/openclaw-upgrade-survivor/gateway.jsonl"],
       },
-    ],
-  ],
-  [
-    "configured-plugin-installs",
-    [
-      configSetJsonFile(
-        "plugins-configured-installs",
-        "configured-plugin-installs",
-        "plugins",
-        "plugins-configured-installs.json",
-      ),
-      {
-        id: "channels-whatsapp-unset",
-        intent: "configured-plugin-installs",
-        argv: ["config", "unset", "channels.whatsapp"],
-      },
-      configSetJsonFile(
-        "channels-matrix",
-        "configured-plugin-installs",
-        "channels.matrix",
-        "channels-matrix.json",
-      ),
     ],
   ],
 ]);
@@ -161,12 +121,6 @@ function selectedScenario() {
 function adaptStepForBaseline(step, baselineVersion, summary) {
   if (!isReleaseBefore(baselineVersion, "2026.4.0")) {
     return step;
-  }
-  if (step.id === "plugins-feishu" || step.id === "channels-feishu") {
-    if (!summary.skippedIntents.includes("feishu-channel")) {
-      summary.skippedIntents.push("feishu-channel");
-    }
-    return null;
   }
   if (step.id === "agents") {
     const agents = JSON.parse(step.argv[3]);
@@ -256,7 +210,6 @@ function applyRecipe() {
       "plugins",
       "discord-channel",
       "telegram-channel",
-      "whatsapp-channel",
       ...scenarioSteps.map((step) => step.intent),
     ],
     skippedIntents: [],

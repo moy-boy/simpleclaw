@@ -2,16 +2,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { pluginSdkSubpaths } from "../../scripts/lib/plugin-sdk-entries.mjs";
 import privateLocalOnlyPluginSdkSubpaths from "../../scripts/lib/plugin-sdk-private-local-only-subpaths.json" with { type: "json" };
+import { listSupportedBundledPluginRoots } from "../../scripts/lib/supported-surface.mjs";
 import {
   detectVitestHostInfo as detectVitestHostInfoImpl,
   isCiLikeEnv,
   resolveLocalVitestMaxWorkers as resolveLocalVitestMaxWorkersImpl,
   resolveLocalVitestScheduling as resolveLocalVitestSchedulingImpl,
 } from "../../scripts/lib/vitest-local-scheduling.mjs";
-import {
-  BUNDLED_PLUGIN_ROOT_DIR,
-  BUNDLED_PLUGIN_TEST_GLOB,
-} from "./vitest.bundled-plugin-paths.ts";
+import { BUNDLED_PLUGIN_ROOT_DIR } from "./vitest.bundled-plugin-paths.ts";
 import { loadVitestExperimentalConfig } from "./vitest.performance-config.ts";
 import { shouldPrintVitestThrottle } from "./vitest.system-load.ts";
 
@@ -65,6 +63,9 @@ export function resolveDefaultVitestPool(
 }
 
 export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const supportedBundledPluginTestGlobs = listSupportedBundledPluginRoots().map(
+  (root) => `${root}/**/*.test.ts`,
+);
 export const nonIsolatedRunnerPath = path.join(repoRoot, "test", "non-isolated-runner.ts");
 export function resolveRepoRootPath(value: string): string {
   return path.isAbsolute(value) ? value : path.join(repoRoot, value);
@@ -226,30 +227,9 @@ export const sharedVitestConfig = {
       "test/vitest/vitest.cron.config.ts",
       "test/vitest/vitest.daemon.config.ts",
       "test/vitest/vitest.e2e.config.ts",
-      "test/vitest/vitest.extension-acpx-paths.mjs",
-      "test/vitest/vitest.extension-acpx.config.ts",
       "test/vitest/vitest.extension-channel-single-config.ts",
       "test/vitest/vitest.extension-channel-split-paths.mjs",
-      "test/vitest/vitest.extension-channels.config.ts",
-      "test/vitest/vitest.extension-diffs-paths.mjs",
-      "test/vitest/vitest.extension-diffs.config.ts",
       "test/vitest/vitest.extension-discord.config.ts",
-      "test/vitest/vitest.extension-feishu-paths.mjs",
-      "test/vitest/vitest.extension-feishu.config.ts",
-      "test/vitest/vitest.extension-imessage.config.ts",
-      "test/vitest/vitest.extension-irc-paths.mjs",
-      "test/vitest/vitest.extension-irc.config.ts",
-      "test/vitest/vitest.extension-line.config.ts",
-      "test/vitest/vitest.extension-mattermost-paths.mjs",
-      "test/vitest/vitest.extension-mattermost.config.ts",
-      "test/vitest/vitest.extension-matrix-paths.mjs",
-      "test/vitest/vitest.extension-matrix.config.ts",
-      "test/vitest/vitest.extension-memory-paths.mjs",
-      "test/vitest/vitest.extension-memory.config.ts",
-      "test/vitest/vitest.extension-messaging-paths.mjs",
-      "test/vitest/vitest.extension-messaging.config.ts",
-      "test/vitest/vitest.extension-msteams-paths.mjs",
-      "test/vitest/vitest.extension-msteams.config.ts",
       "test/vitest/vitest.extensions.config.ts",
       "test/vitest/vitest.gateway.config.ts",
       "test/vitest/vitest.gateway-core.config.ts",
@@ -277,19 +257,9 @@ export const sharedVitestConfig = {
       "test/vitest/vitest.secrets.config.ts",
       "test/vitest/vitest.plugin-sdk.config.ts",
       "test/vitest/vitest.plugins.config.ts",
-      "test/vitest/vitest.extension-telegram-paths.mjs",
       "test/vitest/vitest.extension-telegram.config.ts",
-      "test/vitest/vitest.extension-voice-call-paths.mjs",
-      "test/vitest/vitest.extension-voice-call.config.ts",
-      "test/vitest/vitest.extension-whatsapp-paths.mjs",
-      "test/vitest/vitest.extension-whatsapp.config.ts",
-      "test/vitest/vitest.extension-zalo-paths.mjs",
-      "test/vitest/vitest.extension-zalo.config.ts",
-      "test/vitest/vitest.extension-provider-paths.mjs",
       "test/vitest/vitest.extension-provider-openai.config.ts",
-      "test/vitest/vitest.extension-providers.config.ts",
-      "test/vitest/vitest.extension-signal.config.ts",
-      "test/vitest/vitest.extension-slack.config.ts",
+      "test/vitest/vitest.supported-extension-projects.mjs",
       "test/vitest/vitest.logging.config.ts",
       "test/vitest/vitest.process.config.ts",
       "test/vitest/vitest.tasks.config.ts",
@@ -297,7 +267,7 @@ export const sharedVitestConfig = {
     ],
     include: [
       "src/**/*.test.ts",
-      BUNDLED_PLUGIN_TEST_GLOB,
+      ...supportedBundledPluginTestGlobs,
       "packages/**/*.test.ts",
       "test/**/*.test.ts",
       "ui/src/ui/app-chat.test.ts",
@@ -366,7 +336,6 @@ export const sharedVitestConfig = {
         "src/plugins/**",
         "src/providers/**",
         "src/secrets/**",
-        "src/agents/model-scan.ts",
         "src/agents/pi-embedded-runner.ts",
         "src/agents/sandbox-paths.ts",
         "src/agents/sandbox.ts",

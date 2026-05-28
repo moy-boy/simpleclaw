@@ -89,7 +89,7 @@ exec 3>"$input_fifo"
 wait_for_log "Continue?" 60
 send $'y\r' 0.4
 wait_for_log "to search" 60
-send $'ollama\r' 0.4
+send $'openai\r' 0.4
 wait_for_log "Enable hooks?" 60
 send $' \r' 0.4
 send $'\r' 0.4

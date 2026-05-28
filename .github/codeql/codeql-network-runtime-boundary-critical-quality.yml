@@ -8,7 +8,10 @@ queries:
 
 paths:
   - src
-  - extensions
+  - extensions/codex
+  - extensions/discord
+  - extensions/openai
+  - extensions/telegram
 
 paths-ignore:
   - "**/node_modules"
@@ -25,4 +28,3 @@ paths-ignore:
   - "**/*mock*"
   - "**/*fixture*"
   - "**/*bench*"
-  - "extensions/diffs/assets/**"

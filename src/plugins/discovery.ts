@@ -7,6 +7,7 @@ import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
 } from "../shared/string-coerce.js";
+import { isSupportedPluginId } from "../supported-surface.js";
 import { resolveUserPath } from "../utils.js";
 import { detectBundleManifestFormat, loadBundleManifest } from "./bundle-manifest.js";
 import { resolveSourceCheckoutDependencyDiagnostic } from "./bundled-dir.js";
@@ -806,6 +807,7 @@ function discoverInDirectory(params: {
   packageManifestCache?: Map<string, PackageManifest | null>;
   recurseDirectories?: boolean;
   skipDirectories?: Set<string>;
+  directoryFilter?: (entryName: string) => boolean;
   visitedDirectories?: Set<string>;
 }) {
   if (!fs.existsSync(params.dir)) {
@@ -856,6 +858,9 @@ function discoverInDirectory(params: {
       continue;
     }
     if (params.skipDirectories?.has(entry.name)) {
+      continue;
+    }
+    if (params.directoryFilter && !params.directoryFilter(entry.name)) {
       continue;
     }
     if (shouldIgnoreScannedDirectory(entry.name)) {
@@ -1030,6 +1035,13 @@ function isSourceCheckoutExtensionsDir(extensionsDir: string): boolean {
     fs.existsSync(path.join(packageRoot, "src")) &&
     fs.existsSync(extensionsDir) &&
     hasDiscoverablePluginTree(extensionsDir)
+  );
+}
+
+function shouldFilterUnsupportedSourceCheckoutBundledDirs(extensionsDir: string): boolean {
+  return (
+    isSourceCheckoutExtensionsDir(extensionsDir) &&
+    fs.existsSync(path.join(path.dirname(extensionsDir), "scripts", "lib", "supported-surface.mjs"))
   );
 }
 
@@ -1380,6 +1392,9 @@ export function discoverOpenClawPlugins(params: {
         });
       }
       if (roots.stock) {
+        const bundledDirectoryFilter = shouldFilterUnsupportedSourceCheckoutBundledDirs(roots.stock)
+          ? isSupportedPluginId
+          : undefined;
         discoverInDirectory({
           dir: roots.stock,
           origin: "bundled",
@@ -1390,6 +1405,7 @@ export function discoverOpenClawPlugins(params: {
           seen,
           realpathCache,
           packageManifestCache,
+          ...(bundledDirectoryFilter ? { directoryFilter: bundledDirectoryFilter } : {}),
         });
       }
       const sourceCheckoutExtensionsDir = resolveBundledSourceCheckoutExtensionsDir(roots.stock);
@@ -1410,6 +1426,9 @@ export function discoverOpenClawPlugins(params: {
           realpathCache,
           packageManifestCache,
           skipDirectories: readChildDirectoryNames(roots.stock),
+          ...(shouldFilterUnsupportedSourceCheckoutBundledDirs(sourceCheckoutExtensionsDir)
+            ? { directoryFilter: isSupportedPluginId }
+            : {}),
         });
       }
       const installedPaths = collectInstalledPluginRecordPaths(

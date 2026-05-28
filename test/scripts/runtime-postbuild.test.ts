@@ -35,12 +35,7 @@ async function expectPathMissing(targetPath: string): Promise<void> {
 
 describe("runtime postbuild static assets", () => {
   it("tracks plugin-owned static assets that release packaging must ship", () => {
-    expect(listStaticExtensionAssetOutputs()).toEqual([
-      "dist/extensions/acpx/error-format.mjs",
-      "dist/extensions/acpx/mcp-command-line.mjs",
-      "dist/extensions/acpx/mcp-proxy.mjs",
-      "dist/extensions/diffs/assets/viewer-runtime.js",
-    ]);
+    expect(listStaticExtensionAssetOutputs()).toEqual([]);
   });
 
   it("discovers repo static asset metadata without scanning extension directories", () => {
@@ -55,23 +50,18 @@ describe("runtime postbuild static assets", () => {
       };
     `);
 
-    expect(payload.outputs).toEqual([
-      "dist/extensions/acpx/error-format.mjs",
-      "dist/extensions/acpx/mcp-command-line.mjs",
-      "dist/extensions/acpx/mcp-proxy.mjs",
-      "dist/extensions/diffs/assets/viewer-runtime.js",
-    ]);
-    expect(payload.sources).toContain("extensions/diffs/assets/viewer-runtime.js");
+    expect(payload.outputs).toEqual([]);
+    expect(payload.sources).toEqual([]);
   });
 
   it("discovers static assets from plugin package metadata", async () => {
     const rootDir = createTempDir("openclaw-runtime-postbuild-");
-    const packageDir = path.join(rootDir, "extensions", "demo");
+    const packageDir = path.join(rootDir, "extensions", "telegram");
     await fs.mkdir(packageDir, { recursive: true });
     await fs.writeFile(
       path.join(packageDir, "package.json"),
       JSON.stringify({
-        name: "@openclaw/demo",
+        name: "@openclaw/telegram",
         openclaw: {
           build: {
             staticAssets: [
@@ -88,17 +78,17 @@ describe("runtime postbuild static assets", () => {
 
     expect(discoverStaticExtensionAssets({ rootDir })).toEqual([
       {
-        pluginDir: "demo",
-        src: "extensions/demo/assets/runtime.js",
-        dest: "dist/extensions/demo/assets/runtime.js",
+        pluginDir: "telegram",
+        src: "extensions/telegram/assets/runtime.js",
+        dest: "dist/extensions/telegram/assets/runtime.js",
       },
     ]);
   });
 
   it("copies declared static assets into dist", async () => {
     const rootDir = createTempDir("openclaw-runtime-postbuild-");
-    const src = "extensions/acpx/src/runtime-internals/mcp-proxy.mjs";
-    const dest = "dist/extensions/acpx/mcp-proxy.mjs";
+    const src = "extensions/telegram/assets/runtime.mjs";
+    const dest = "dist/extensions/telegram/assets/runtime.mjs";
     const sourcePath = path.join(rootDir, src);
     const destPath = path.join(rootDir, dest);
     await fs.mkdir(path.dirname(sourcePath), { recursive: true });
@@ -114,10 +104,10 @@ describe("runtime postbuild static assets", () => {
 
   it("stages copied static assets byte-for-byte during the same postbuild run", async () => {
     const rootDir = createTempDir("openclaw-runtime-postbuild-");
-    const source = "extensions/diffs/assets/viewer-runtime.js";
+    const source = "extensions/telegram/assets/viewer-runtime.js";
     const output = "assets/viewer-runtime.js";
-    const distAsset = "dist/extensions/diffs/assets/viewer-runtime.js";
-    const runtimeAsset = "dist-runtime/extensions/diffs/assets/viewer-runtime.js";
+    const distAsset = "dist/extensions/telegram/assets/viewer-runtime.js";
+    const runtimeAsset = "dist-runtime/extensions/telegram/assets/viewer-runtime.js";
 
     await fs.mkdir(path.join(rootDir, "src", "plugin-sdk"), { recursive: true });
     await fs.writeFile(
@@ -125,11 +115,11 @@ describe("runtime postbuild static assets", () => {
       "module.exports = {};\n",
       "utf8",
     );
-    await fs.mkdir(path.join(rootDir, "extensions", "diffs", "assets"), { recursive: true });
+    await fs.mkdir(path.join(rootDir, "extensions", "telegram", "assets"), { recursive: true });
     await fs.writeFile(
-      path.join(rootDir, "extensions", "diffs", "package.json"),
+      path.join(rootDir, "extensions", "telegram", "package.json"),
       JSON.stringify({
-        name: "@openclaw/diffs",
+        name: "@openclaw/telegram",
         openclaw: {
           extensions: ["./index.ts"],
           build: {
@@ -140,8 +130,8 @@ describe("runtime postbuild static assets", () => {
       "utf8",
     );
     await fs.writeFile(
-      path.join(rootDir, "extensions", "diffs", "openclaw.plugin.json"),
-      '{"id":"diffs"}\n',
+      path.join(rootDir, "extensions", "telegram", "openclaw.plugin.json"),
+      '{"id":"telegram"}\n',
       "utf8",
     );
     await fs.writeFile(path.join(rootDir, source), "export const viewer = true;\n", "utf8");
@@ -164,8 +154,8 @@ describe("runtime postbuild static assets", () => {
   it("preserves restored dist static assets when plugin sources are absent", async () => {
     const rootDir = createTempDir("openclaw-runtime-postbuild-");
     const output = "assets/viewer-runtime.js";
-    const distPluginDir = path.join(rootDir, "dist", "extensions", "diffs");
-    const runtimeAsset = path.join(rootDir, "dist-runtime", "extensions", "diffs", output);
+    const distPluginDir = path.join(rootDir, "dist", "extensions", "telegram");
+    const runtimeAsset = path.join(rootDir, "dist-runtime", "extensions", "telegram", output);
 
     await fs.mkdir(path.join(rootDir, "src", "plugin-sdk"), { recursive: true });
     await fs.writeFile(
@@ -177,13 +167,13 @@ describe("runtime postbuild static assets", () => {
     await fs.writeFile(path.join(distPluginDir, "index.js"), "export default {};\n", "utf8");
     await fs.writeFile(
       path.join(distPluginDir, "openclaw.plugin.json"),
-      '{"id":"diffs"}\n',
+      '{"id":"telegram"}\n',
       "utf8",
     );
     await fs.writeFile(
       path.join(distPluginDir, "package.json"),
       JSON.stringify({
-        name: "@openclaw/diffs",
+        name: "@openclaw/telegram",
         openclaw: {
           extensions: ["./index.js"],
           build: {

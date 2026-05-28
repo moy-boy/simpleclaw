@@ -45,7 +45,7 @@ describe("scripts/lib/plugin-prerelease-test-plan.mjs", () => {
     expect(plan.dockerLanes).toEqual([
       "npm-onboard-channel-agent",
       "npm-onboard-discord-channel-agent",
-      "npm-onboard-slack-channel-agent",
+      "npm-onboard-telegram-channel-agent",
       "doctor-switch",
       "update-channel-switch",
       "plugins-offline",
@@ -551,43 +551,18 @@ describe("scripts/lib/plugin-prerelease-test-plan.mjs", () => {
     );
   });
 
-  it("keeps runtime tool coverage blocking in release checks", () => {
+  it("keeps release checks off the removed QA runtime coverage lane", () => {
     const releaseChecksSource = readFileSync(
       ".github/workflows/openclaw-release-checks.yml",
       "utf8",
     );
     const releaseChecksWorkflow = parse(releaseChecksSource);
-    const runtimeToolCoverage = releaseChecksWorkflow.jobs.runtime_tool_coverage_release_checks;
 
-    expect(runtimeToolCoverage["continue-on-error"]).toBeUndefined();
-    expect(runtimeToolCoverage.needs).toEqual([
-      "resolve_target",
-      "qa_lab_runtime_parity_release_checks",
-    ]);
-    expect(runtimeToolCoverage.steps).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: "Enforce standard runtime tool coverage",
-          run: expect.stringContaining("pnpm openclaw qa coverage"),
-        }),
-      ]),
-    );
-    expect(runtimeToolCoverage.steps).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: "Enforce standard runtime tool coverage",
-          run: expect.stringContaining(
-            "--summary .artifacts/qa-e2e/runtime-parity-standard/qa-suite-summary.json",
-          ),
-        }),
-      ]),
-    );
-    expect(releaseChecksWorkflow.jobs.summary.needs).toContain(
+    expect(releaseChecksWorkflow.jobs.runtime_tool_coverage_release_checks).toBeUndefined();
+    expect(releaseChecksWorkflow.jobs.summary.needs).not.toContain(
       "runtime_tool_coverage_release_checks",
     );
-    expect(releaseChecksSource).toContain(
-      '"runtime_tool_coverage_release_checks=${{ needs.runtime_tool_coverage_release_checks.result }}"',
-    );
+    expect(releaseChecksSource).not.toContain("pnpm openclaw qa coverage");
   });
 
   it("keeps the live-ish availability check redacted", () => {

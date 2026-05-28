@@ -17,6 +17,7 @@ import {
 } from "../../plugins/official-external-plugin-repair-hints.js";
 import { formatDocsLink } from "../../terminal/links.js";
 import { theme } from "../../terminal/theme.js";
+import { isSupportedChannelId, shouldEnforceSupportedChannelIds } from "../supported-surface.js";
 import {
   appendBaseUrlBit,
   appendEnabledConfiguredLinkedBits,
@@ -65,10 +66,16 @@ export async function formatConfigChannelsStatusLines(
 
   const sourceConfig = opts?.sourceConfig ?? cfg;
   const requestedChannel = opts?.channel ? normalizeChannelId(opts.channel) : null;
+  const enforceSupportedChannels =
+    shouldEnforceSupportedChannelIds(cfg) || shouldEnforceSupportedChannelIds(sourceConfig);
   const plugins = listReadOnlyChannelPluginsForConfig(cfg, {
     activationSourceConfig: sourceConfig,
     includeSetupFallbackPlugins: true,
-  }).filter((plugin) => !requestedChannel || plugin.id === requestedChannel);
+  }).filter(
+    (plugin) =>
+      (!requestedChannel || plugin.id === requestedChannel) &&
+      (!enforceSupportedChannels || isSupportedChannelId(plugin.id)),
+  );
   const visibleChannelIds = new Set<string>();
   for (const plugin of plugins) {
     visibleChannelIds.add(plugin.id);
@@ -110,6 +117,9 @@ export async function formatConfigChannelsStatusLines(
     ]),
   ];
   for (const channelId of missingChannelIds) {
+    if (enforceSupportedChannels && !isSupportedChannelId(channelId)) {
+      continue;
+    }
     if (requestedChannel && channelId !== requestedChannel) {
       continue;
     }

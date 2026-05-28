@@ -71,24 +71,24 @@ afterEach(() => {
 describe("buildOfficialChannelCatalog", () => {
   it("includes publishable official channel plugins and skips non-publishable entries", () => {
     const repoRoot = makeRepoRoot("openclaw-official-channel-catalog-");
-    writeJson(path.join(repoRoot, "extensions", "whatsapp", "package.json"), {
-      name: "@openclaw/whatsapp",
+    writeJson(path.join(repoRoot, "extensions", "telegram", "package.json"), {
+      name: "@openclaw/telegram",
       version: "2026.3.23",
-      description: "OpenClaw WhatsApp channel plugin",
+      description: "OpenClaw Telegram channel plugin",
       openclaw: {
         channel: {
-          id: "whatsapp",
-          label: "WhatsApp",
-          selectionLabel: "WhatsApp (QR link)",
-          detailLabel: "WhatsApp Web",
-          docsPath: "/channels/whatsapp",
-          blurb: "works with your own number; recommend a separate phone + eSIM.",
+          id: "telegram",
+          label: "Telegram",
+          selectionLabel: "Telegram (Bot API)",
+          detailLabel: "Telegram Bot",
+          docsPath: "/channels/telegram",
+          docsLabel: "telegram",
+          blurb: "register a bot with @BotFather and get going.",
         },
         install: {
-          clawhubSpec: "clawhub:@openclaw/whatsapp",
-          npmSpec: "@openclaw/whatsapp",
-          localPath: bundledPluginRoot("whatsapp"),
-          defaultChoice: "clawhub",
+          npmSpec: "@openclaw/telegram",
+          localPath: bundledPluginRoot("telegram"),
+          defaultChoice: "npm",
         },
         release: {
           publishToNpm: true,
@@ -118,129 +118,90 @@ describe("buildOfficialChannelCatalog", () => {
 
     expect(
       summarizeCatalogEntry(
-        findCatalogEntry(entries, (entry) => entry.name === "@wecom/wecom-openclaw-plugin"),
+        findCatalogEntry(entries, (entry) => entry.name === "@openclaw/discord"),
       ),
     ).toEqual({
-      name: "@wecom/wecom-openclaw-plugin",
-      description: "OpenClaw WeCom channel plugin by the Tencent WeCom team.",
-      source: "external",
-      plugin: {
-        id: "wecom-openclaw-plugin",
-        label: "WeCom",
-      },
-      channel: {
-        id: "wecom",
-        label: "WeCom",
-        selectionLabel: "WeCom（企业微信）",
-        detailLabel: "WeCom",
-        docsLabel: "wecom",
-        docsPath: "/plugins/community#wecom",
-        blurb: "Enterprise messaging and documents, scheduling, task tools.",
-        order: 45,
-        aliases: ["qywx", "wework", "enterprise-wechat"],
-      },
-      install: {
-        npmSpec: "@wecom/wecom-openclaw-plugin@2026.5.7",
-        defaultChoice: "npm",
-        expectedIntegrity:
-          "sha512-TCkP9as00WfEhgFWG8YL/rcmaWGIshAki2HQh83nTRccGfVBCoGjrEboTTqq3yDmK9koWTV11zi8u8A4dNtvug==",
-      },
-    });
-    expect(
-      summarizeCatalogEntry(
-        findCatalogEntry(entries, (entry) => entry.name === "openclaw-plugin-yuanbao"),
-      ),
-    ).toEqual({
-      name: "openclaw-plugin-yuanbao",
-      description: "OpenClaw Yuanbao channel plugin by the Tencent Yuanbao team.",
-      source: "external",
-      plugin: {
-        id: "openclaw-plugin-yuanbao",
-        label: "Yuanbao",
-      },
-      channel: {
-        id: "yuanbao",
-        label: "Yuanbao",
-        selectionLabel: "Yuanbao (元宝)",
-        detailLabel: "Yuanbao",
-        docsLabel: "yuanbao",
-        docsPath: "/plugins/community#yuanbao",
-        blurb: "Tencent Yuanbao AI assistant conversation channel.",
-        order: 85,
-        aliases: ["yuanbao", "yb", "tencent-yuanbao", "元宝"],
-      },
-      install: {
-        npmSpec: "openclaw-plugin-yuanbao@2.13.1",
-        defaultChoice: "npm",
-        expectedIntegrity:
-          "sha512-lH2I9/nsmrg7l0YJJSQhOSpWMEFBAa6FwKbZcRLDFHDT2+mOZkHa44XE+8KYN4VmorlUdAxHzpZQmVr7C98IuA==",
-      },
-    });
-    expect(
-      summarizeCatalogEntry(
-        findCatalogEntry(entries, (entry) => entry.name === "@openclaw/whatsapp"),
-      ),
-    ).toEqual({
-      name: "@openclaw/whatsapp",
-      description: "OpenClaw WhatsApp channel plugin",
+      name: "@openclaw/discord",
+      description: "OpenClaw Discord channel plugin",
       source: "official",
       plugin: undefined,
       channel: {
-        id: "whatsapp",
-        label: "WhatsApp",
-        selectionLabel: "WhatsApp (QR link)",
-        detailLabel: "WhatsApp Web",
-        docsLabel: "whatsapp",
-        docsPath: "/channels/whatsapp",
-        blurb: "works with your own number; recommend a separate phone + eSIM.",
-        systemImage: "message",
+        id: "discord",
+        label: "Discord",
+        selectionLabel: "Discord (Bot API)",
+        detailLabel: "Discord Bot",
+        docsLabel: "discord",
+        docsPath: "/channels/discord",
+        blurb: "very well supported right now.",
+        systemImage: "bubble.left.and.bubble.right",
+        markdownCapable: true,
+        preferSessionLookupForAnnounceTarget: true,
       },
       install: {
-        clawhubSpec: "clawhub:@openclaw/whatsapp",
-        npmSpec: "@openclaw/whatsapp",
-        defaultChoice: "clawhub",
-        minHostVersion: ">=2026.4.25",
+        npmSpec: "@openclaw/discord",
+        defaultChoice: "npm",
+        minHostVersion: ">=2026.4.10",
+        allowInvalidConfigRecovery: true,
+      },
+    });
+    expect(
+      summarizeCatalogEntry(
+        findCatalogEntry(entries, (entry) => entry.name === "@openclaw/telegram"),
+      ),
+    ).toEqual({
+      name: "@openclaw/telegram",
+      description: "OpenClaw Telegram channel plugin",
+      source: undefined,
+      plugin: undefined,
+      channel: {
+        id: "telegram",
+        label: "Telegram",
+        selectionLabel: "Telegram (Bot API)",
+        detailLabel: "Telegram Bot",
+        docsLabel: "telegram",
+        docsPath: "/channels/telegram",
+        blurb: "register a bot with @BotFather and get going.",
+      },
+      install: {
+        npmSpec: "@openclaw/telegram",
+        defaultChoice: "npm",
       },
     });
   });
 
-  it("keeps third-party official external catalog npm sources exactly pinned", () => {
+  it("omits third-party channel packages from the official external catalog", () => {
     const repoRoot = makeRepoRoot("openclaw-official-channel-catalog-policy-");
     const entries = buildOfficialChannelCatalog({ repoRoot }).entries.filter(
       (entry) => entry.source === "external" && !entry.name?.startsWith("@openclaw/"),
     );
 
-    expect(entries.length).toBeGreaterThan(0);
-    for (const entry of entries) {
-      const installSource = describePluginInstallSource(requireInstall(entry));
-      expect(installSource.warnings).toStrictEqual([]);
-      expect(requireNpmInstallSource(installSource).pinState).toBe("exact-with-integrity");
-    }
+    expect(entries).toEqual([]);
   });
 
   it("allows official OpenClaw channel npm specs without integrity during launch", () => {
     const repoRoot = makeRepoRoot("openclaw-official-channel-catalog-openclaw-policy-");
-    const twitch = buildOfficialChannelCatalog({ repoRoot }).entries.find(
-      (entry) => entry.openclaw?.channel?.id === "twitch",
+    const discord = buildOfficialChannelCatalog({ repoRoot }).entries.find(
+      (entry) => entry.openclaw?.channel?.id === "discord",
     );
 
     expect({
-      name: twitch?.name,
-      install: twitch?.openclaw?.install,
+      name: discord?.name,
+      install: discord?.openclaw?.install,
     }).toEqual({
-      name: "@openclaw/twitch",
+      name: "@openclaw/discord",
       install: {
-        npmSpec: "@openclaw/twitch",
+        npmSpec: "@openclaw/discord",
         defaultChoice: "npm",
         minHostVersion: ">=2026.4.10",
+        allowInvalidConfigRecovery: true,
       },
     });
-    const installSource = describePluginInstallSource(requireInstall(twitch));
+    const installSource = describePluginInstallSource(requireInstall(discord));
     expect(requireNpmInstallSource(installSource).pinState).toBe("floating-without-integrity");
     expect(installSource.warnings).toEqual(["npm-spec-floating", "npm-spec-missing-integrity"]);
   });
 
-  it("preserves ClawHub specs when generating publishable channel catalog entries", () => {
+  it("skips unsupported publishable channel catalog entries", () => {
     const repoRoot = makeRepoRoot("openclaw-official-channel-catalog-clawhub-");
     writeJson(path.join(repoRoot, "extensions", "storepack-chat", "package.json"), {
       name: "@openclaw/storepack-chat",
@@ -267,27 +228,26 @@ describe("buildOfficialChannelCatalog", () => {
       (candidate) => candidate.openclaw?.channel?.id === "storepack-chat",
     );
 
-    expect(requireInstall(entry)).toEqual({
-      clawhubSpec: "clawhub:@openclaw/storepack-chat",
-      npmSpec: "@openclaw/storepack-chat",
-      defaultChoice: "clawhub",
-    });
+    expect(entry).toBeUndefined();
   });
 
   it("writes the official catalog under dist", () => {
     const repoRoot = makeRepoRoot("openclaw-official-channel-catalog-write-");
-    writeJson(path.join(repoRoot, "extensions", "whatsapp", "package.json"), {
-      name: "@openclaw/whatsapp",
+    writeJson(path.join(repoRoot, "extensions", "telegram", "package.json"), {
+      name: "@openclaw/telegram",
+      description: "OpenClaw Telegram channel plugin",
       openclaw: {
         channel: {
-          id: "whatsapp",
-          label: "WhatsApp",
-          selectionLabel: "WhatsApp",
-          docsPath: "/channels/whatsapp",
-          blurb: "wa",
+          id: "telegram",
+          label: "Telegram",
+          selectionLabel: "Telegram (Bot API)",
+          detailLabel: "Telegram Bot",
+          docsPath: "/channels/telegram",
+          docsLabel: "telegram",
+          blurb: "register a bot with @BotFather and get going.",
         },
         install: {
-          npmSpec: "@openclaw/whatsapp",
+          npmSpec: "@openclaw/telegram",
         },
         release: {
           publishToNpm: true,
@@ -300,43 +260,37 @@ describe("buildOfficialChannelCatalog", () => {
     const outputPath = path.join(repoRoot, OFFICIAL_CHANNEL_CATALOG_RELATIVE_PATH);
     expect(fs.existsSync(outputPath)).toBe(true);
     const entries = JSON.parse(fs.readFileSync(outputPath, "utf8")).entries;
-    expect(entries.map((entry: { name?: string }) => entry.name)).toContain(
-      "@wecom/wecom-openclaw-plugin",
-    );
-    expect(entries.map((entry: { name?: string }) => entry.name)).toContain(
-      "openclaw-plugin-yuanbao",
-    );
-    const whatsappEntry = findCatalogEntry(
+    expect(entries.map((entry: { name?: string }) => entry.name)).toEqual([
+      "@openclaw/discord",
+      "@openclaw/telegram",
+    ]);
+    const telegramEntry = findCatalogEntry(
       entries,
       (entry: { openclaw?: { channel?: { id?: string } } }) =>
-        entry.openclaw?.channel?.id === "whatsapp",
+        entry.openclaw?.channel?.id === "telegram",
     );
-    expect(summarizeCatalogEntry(whatsappEntry)).toEqual({
-      name: "@openclaw/whatsapp",
-      description: "OpenClaw WhatsApp channel plugin",
-      source: "official",
+    expect(summarizeCatalogEntry(telegramEntry)).toEqual({
+      name: "@openclaw/telegram",
+      description: "OpenClaw Telegram channel plugin",
+      source: undefined,
       plugin: undefined,
       channel: {
-        id: "whatsapp",
-        label: "WhatsApp",
-        selectionLabel: "WhatsApp (QR link)",
-        detailLabel: "WhatsApp Web",
-        docsLabel: "whatsapp",
-        docsPath: "/channels/whatsapp",
-        blurb: "works with your own number; recommend a separate phone + eSIM.",
-        systemImage: "message",
+        id: "telegram",
+        label: "Telegram",
+        selectionLabel: "Telegram (Bot API)",
+        detailLabel: "Telegram Bot",
+        docsLabel: "telegram",
+        docsPath: "/channels/telegram",
+        blurb: "register a bot with @BotFather and get going.",
       },
       install: {
-        clawhubSpec: "clawhub:@openclaw/whatsapp",
-        npmSpec: "@openclaw/whatsapp",
-        defaultChoice: "clawhub",
-        minHostVersion: ">=2026.4.25",
+        npmSpec: "@openclaw/telegram",
       },
     });
-    const whatsappEntries = entries.filter(
+    const telegramEntries = entries.filter(
       (entry: { openclaw?: { channel?: { id?: string } } }) =>
-        entry.openclaw?.channel?.id === "whatsapp",
+        entry.openclaw?.channel?.id === "telegram",
     );
-    expect(whatsappEntries).toHaveLength(1);
+    expect(telegramEntries).toHaveLength(1);
   });
 });

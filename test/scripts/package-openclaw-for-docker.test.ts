@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildPackageArtifacts } from "../../scripts/package-openclaw-for-docker.mjs";
 
 describe("package-openclaw-for-docker", () => {
-  it("uses build-all as the single package artifact build step", async () => {
+  it("uses the CI artifact build profile as the single package artifact build step", async () => {
     const calls: Array<{
       command: string;
       args: string[];
@@ -29,7 +29,7 @@ describe("package-openclaw-for-docker", () => {
     expect(calls).toEqual([
       {
         command: "node",
-        args: ["scripts/build-all.mjs"],
+        args: ["scripts/build-all.mjs", "ciArtifacts"],
         cwd: "/repo",
         noPnpm: "1",
       },

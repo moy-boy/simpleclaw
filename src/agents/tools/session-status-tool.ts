@@ -25,6 +25,11 @@ import {
 import { applyModelOverrideToSessionEntry } from "../../sessions/model-overrides.js";
 import { createLazyImportLoader } from "../../shared/lazy-promise.js";
 import type { BuildStatusTextParams } from "../../status/status-text.types.js";
+import {
+  formatUnsupportedModelRefMessage,
+  isSupportedModelRef,
+  shouldEnforceSupportedModelProviderIds,
+} from "../../supported-surface.js";
 import { buildTaskStatusSnapshotForRelatedSessionKeyForOwner } from "../../tasks/task-owner-access.js";
 import { formatTaskStatusDetail, formatTaskStatusTitle } from "../../tasks/task-status.js";
 import { loadModelCatalog } from "../model-catalog.js";
@@ -305,6 +310,9 @@ async function resolveModelOverride(params: {
     throw new Error(`Unrecognized model "${raw}".`);
   }
   const key = modelKey(resolved.ref.provider, resolved.ref.model);
+  if (shouldEnforceSupportedModelProviderIds(params.cfg) && !isSupportedModelRef(key)) {
+    throw new Error(formatUnsupportedModelRefMessage(key));
+  }
   if (!policy.allowsKey(key)) {
     throw new Error(`Model "${key}" is not allowed.`);
   }

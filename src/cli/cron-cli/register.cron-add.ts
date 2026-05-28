@@ -114,10 +114,7 @@ export function registerCronAddCommand(cron: Command) {
       .option("--deliver", "Deprecated (use --announce). Fallback-delivers final text to a chat.")
       .option("--no-deliver", "Disable runner fallback delivery")
       .option("--channel <channel>", `Delivery channel (${getCronChannelOptions()})`, "last")
-      .option(
-        "--to <dest>",
-        "Delivery destination (E.164, Telegram chatId, or Discord channel/user)",
-      )
+      .option("--to <dest>", "Delivery destination (Telegram chat id or Discord channel/user)")
       .option("--thread-id <id>", "Telegram forum topic thread id")
       .option("--account <id>", "Channel account id for delivery (multi-account setups)")
       .option("--best-effort-deliver", "Do not fail the job if delivery fails", false)

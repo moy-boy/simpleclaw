@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  filterSparseMissingOxlintTargets,
-  shouldPrepareExtensionPackageBoundaryArtifacts,
-} from "../../scripts/run-oxlint.mjs";
-import {
   createOxlintShards,
   createWindowsExtensionShards,
   resolveWindowsExtensionChunkSize,
 } from "../../scripts/run-oxlint-shards.mjs";
+import {
+  filterSparseMissingOxlintTargets,
+  shouldPrepareExtensionPackageBoundaryArtifacts,
+} from "../../scripts/run-oxlint.mjs";
 
 describe("run-oxlint", () => {
   it("prepares extension package boundary artifacts for normal lint runs", () => {
@@ -74,8 +74,10 @@ describe("run-oxlint", () => {
           { name: "ignored.txt", isDirectory: () => false, isFile: () => true },
           { name: "root.live.test.ts", isDirectory: () => false, isFile: () => true },
           { name: "notes.md", isDirectory: () => false, isFile: () => true },
-          { name: "alpha", isDirectory: () => true, isFile: () => false },
-          { name: "beta", isDirectory: () => true, isFile: () => false },
+          { name: "openai", isDirectory: () => true, isFile: () => false },
+          { name: "codex", isDirectory: () => true, isFile: () => false },
+          { name: "telegram", isDirectory: () => true, isFile: () => false },
+          { name: "discord", isDirectory: () => true, isFile: () => false },
         ] as never,
     });
 
@@ -97,13 +99,18 @@ describe("run-oxlint", () => {
         args: [
           "--tsconfig",
           "config/tsconfig/oxlint.extensions.json",
-          "extensions/alpha",
-          "extensions/beta",
+          "extensions/codex",
+          "extensions/discord",
         ],
       },
       {
         name: "extensions:02",
-        args: ["--tsconfig", "config/tsconfig/oxlint.extensions.json", "extensions/zeta"],
+        args: [
+          "--tsconfig",
+          "config/tsconfig/oxlint.extensions.json",
+          "extensions/openai",
+          "extensions/telegram",
+        ],
       },
       {
         name: "scripts",
@@ -123,17 +130,26 @@ describe("run-oxlint", () => {
     expect(shards).toEqual([
       {
         name: "extensions",
-        args: ["--tsconfig", "config/tsconfig/oxlint.extensions.json", "extensions"],
+        args: [
+          "--tsconfig",
+          "config/tsconfig/oxlint.extensions.json",
+          "extensions/codex",
+          "extensions/discord",
+          "extensions/openai",
+          "extensions/telegram",
+        ],
       },
     ]);
   });
 
   it("keeps the default Windows oxlint extension chunk size for invalid overrides", () => {
     expect(resolveWindowsExtensionChunkSize({})).toBe(8);
-    expect(resolveWindowsExtensionChunkSize({ OPENCLAW_OXLINT_WINDOWS_EXTENSION_CHUNK_SIZE: "0" }))
-      .toBe(8);
-    expect(resolveWindowsExtensionChunkSize({ OPENCLAW_OXLINT_WINDOWS_EXTENSION_CHUNK_SIZE: "abc" }))
-      .toBe(8);
+    expect(
+      resolveWindowsExtensionChunkSize({ OPENCLAW_OXLINT_WINDOWS_EXTENSION_CHUNK_SIZE: "0" }),
+    ).toBe(8);
+    expect(
+      resolveWindowsExtensionChunkSize({ OPENCLAW_OXLINT_WINDOWS_EXTENSION_CHUNK_SIZE: "abc" }),
+    ).toBe(8);
   });
 
   it("filters tracked targets missing from sparse checkouts", () => {

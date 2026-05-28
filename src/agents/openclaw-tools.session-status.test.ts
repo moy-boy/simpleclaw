@@ -154,6 +154,13 @@ function createModelCatalogModuleMock() {
         reasoning: true,
         contextWindow: 400000,
       },
+      {
+        provider: "openai-codex",
+        id: "gpt-5.5",
+        name: "GPT-5.5",
+        reasoning: true,
+        contextWindow: 400000,
+      },
     ],
   };
 }
@@ -910,7 +917,7 @@ describe("session_status tool", () => {
 
     const result = await tool.execute("call-current-channel-plugin-model", {
       sessionKey: "current",
-      model: "anthropic/claude-sonnet-4-6",
+      model: "openai-codex/gpt-5.5",
     });
     const details = result.details as {
       ok?: boolean;
@@ -921,18 +928,32 @@ describe("session_status tool", () => {
     };
     expect(details.ok).toBe(true);
     expect(details.sessionKey).toBe("agent:main:scope:scopy:direct:scopy");
-    expect(details.model).toBe("claude-sonnet-4-6");
-    expect(details.modelProvider).toBe("anthropic");
-    expect(details.modelOverride).toBe("anthropic/claude-sonnet-4-6");
+    expect(details.model).toBe("gpt-5.5");
+    expect(details.modelProvider).toBe("openai-codex");
+    expect(details.modelOverride).toBe("openai-codex/gpt-5.5");
     expect(updateSessionStoreMock).toHaveBeenCalledTimes(1);
     const savedStore = latestMockCallArg(updateSessionStoreMock, 1) as Record<string, SessionEntry>;
     const saved = savedStore["agent:main:scope:scopy:direct:scopy"];
     expectRecordFields(saved, {
-      providerOverride: "anthropic",
-      modelOverride: "claude-sonnet-4-6",
+      providerOverride: "openai-codex",
+      modelOverride: "gpt-5.5",
       liveModelSwitchPending: true,
     });
     expect(saved.sessionId).toMatch(UUID_RE);
+  });
+
+  it("rejects unsupported session_status model mutations", async () => {
+    resetSessionStore({});
+
+    const tool = getSessionStatusTool("agent:main:scope:scopy:direct:scopy");
+
+    await expect(
+      tool.execute("call-current-channel-plugin-unsupported-model", {
+        sessionKey: "current",
+        model: "anthropic/claude-sonnet-4-6",
+      }),
+    ).rejects.toThrow('Unsupported model "anthropic/claude-sonnet-4-6".');
+    expect(updateSessionStoreMock).not.toHaveBeenCalled();
   });
 
   it("fires session:patch when session_status changes the persisted session model", async () => {
@@ -950,7 +971,7 @@ describe("session_status tool", () => {
     const tool = getSessionStatusTool();
 
     await tool.execute("call-session-status-model-hook", {
-      model: "anthropic/claude-sonnet-4-6",
+      model: "openai-codex/gpt-5.5",
     });
 
     await vi.waitFor(() => expect(events).toHaveLength(1));
@@ -961,11 +982,11 @@ describe("session_status tool", () => {
     const context = event.context;
     expect(context.patch).toMatchObject({
       key: "main",
-      model: "anthropic/claude-sonnet-4-6",
+      model: "openai-codex/gpt-5.5",
     });
     expect(context.sessionEntry).toMatchObject({
-      providerOverride: "anthropic",
-      modelOverride: "claude-sonnet-4-6",
+      providerOverride: "openai-codex",
+      modelOverride: "gpt-5.5",
       liveModelSwitchPending: true,
     });
   });
@@ -976,7 +997,7 @@ describe("session_status tool", () => {
     const tool = getSessionStatusTool("agent:main:scope:scopy:direct:scopy");
 
     const result = await tool.execute("call-current-channel-plugin-default-model", {
-      model: "anthropic/claude-sonnet-4-6",
+      model: "openai-codex/gpt-5.5",
     });
     const details = result.details as { ok?: boolean; sessionKey?: string };
     expect(details.ok).toBe(true);
@@ -985,8 +1006,8 @@ describe("session_status tool", () => {
     const savedStore = latestMockCallArg(updateSessionStoreMock, 1) as Record<string, SessionEntry>;
     const saved = savedStore["agent:main:scope:scopy:direct:scopy"];
     expectRecordFields(saved, {
-      providerOverride: "anthropic",
-      modelOverride: "claude-sonnet-4-6",
+      providerOverride: "openai-codex",
+      modelOverride: "gpt-5.5",
       liveModelSwitchPending: true,
     });
     expect(saved.sessionId).toMatch(UUID_RE);
@@ -1242,7 +1263,7 @@ describe("session_status tool", () => {
 
     const result = await tool.execute("call-current-subagent", {
       sessionKey: "current",
-      model: "anthropic/claude-sonnet-4-6",
+      model: "openai-codex/gpt-5.5",
     });
     const details = result.details as { ok?: boolean; sessionKey?: string };
     expect(details.ok).toBe(true);
@@ -1251,7 +1272,7 @@ describe("session_status tool", () => {
     const savedStore = mockCallArg(updateSessionStoreMock, 0, 1) as Record<string, unknown>;
     expectRecordFields(savedStore["agent:main:subagent:child"], {
       liveModelSwitchPending: true,
-      modelOverride: "claude-sonnet-4-6",
+      modelOverride: "gpt-5.5",
     });
   });
 

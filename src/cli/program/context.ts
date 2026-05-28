@@ -1,3 +1,4 @@
+import { listSupportedChannelIds } from "../../commands/supported-surface.js";
 import { VERSION } from "../../version.js";
 import { resolveCliChannelOptions } from "../channel-options.js";
 
@@ -12,7 +13,12 @@ export function createProgramContext(): ProgramContext {
   let cachedChannelOptions: string[] | undefined;
   const getChannelOptions = (): string[] => {
     if (cachedChannelOptions === undefined) {
-      cachedChannelOptions = resolveCliChannelOptions();
+      const supported = listSupportedChannelIds();
+      const discovered = resolveCliChannelOptions();
+      cachedChannelOptions =
+        discovered.length === 0
+          ? supported
+          : supported.filter((channel) => discovered.includes(channel));
     }
     return cachedChannelOptions;
   };

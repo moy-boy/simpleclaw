@@ -22,7 +22,33 @@ describe("inferAuthChoiceFromFlags", () => {
     resolveManifestProviderOnboardAuthFlags.mockReturnValue([]);
   });
 
-  it("infers plugin-owned auth choices from manifest option keys", () => {
+  it("infers supported plugin-owned auth choices from manifest option keys", () => {
+    resolveManifestProviderOnboardAuthFlags.mockReturnValue([
+      {
+        optionKey: "openaiCodexLogin",
+        authChoice: "openai-codex",
+        cliFlag: "--openai-codex-login",
+      },
+    ]);
+
+    const opts: OnboardOptions = {
+      openaiCodexLogin: "login-token",
+    };
+
+    expect(inferAuthChoiceFromFlags(opts)).toEqual({
+      choice: "openai-codex",
+      matches: [
+        {
+          optionKey: "openaiCodexLogin",
+          authChoice: "openai-codex",
+          label: "--openai-codex-login",
+        },
+      ],
+      unsupportedMatches: [],
+    });
+  });
+
+  it("reports unsupported plugin and custom provider flags separately", () => {
     resolveManifestProviderOnboardAuthFlags.mockReturnValue([
       {
         optionKey: "pluginOwnedApiKey",
@@ -30,33 +56,22 @@ describe("inferAuthChoiceFromFlags", () => {
         cliFlag: "--plugin-api-key",
       },
     ]);
-
     const opts: OnboardOptions = {
       pluginOwnedApiKey: "sk-plugin-test",
-    };
-
-    expect(inferAuthChoiceFromFlags(opts)).toEqual({
-      choice: "plugin-api-key",
-      matches: [
-        {
-          optionKey: "pluginOwnedApiKey",
-          authChoice: "plugin-api-key",
-          label: "--plugin-api-key",
-        },
-      ],
-    });
-  });
-
-  it("infers the built-in custom provider from custom flags", () => {
-    const opts: OnboardOptions = {
       customBaseUrl: "https://models.custom.local/v1",
       customModelId: "local-large",
       customApiKey: "custom-test-key", // pragma: allowlist secret
     };
 
     expect(inferAuthChoiceFromFlags(opts)).toEqual({
-      choice: "custom-api-key",
-      matches: [
+      choice: undefined,
+      matches: [],
+      unsupportedMatches: [
+        {
+          optionKey: "pluginOwnedApiKey",
+          authChoice: "plugin-api-key",
+          label: "--plugin-api-key",
+        },
         {
           optionKey: "customBaseUrl",
           authChoice: "custom-api-key",

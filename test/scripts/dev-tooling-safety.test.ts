@@ -1,6 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { testing as promptProbeTesting } from "../../scripts/anthropic-prompt-probe.ts";
-import { testing as claudeUsageTesting } from "../../scripts/debug-claude-usage.ts";
 import { testing as discordSmokeTesting } from "../../scripts/dev/discord-acp-plain-language-smoke.ts";
 import {
   maskIdentifier,
@@ -67,26 +65,5 @@ describe("script-specific dev tooling hardening", () => {
 
     expect(discordSmokeTesting.redactDiscordApiPath(path)).not.toContain(token);
     expect(discordSmokeTesting.redactDiscordApiPath(path)).toContain("/webhooks/123/");
-  });
-
-  it("rejects absolute-form URLs in the Anthropic capture proxy", () => {
-    expect(
-      promptProbeTesting.resolveAnthropicUpstreamUrl(
-        "/v1/messages?anthropic-version=2023-06-01",
-        "https://api.anthropic.com",
-      ),
-    ).toBe("https://api.anthropic.com/v1/messages?anthropic-version=2023-06-01");
-    expect(() =>
-      promptProbeTesting.resolveAnthropicUpstreamUrl(
-        "http://169.254.169.254/latest/meta-data",
-        "https://api.anthropic.com",
-      ),
-    ).toThrow(/refusing non-origin proxy request URL/u);
-  });
-
-  it("uses exact Claude cookie host matchers instead of broad substring matches", () => {
-    expect(claudeUsageTesting.CLAUDE_COOKIE_HOST_SQL).toContain("host_key = 'claude.ai'");
-    expect(claudeUsageTesting.CLAUDE_COOKIE_HOST_SQL).toContain("LIKE '%.claude.ai'");
-    expect(claudeUsageTesting.CLAUDE_COOKIE_HOST_SQL).not.toContain("%claude.ai%");
   });
 });

@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { isSupportedBundledPluginId } from "./lib/supported-surface.mjs";
 
 const DOC_PATH = "docs/plugins/plugin-inventory.md";
 const REFERENCE_INDEX_PATH = "docs/plugins/reference.md";
@@ -412,8 +413,8 @@ title: "Plugin reference"
 
 # Plugin reference
 
-This page is generated from \`extensions/*/package.json\` and
-\`openclaw.plugin.json\`. Regenerate it with:
+This page is generated from the supported default plugin surface. Regenerate it
+with:
 
 \`\`\`bash
 pnpm plugins:inventory:gen
@@ -469,9 +470,10 @@ function collectPluginRecords() {
   const rootPackageJson = readJson("package.json");
   const excludedDirs = collectExcludedPackagedExtensionDirs(rootPackageJson);
   const sourceEntries = collectPluginSourceEntries();
+  const inventoryEntries = sourceEntries.filter((entry) => isSupportedBundledPluginId(entry.id));
   const records = [];
 
-  for (const { dirName, id, manifest, packageJson } of sourceEntries) {
+  for (const { dirName, id, manifest, packageJson } of inventoryEntries) {
     const status = resolveStatus({ dirName, packageJson, excludedDirs });
     records.push({
       description: resolveDescription({ manifest, packageJson }),
@@ -485,12 +487,18 @@ function collectPluginRecords() {
     });
   }
 
-  validatePluginCoverage(records, sourceEntries);
+  validatePluginCoverage(records, inventoryEntries);
   return records.toSorted((left, right) => left.id.localeCompare(right.id));
 }
 
 function writeGeneratedDocs(records) {
   fs.mkdirSync(path.join(ROOT, REFERENCE_DIR), { recursive: true });
+  const expectedReferencePages = new Set(records.map((record) => `${record.id}.md`));
+  for (const entry of fs.readdirSync(path.join(ROOT, REFERENCE_DIR))) {
+    if (entry.endsWith(".md") && !expectedReferencePages.has(entry)) {
+      fs.unlinkSync(path.join(ROOT, REFERENCE_DIR, entry));
+    }
+  }
   for (const record of records) {
     fs.writeFileSync(
       path.join(ROOT, REFERENCE_DIR, `${record.id}.md`),
@@ -502,8 +510,16 @@ function writeGeneratedDocs(records) {
 }
 
 function readGeneratedDocs(records) {
+  const expectedReferencePages = new Set(records.map((record) => `${record.id}.md`));
+  const extraReferencePages = fs.existsSync(path.join(ROOT, REFERENCE_DIR))
+    ? fs
+        .readdirSync(path.join(ROOT, REFERENCE_DIR))
+        .filter((entry) => entry.endsWith(".md") && !expectedReferencePages.has(entry))
+        .toSorted((left, right) => left.localeCompare(right))
+    : [];
   return [
     [REFERENCE_INDEX_PATH, renderReferenceIndex(records)],
+    ...extraReferencePages.map((entry) => [path.join(REFERENCE_DIR, entry), ""]),
     ...records.map((record) => [
       path.join(REFERENCE_DIR, `${record.id}.md`),
       renderReferencePage(record),
@@ -530,8 +546,9 @@ title: "Plugin inventory"
 
 # Plugin inventory
 
-This page is generated from \`extensions/*/package.json\`, \`openclaw.plugin.json\`,
-and the root npm package \`files\` exclusions. Regenerate it with:
+This page is generated from the supported default plugin surface,
+\`extensions/*/package.json\`, \`openclaw.plugin.json\`, and the root npm package
+\`files\` exclusions. Regenerate it with:
 
 \`\`\`bash
 pnpm plugins:inventory:gen
@@ -543,9 +560,9 @@ pnpm plugins:inventory:gen
 - **Official external package:** OpenClaw-maintained plugin omitted from the core npm package, kept in this official inventory, and installed on demand through ClawHub and/or npm.
 - **Source checkout only:** repo-local plugin omitted from published npm artifacts and not advertised as an installable package.
 
-Source checkouts are different from npm installs: after \`pnpm install\`, bundled
-plugins load from \`extensions/<id>\` so local edits and package-local workspace
-dependencies are available.
+Source checkouts are different from npm installs: after \`pnpm install\`, the
+supported default plugins load from \`extensions/<id>\` so local edits and
+package-local workspace dependencies are available.
 
 ## Install a plugin
 
@@ -607,6 +624,10 @@ function main(argv = process.argv.slice(2)) {
   for (const [relativePath, expected] of readGeneratedDocs(records)) {
     const fullPath = path.join(ROOT, relativePath);
     const actual = fs.existsSync(fullPath) ? fs.readFileSync(fullPath, "utf8") : "";
+    if (expected === "" && actual !== "") {
+      console.error(`${relativePath} is stale. Run \`pnpm plugins:inventory:gen\`.`);
+      process.exit(1);
+    }
     if (actual !== expected) {
       console.error(`${relativePath} is stale. Run \`pnpm plugins:inventory:gen\`.`);
       process.exit(1);

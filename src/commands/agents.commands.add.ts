@@ -29,6 +29,7 @@ import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
 } from "../shared/string-coerce.js";
+import { formatUnsupportedResolvedModelRefMessage } from "../supported-model-policy.js";
 import { resolveUserPath, shortenHomePath } from "../utils.js";
 import { createClackPrompter } from "../wizard/clack-prompter.js";
 import { WizardCancelledError } from "../wizard/prompts.js";
@@ -45,6 +46,10 @@ import { applyAuthChoice, warnIfModelConfigLooksOff } from "./auth-choice.js";
 import { setupChannels } from "./onboard-channels.js";
 import { ensureWorkspaceAndSessions } from "./onboard-helpers.js";
 import type { ChannelChoice } from "./onboard-types.js";
+import {
+  listSupportedChannelIds,
+  shouldEnforceSupportedModelProviderIds,
+} from "./supported-surface.js";
 
 type AgentsAddOptions = {
   name?: string;
@@ -176,6 +181,15 @@ export async function agentsAddCommand(
         transform: (latestConfig) => {
           if (findAgentEntryIndex(listAgentEntries(latestConfig), agentId) >= 0) {
             throw new AgentsAddMutationError(`Agent "${agentId}" already exists.`);
+          }
+          if (model && shouldEnforceSupportedModelProviderIds(latestConfig)) {
+            const unsupportedModelMessage = formatUnsupportedResolvedModelRefMessage({
+              cfg: latestConfig,
+              raw: model,
+            });
+            if (unsupportedModelMessage) {
+              throw new AgentsAddMutationError(unsupportedModelMessage);
+            }
           }
           const agentDir = explicitAgentDir ?? resolveAgentDir(latestConfig, agentId);
           const nextConfig = applyAgentConfig(latestConfig, {
@@ -432,6 +446,7 @@ export async function agentsAddCommand(
       onAccountId: (channel, accountId) => {
         channelAccountIds[channel] = accountId;
       },
+      channelIds: listSupportedChannelIds(),
     });
 
     if (selection.length > 0) {

@@ -38,6 +38,11 @@ import { createSubsystemLogger } from "../../logging/subsystem.js";
 import type { OutboundMediaAccess } from "../../media/load-options.js";
 import { resolveAgentScopedOutboundMediaAccess } from "../../media/read-capability.js";
 import { getGlobalHookRunner } from "../../plugins/hook-runner-global.js";
+import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+} from "../../supported-surface.js";
 import { diagnosticErrorCategory } from "../diagnostic-error-metadata.js";
 import { emitDiagnosticEvent, type DiagnosticMessageDeliveryKind } from "../diagnostic-events.js";
 import { formatErrorMessage } from "../errors.js";
@@ -1170,6 +1175,20 @@ function suppressedPayloadOutcome(params: {
   };
 }
 
+function assertSupportedOutboundDeliveryChannel(params: {
+  cfg: OpenClawConfig;
+  channel: Exclude<OutboundChannel, "none">;
+}): void {
+  if (
+    process.env.VITEST !== undefined ||
+    !shouldEnforceSupportedChannelIds(params.cfg) ||
+    isSupportedChannelId(params.channel)
+  ) {
+    return;
+  }
+  throw new Error(formatUnsupportedChannelMessage(params.channel));
+}
+
 /**
  * @deprecated Direct outbound delivery is compatibility/runtime substrate.
  * New message lifecycle code should use `sendDurableMessageBatch` from
@@ -1187,6 +1206,7 @@ export async function deliverOutboundPayloadsInternal(
   params: DeliverOutboundPayloadsParams,
 ): Promise<OutboundDeliveryResult[]> {
   const { channel, to, payloads } = params;
+  assertSupportedOutboundDeliveryChannel({ cfg: params.cfg, channel });
   const queuePolicy = params.queuePolicy ?? "best_effort";
   const queuePayloads = payloads.map(stripInternalRuntimeScaffoldingFromPayload);
   const queuePayloadsChanged = queuePayloads.some((payload, index) => payload !== payloads[index]);

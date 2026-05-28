@@ -22,7 +22,6 @@ import { createSparseTsgoSkipEnv } from "./lib/tsgo-sparse-guard.mjs";
 const LIVE_DOCKER_AUTH_SHELL_TARGETS = [
   "scripts/lib/live-docker-auth.sh",
   "scripts/test-live-acp-bind-docker.sh",
-  "scripts/test-live-cli-backend-docker.sh",
   "scripts/test-live-codex-harness-docker.sh",
   "scripts/test-live-gateway-models-docker.sh",
   "scripts/test-live-models-docker.sh",

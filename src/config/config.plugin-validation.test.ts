@@ -320,8 +320,8 @@ describe("config plugin validation", () => {
       {
         agents: { list: [{ id: "pi" }] },
         plugins: {
-          entries: { brave: { enabled: true } },
-          allow: ["brave"],
+          entries: { discord: { enabled: true } },
+          allow: ["discord"],
         },
       },
       {
@@ -337,105 +337,16 @@ describe("config plugin validation", () => {
 
     expect(res.ok).toBe(true);
     const message =
-      "plugin not installed: brave — install the official external plugin with: openclaw plugins install @openclaw/brave-plugin";
-    expectPathMessage(res.warnings, "plugins.entries.brave", message);
+      "plugin not installed: discord — install the official external plugin with: openclaw plugins install @openclaw/discord";
+    expectPathMessage(res.warnings, "plugins.entries.discord", message);
     expect((res.warnings ?? []).filter((warning) => warning.message === message)).toHaveLength(1);
     expect(
       (res.warnings ?? []).some(
         (warning) =>
-          (warning.path === "plugins.entries.brave" || warning.path === "plugins.allow") &&
+          (warning.path === "plugins.entries.discord" || warning.path === "plugins.allow") &&
           warning.message.includes("remove it from plugins config"),
       ),
     ).toBe(false);
-  });
-
-  it("warns instead of failing when an official external memory slot plugin is not installed", () => {
-    const res = validateConfigObjectWithPlugins(
-      {
-        agents: { list: [{ id: "pi" }] },
-        plugins: {
-          slots: { memory: "memory-lancedb" },
-          entries: { "memory-lancedb": { enabled: true } },
-        },
-      },
-      {
-        env: suiteEnv(),
-        pluginMetadataSnapshot: {
-          manifestRegistry: {
-            plugins: [],
-            diagnostics: [],
-          },
-        },
-      },
-    );
-
-    expect(res.ok).toBe(true);
-    const slotMessage =
-      "plugin not installed: memory-lancedb — gateway will run without persistent memory until installed; install the official external plugin with: openclaw plugins install @openclaw/memory-lancedb";
-    const entryMessage =
-      "plugin not installed: memory-lancedb — install the official external plugin with: openclaw plugins install @openclaw/memory-lancedb";
-    expectPathMessage(res.warnings, "plugins.slots.memory", slotMessage);
-    expectPathMessage(res.warnings, "plugins.entries.memory-lancedb", entryMessage);
-  });
-
-  it("keeps no-persistent-memory wording scoped to the selected missing memory slot", () => {
-    const res = validateConfigObjectWithPlugins(
-      {
-        agents: { list: [{ id: "pi" }] },
-        plugins: {
-          slots: { memory: "none" },
-          entries: { "memory-lancedb": { enabled: true } },
-          allow: ["memory-lancedb"],
-        },
-      },
-      {
-        env: suiteEnv(),
-        pluginMetadataSnapshot: {
-          manifestRegistry: {
-            plugins: [],
-            diagnostics: [],
-          },
-        },
-      },
-    );
-
-    expect(res.ok).toBe(true);
-    const message =
-      "plugin not installed: memory-lancedb — install the official external plugin with: openclaw plugins install @openclaw/memory-lancedb";
-    expectPathMessage(res.warnings, "plugins.entries.memory-lancedb", message);
-    expect((res.warnings ?? []).filter((warning) => warning.message === message)).toHaveLength(1);
-    expect(
-      (res.warnings ?? []).some((warning) =>
-        warning.message.includes("gateway will run without persistent memory"),
-      ),
-    ).toBe(false);
-  });
-
-  it("deduplicates yuanbao missing-plugin warnings across entries and allow", () => {
-    const res = validateConfigObjectWithPlugins(
-      {
-        agents: { list: [{ id: "pi" }] },
-        plugins: {
-          entries: { yuanbao: { enabled: true } },
-          allow: ["yuanbao"],
-        },
-      },
-      {
-        env: suiteEnv(),
-        pluginMetadataSnapshot: {
-          manifestRegistry: {
-            plugins: [],
-            diagnostics: [],
-          },
-        },
-      },
-    );
-
-    expect(res.ok).toBe(true);
-    const message =
-      "plugin not installed: yuanbao — install the official external plugin with: openclaw plugins install openclaw-plugin-yuanbao@2.13.1";
-    expectPathMessage(res.warnings, "plugins.entries.yuanbao", message);
-    expect((res.warnings ?? []).filter((warning) => warning.message === message)).toHaveLength(1);
   });
 
   it("keeps official external non-memory plugins fatal in the memory slot", () => {
@@ -443,8 +354,8 @@ describe("config plugin validation", () => {
       {
         agents: { list: [{ id: "pi" }] },
         plugins: {
-          slots: { memory: "brave" },
-          entries: { brave: { enabled: true } },
+          slots: { memory: "discord" },
+          entries: { discord: { enabled: true } },
         },
       },
       {
@@ -462,11 +373,11 @@ describe("config plugin validation", () => {
     if (res.ok) {
       return;
     }
-    expectPathMessage(res.issues, "plugins.slots.memory", "plugin not found: brave");
+    expectPathMessage(res.issues, "plugins.slots.memory", "plugin not found: discord");
     expectPathMessage(
       res.warnings,
-      "plugins.entries.brave",
-      "plugin not installed: brave — install the official external plugin with: openclaw plugins install @openclaw/brave-plugin",
+      "plugins.entries.discord",
+      "plugin not installed: discord — install the official external plugin with: openclaw plugins install @openclaw/discord",
     );
   });
 
@@ -871,35 +782,6 @@ describe("config plugin validation", () => {
     } finally {
       await fs.rm(installedPluginIndexPath, { force: true });
     }
-  });
-
-  it("warns with actionable guidance when a runtime command name is used in plugins.allow", () => {
-    const res = validateInSuite({
-      agents: { list: [{ id: "pi" }] },
-      plugins: {
-        allow: ["dreaming"],
-        entries: {
-          "memory-core": {
-            config: { dreaming: { enabled: true } },
-          },
-        },
-      },
-    });
-    // Should not produce the generic "plugin not found" warning.
-    expect(
-      res.warnings?.some(
-        (w) => w.path === "plugins.allow" && w.message.includes("plugin not found: dreaming"),
-      ),
-    ).toBe(false);
-    // Should produce a helpful redirect to the parent plugin.
-    expect(
-      res.warnings?.some(
-        (w) =>
-          w.path === "plugins.allow" &&
-          w.message.includes('"dreaming" is not a plugin') &&
-          w.message.includes("memory-core"),
-      ),
-    ).toBe(true);
   });
 
   it("does not fail validation for the implicit default memory slot when plugins config is explicit", () => {

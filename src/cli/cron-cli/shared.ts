@@ -1,4 +1,5 @@
 import { listChannelPlugins } from "../../channels/plugins/index.js";
+import { listSupportedChannelIds } from "../../commands/supported-surface.js";
 import { parseAbsoluteTimeMs } from "../../cron/parse.js";
 import { resolveCronStaggerMs } from "../../cron/stagger.js";
 import type { CronDeliveryPreview, CronJob, CronSchedule } from "../../cron/types.js";
@@ -19,10 +20,11 @@ import { callGatewayFromCli } from "../gateway-rpc.js";
 
 export const getCronChannelOptions = () => {
   // Keep help truthful even before the plugin registry is bootstrapped.
+  const supportedChannelIds = listSupportedChannelIds();
   const pluginIds = listChannelPlugins()
     .map((plugin) => plugin.id)
-    .filter(Boolean);
-  return pluginIds.length > 0 ? ["last", ...pluginIds].join("|") : "last|<channel-id>";
+    .filter((pluginId) => supportedChannelIds.includes(pluginId));
+  return ["last", ...(pluginIds.length > 0 ? pluginIds : supportedChannelIds)].join("|");
 };
 
 export function printCronJson(value: unknown) {

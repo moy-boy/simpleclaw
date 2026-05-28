@@ -6,11 +6,10 @@ import {
   bundledDistPluginFile,
   bundledPluginFile,
 } from "./bundled-plugin-paths.mjs";
-import { shouldBuildBundledCluster } from "./optional-bundled-clusters.mjs";
+import { shouldIncludeBundledPluginId } from "./supported-surface.mjs";
 
 const TOP_LEVEL_PUBLIC_SURFACE_EXTENSIONS = new Set([".ts", ".js", ".mts", ".cts", ".mjs", ".cjs"]);
 export const NON_PACKAGED_BUNDLED_PLUGIN_DIRS = new Set(["qa-channel", "qa-lab", "qa-matrix"]);
-const EXCLUDED_CORE_BUNDLED_PLUGIN_DIRS = new Set(["qqbot", "whatsapp"]);
 const toPosixPath = (value) => value.replaceAll("\\", "/");
 
 function readBundledPluginPackageJson(packageJsonPath, options = {}) {
@@ -22,14 +21,6 @@ function readBundledPluginPackageJson(packageJsonPath, options = {}) {
   } catch {
     return null;
   }
-}
-
-function isManifestlessBundledRuntimeSupportPackage(params) {
-  const packageName = typeof params.packageJson?.name === "string" ? params.packageJson.name : "";
-  if (packageName !== `@openclaw/${params.dirName}`) {
-    return false;
-  }
-  return params.topLevelPublicSurfaceEntries.length > 0;
 }
 
 function shouldBuildBundledDistEntry(packageJson) {
@@ -177,29 +168,20 @@ export function collectBundledPluginBuildEntries(params = {}) {
 
   for (const candidate of collectBundledPluginCandidates(cwd, extensionsRoot)) {
     const { dirName, pluginDir, relativeFiles, topLevelPublicSurfaceEntries } = candidate;
+    if (!shouldIncludeBundledPluginId(dirName, env)) {
+      continue;
+    }
     const manifestPath = path.join(pluginDir, "openclaw.plugin.json");
-    const hasManifest = relativeFiles?.includes("openclaw.plugin.json") ?? fs.existsSync(manifestPath);
+    const hasManifest =
+      relativeFiles?.includes("openclaw.plugin.json") ?? fs.existsSync(manifestPath);
     const packageJsonPath = path.join(pluginDir, "package.json");
     const packageJson = readBundledPluginPackageJson(packageJsonPath, {
       hasPackageJson: relativeFiles?.includes("package.json"),
     });
-    if (
-      !hasManifest &&
-      !isManifestlessBundledRuntimeSupportPackage({
-        dirName,
-        packageJson,
-        topLevelPublicSurfaceEntries,
-      })
-    ) {
-      continue;
-    }
-    if (!shouldBuildBundledCluster(dirName, env, { packageJson })) {
+    if (!hasManifest) {
       continue;
     }
     if (!shouldBuildBundledDistEntry(packageJson)) {
-      continue;
-    }
-    if (EXCLUDED_CORE_BUNDLED_PLUGIN_DIRS.has(dirName)) {
       continue;
     }
 

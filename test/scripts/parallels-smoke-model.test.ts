@@ -116,8 +116,8 @@ describe("Parallels smoke model selection", () => {
     expect(providerAuth).toContain("OPENCLAW_PARALLELS_WINDOWS_OPENAI_MODEL");
     expect(providerAuth).toContain("openai/gpt-5.5");
     expect(providerAuth).toContain('authChoice: "openai-api-key"');
-    expect(providerAuth).toContain('authChoice: "apiKey"');
-    expect(providerAuth).toContain('authChoice: "minimax-global-api"');
+    expect(providerAuth).not.toContain("ANTHROPIC_API_KEY");
+    expect(providerAuth).not.toContain("MINIMAX_API_KEY");
 
     for (const scriptPath of [...OS_TS_PATHS, TS_PATHS.npmUpdate]) {
       const script = readFileSync(scriptPath, "utf8");
@@ -362,17 +362,17 @@ console.log(resolveUbuntuVmName("Ubuntu missing"));
     });
 
     expect(
-      resolveProviderAuth("anthropic", {
-        apiKeyEnv: "CUSTOM_ANTHROPIC_KEY",
-        env: { CUSTOM_ANTHROPIC_KEY: "sk-anthropic" },
-        modelId: "anthropic/custom",
+      resolveProviderAuth("openai", {
+        apiKeyEnv: "CUSTOM_OPENAI_KEY",
+        env: { CUSTOM_OPENAI_KEY: "sk-custom-openai" },
+        modelId: "openai/custom",
       }),
     ).toEqual({
-      apiKeyEnv: "CUSTOM_ANTHROPIC_KEY",
-      apiKeyValue: "sk-anthropic",
-      authChoice: "apiKey",
-      authKeyFlag: "anthropic-api-key",
-      modelId: "anthropic/custom",
+      apiKeyEnv: "CUSTOM_OPENAI_KEY",
+      apiKeyValue: "sk-custom-openai",
+      authChoice: "openai-api-key",
+      authKeyFlag: "openai-api-key",
+      modelId: "openai/custom",
     });
   });
 

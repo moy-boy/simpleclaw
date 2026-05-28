@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 import { listChangedPathsFromGit, listStagedChangedPaths } from "./changed-lanes.mjs";
+import { isSupportedBundledPluginId } from "./lib/supported-surface.mjs";
 import { resolveNpmRunner } from "./npm-runner.mjs";
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -499,6 +500,7 @@ function listPublishablePluginPackageDirs() {
   const extensionsDir = path.join(ROOT_DIR, "extensions");
   return readdirSync(extensionsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
+    .filter((entry) => isSupportedBundledPluginId(entry.name))
     .map((entry) => path.posix.join("extensions", entry.name))
     .filter((packageDir) => {
       const packageJsonPath = path.join(ROOT_DIR, packageDir, "package.json");

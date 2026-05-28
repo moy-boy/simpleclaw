@@ -15,8 +15,6 @@ on:
         type: choice
         options:
           - openai
-          - anthropic
-          - minimax
       mode:
         description: Which cross-OS release lanes to run
         required: false
@@ -54,13 +52,10 @@ on:
           - cross-os
           - live-e2e
           - package
-          - qa
-          - qa-parity
-          - qa-live
           - npm-telegram
           - performance
       live_suite_filter:
-        description: Optional exact live/E2E suite id, or comma-separated QA live lanes such as qa-live-matrix,qa-live-telegram; blank runs all selected live suites
+        description: Optional exact live/E2E suite id; blank runs all selected live suites
         required: false
         default: ""
         type: string
@@ -192,10 +187,10 @@ jobs:
             else
               echo "- Plugin prerelease: skipped by rerun group"
             fi
-            if [[ "$RERUN_GROUP" == "all" || "$RERUN_GROUP" == "release-checks" || "$RERUN_GROUP" == "install-smoke" || "$RERUN_GROUP" == "cross-os" || "$RERUN_GROUP" == "live-e2e" || "$RERUN_GROUP" == "package" || "$RERUN_GROUP" == "qa" || "$RERUN_GROUP" == "qa-parity" || "$RERUN_GROUP" == "qa-live" ]]; then
-              echo "- Release/live/Docker/package/QA: \`OpenClaw Release Checks\`"
+            if [[ "$RERUN_GROUP" == "all" || "$RERUN_GROUP" == "release-checks" || "$RERUN_GROUP" == "install-smoke" || "$RERUN_GROUP" == "cross-os" || "$RERUN_GROUP" == "live-e2e" || "$RERUN_GROUP" == "package" ]]; then
+              echo "- Release/live/Docker/package: \`OpenClaw Release Checks\`"
             else
-              echo "- Release/live/Docker/package/QA: skipped by rerun group"
+              echo "- Release/live/Docker/package: skipped by rerun group"
             fi
             if [[ -n "${RELEASE_PACKAGE_SPEC// }" ]]; then
               echo "- Published release package: \`${RELEASE_PACKAGE_SPEC}\`"
@@ -511,9 +506,9 @@ jobs:
           dispatch_and_wait plugin-prerelease.yml -f target_ref="$TARGET_SHA" -f expected_sha="$TARGET_SHA" -f full_release_validation=true
 
   release_checks:
-    name: Run release/live/Docker/QA validation
+    name: Run release/live/Docker/package validation
     needs: [resolve_target, docker_runtime_assets_preflight]
-    if: ${{ always() && needs.resolve_target.result == 'success' && contains(fromJSON('["all","release-checks","install-smoke","cross-os","live-e2e","package","qa","qa-parity","qa-live"]'), inputs.rerun_group) && (inputs.rerun_group != 'all' || needs.docker_runtime_assets_preflight.result == 'success') }}
+    if: ${{ always() && needs.resolve_target.result == 'success' && contains(fromJSON('["all","release-checks","install-smoke","cross-os","live-e2e","package"]'), inputs.rerun_group) && (inputs.rerun_group != 'all' || needs.docker_runtime_assets_preflight.result == 'success') }}
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ inputs.release_profile != 'minimum' && 240 || 60 }}
     outputs:
@@ -694,7 +689,7 @@ jobs:
           }
 
           {
-            echo "### Release/live/Docker/QA validation"
+            echo "### Release/live/Docker/package validation"
             echo
             echo "- Target ref: \`${TARGET_REF}\`"
             echo "- Target SHA: \`${TARGET_SHA}\`"
@@ -1333,7 +1328,7 @@ jobs:
               plugin-prerelease)
                 plugin_prerelease_required=1
                 ;;
-              release-checks|install-smoke|cross-os|live-e2e|package|qa|qa-parity|qa-live)
+              release-checks|install-smoke|cross-os|live-e2e|package)
                 release_checks_required=1
                 ;;
             esac

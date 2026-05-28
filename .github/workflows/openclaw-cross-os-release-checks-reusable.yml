@@ -20,8 +20,6 @@ on:
         type: choice
         options:
           - openai
-          - anthropic
-          - minimax
       mode:
         description: Which release-check lanes to run
         required: true
@@ -173,10 +171,6 @@ on:
     secrets:
       OPENAI_API_KEY:
         required: false
-      ANTHROPIC_API_KEY:
-        required: false
-      MINIMAX_API_KEY:
-        required: false
       OPENCLAW_DISCORD_SMOKE_BOT_TOKEN:
         required: false
       OPENCLAW_DISCORD_SMOKE_GUILD_ID:
@@ -214,19 +208,11 @@ jobs:
         env:
           PROVIDER: ${{ inputs.provider }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
         run: |
           set -euo pipefail
           case "${PROVIDER}" in
             openai)
               [[ -n "${OPENAI_API_KEY}" ]] || { echo "Missing OPENAI_API_KEY secret." >&2; exit 1; }
-              ;;
-            anthropic)
-              [[ -n "${ANTHROPIC_API_KEY}" ]] || { echo "Missing ANTHROPIC_API_KEY secret." >&2; exit 1; }
-              ;;
-            minimax)
-              [[ -n "${MINIMAX_API_KEY}" ]] || { echo "Missing MINIMAX_API_KEY secret." >&2; exit 1; }
               ;;
             *)
               echo "Unsupported provider: ${PROVIDER}" >&2
@@ -569,8 +555,6 @@ jobs:
         shell: bash
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
           OPENCLAW_DISCORD_SMOKE_BOT_TOKEN: ${{ secrets.OPENCLAW_DISCORD_SMOKE_BOT_TOKEN }}
           OPENCLAW_DISCORD_SMOKE_GUILD_ID: ${{ secrets.OPENCLAW_DISCORD_SMOKE_GUILD_ID }}
           OPENCLAW_DISCORD_SMOKE_CHANNEL_ID: ${{ secrets.OPENCLAW_DISCORD_SMOKE_CHANNEL_ID }}

@@ -11,6 +11,7 @@ import { formatCliCommand } from "../cli/command-format.js";
 import type { CliDeps } from "../cli/deps.types.js";
 import { getRuntimeConfig } from "../config/io.js";
 import type { SessionEntry } from "../config/sessions/types.js";
+import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { withLocalGatewayRequestScope } from "../gateway/local-request-context.js";
 import {
   clearAgentRunContext,
@@ -38,10 +39,18 @@ import {
 import { resolveSendPolicy } from "../sessions/send-policy.js";
 import { createLazyImportLoader } from "../shared/lazy-promise.js";
 import { normalizeOptionalString } from "../shared/string-coerce.js";
+import {
+  formatUnsupportedChannelMessage,
+  formatUnsupportedModelRefMessage,
+  isSupportedChannelId,
+  isSupportedModelProviderId,
+  shouldEnforceSupportedChannelIds,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 import { sanitizeForLog } from "../terminal/ansi.js";
 import { createTrajectoryRuntimeRecorder } from "../trajectory/runtime.js";
 import { resolveUserPath } from "../utils.js";
-import { resolveMessageChannel } from "../utils/message-channel.js";
+import { isDeliverableMessageChannel, resolveMessageChannel } from "../utils/message-channel.js";
 import { resolveAgentRuntimeConfig } from "./agent-runtime-config.js";
 import {
   clearAutoFallbackPrimaryProbeSelection,
@@ -102,6 +111,40 @@ import { resolveAgentTimeoutMs } from "./timeout.js";
 import { ensureAgentWorkspace } from "./workspace.js";
 
 const log = createSubsystemLogger("agents/agent-command");
+
+function shouldEnforceSupportedAgentRuntimeSurface(cfg: OpenClawConfig): boolean {
+  return process.env.VITEST === undefined && shouldEnforceSupportedModelProviderIds(cfg);
+}
+
+function assertSupportedAgentRuntimeModel(params: {
+  cfg: OpenClawConfig;
+  provider: string;
+  model: string;
+}): void {
+  if (!shouldEnforceSupportedAgentRuntimeSurface(params.cfg)) {
+    return;
+  }
+  if (!isSupportedModelProviderId(params.provider)) {
+    throw new Error(formatUnsupportedModelRefMessage(`${params.provider}/${params.model}`));
+  }
+}
+
+function assertSupportedAgentRuntimeChannel(params: {
+  cfg: OpenClawConfig;
+  channel?: string;
+}): void {
+  if (
+    !params.channel ||
+    process.env.VITEST !== undefined ||
+    !shouldEnforceSupportedChannelIds(params.cfg) ||
+    !isDeliverableMessageChannel(params.channel) ||
+    isSupportedChannelId(params.channel)
+  ) {
+    return;
+  }
+  throw new Error(formatUnsupportedChannelMessage(params.channel));
+}
+
 type AttemptExecutionRuntime = typeof import("./command/attempt-execution.runtime.js");
 type AgentAttemptResult = Awaited<ReturnType<AttemptExecutionRuntime["runAgentAttempt"]>>;
 type AcpManagerRuntime = typeof import("../acp/control-plane/manager.js");
@@ -1034,6 +1077,7 @@ async function agentCommandInternal(
     provider = allowedInitialSelection.provider;
     model = allowedInitialSelection.model;
     providerForAuthProfileValidation = provider;
+    assertSupportedAgentRuntimeModel({ cfg, provider, model });
 
     await ensureSelectedAgentHarnessPlugin({
       config: cfg,
@@ -1255,6 +1299,7 @@ async function agentCommandInternal(
       runContext.messageChannel,
       opts.replyChannel ?? opts.channel,
     );
+    assertSupportedAgentRuntimeChannel({ cfg, channel: messageChannel });
 
     let result: AgentAttemptResult;
     let fallbackProvider = provider;
@@ -1299,6 +1344,7 @@ async function agentCommandInternal(
           agentId: sessionAgentId,
           sessionKey: sessionKey ?? sessionId,
           prepareAgentHarnessRuntime: async ({ provider, model, agentHarnessRuntimeOverride }) => {
+            assertSupportedAgentRuntimeModel({ cfg, provider, model });
             await ensureSelectedAgentHarnessPlugin({
               config: cfg,
               provider,
@@ -1320,6 +1366,11 @@ async function agentCommandInternal(
               result,
             }),
           run: async (providerOverride, modelOverride, runOptions) => {
+            assertSupportedAgentRuntimeModel({
+              cfg,
+              provider: providerOverride,
+              model: modelOverride,
+            });
             const isAutoFallbackPrimaryProbeCandidate =
               autoFallbackPrimaryProbe &&
               providerOverride === autoFallbackPrimaryProbe.provider &&

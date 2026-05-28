@@ -320,7 +320,7 @@ jobs:
           }
           while true; do
             candidates="$(
-              for workflow in mantis-telegram-desktop-proof.yml mantis-telegram-live.yml; do
+              for workflow in mantis-telegram-desktop-proof.yml; do
                 for status in queued in_progress waiting pending requested; do
                   gh run list --repo "$GITHUB_REPOSITORY" --workflow "$workflow" --status "$status" --limit 100 --json databaseId,status,createdAt,url \
                     | jq -r \

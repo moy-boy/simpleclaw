@@ -14,6 +14,10 @@ import { DEFAULT_WORKSPACE, handleReset } from "./onboard-helpers.js";
 import { runInteractiveSetup } from "./onboard-interactive.js";
 import { runNonInteractiveSetup } from "./onboard-non-interactive.js";
 import type { OnboardOptions, ResetScope } from "./onboard-types.js";
+import {
+  formatUnsupportedOnboardAuthChoice,
+  isSupportedOnboardAuthChoice,
+} from "./supported-surface.js";
 
 const VALID_RESET_SCOPES = new Set<ResetScope>(["config", "config+creds+sessions", "full"]);
 
@@ -45,6 +49,11 @@ export async function setupWizardCommand(
     normalizedAuthChoice === opts.authChoice && flow === opts.flow
       ? opts
       : { ...opts, authChoice: normalizedAuthChoice, flow };
+  if (!isSupportedOnboardAuthChoice(normalizedOpts.authChoice)) {
+    runtime.error(formatUnsupportedOnboardAuthChoice(String(normalizedOpts.authChoice)));
+    runtime.exit(1);
+    return;
+  }
   if (
     normalizedOpts.secretInputMode &&
     normalizedOpts.secretInputMode !== "plaintext" && // pragma: allowlist secret

@@ -9,15 +9,6 @@ export const KNIP_UNUSED_FILE_ALLOWLIST = [];
 // package bridge files. Ignore these when reported, but do not require them
 // to be reported.
 export const KNIP_OPTIONAL_UNUSED_FILE_ALLOWLIST = [
-  "extensions/acpx/src/runtime-internals/error-format.mjs",
-  "extensions/acpx/src/runtime-internals/mcp-command-line.mjs",
-  "extensions/acpx/src/runtime-internals/mcp-proxy.mjs",
-  "extensions/canvas/src/host/a2ui-app/bootstrap.js",
-  "extensions/canvas/src/host/a2ui-app/rolldown.config.mjs",
-  "extensions/diffs/src/viewer-client.ts",
-  "extensions/diffs/src/viewer-payload.ts",
-  "extensions/matrix/src/plugin-entry.runtime.js",
-  "extensions/memory-core/src/memory-tool-manager-mock.ts",
   "src/agents/subagent-registry.runtime.ts",
   "src/auto-reply/inbound.group-require-mention-test-plugins.ts",
   "src/auto-reply/reply/get-reply.test-loader.ts",
@@ -39,7 +30,5 @@ export const KNIP_OPTIONAL_UNUSED_FILE_ALLOWLIST = [
   "src/plugins/contracts/tts-contract-suites.ts",
   "src/plugins/runtime-sidecar-paths-baseline.ts",
   "src/tasks/task-registry-control.runtime.ts",
-  "extensions/qa-lab/src/auth-profile.fixture.ts",
-  "extensions/qa-lab/src/codex-plugin.fixture.ts",
   "src/gateway/test/server-sessions-helpers.ts",
 ];

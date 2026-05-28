@@ -271,26 +271,26 @@ describe("models.authStatus", () => {
       warnAfterMs: 0,
       profiles: [
         {
-          profileId: "anthropic:default",
-          provider: "anthropic",
+          profileId: "openai:default",
+          provider: "openai",
           type: "api_key",
           status: "static",
           source: "store",
-          label: "anthropic:default",
+          label: "openai:default",
         },
       ],
       providers: [
         {
-          provider: "anthropic",
+          provider: "openai",
           status: "static",
           profiles: [
             {
-              profileId: "anthropic:default",
-              provider: "anthropic",
+              profileId: "openai:default",
+              provider: "openai",
               type: "api_key",
               status: "static",
               source: "store",
-              label: "anthropic:default",
+              label: "openai:default",
             },
           ],
         },
@@ -306,11 +306,12 @@ describe("models.authStatus", () => {
       auth: {
         profiles: {
           "opencode-go:default": { provider: "opencode-go", mode: "api_key" },
+          "openai-codex:default": { provider: "openai-codex", mode: "oauth" },
         },
       },
       agents: {
         defaults: {
-          model: { primary: "opencode-go/kimi-k2.6" },
+          model: { primary: "openai-codex/gpt-5.4" },
         },
       },
       models: {
@@ -318,6 +319,10 @@ describe("models.authStatus", () => {
           "opencode-go": {
             baseUrl: "https://example.test/v1",
             auth: "api-key",
+            models: [],
+          },
+          "openai-codex": {
+            auth: "oauth",
             models: [],
           },
         },
@@ -333,9 +338,10 @@ describe("models.authStatus", () => {
     expect(externalCli.mode).toBe("scoped");
     expect(externalCli.allowKeychainPrompt).toBe(false);
     requireRecord(externalCli.config);
-    expect(externalCli.providerIds).toContain("opencode-go");
+    expect(externalCli.providerIds).toContain("openai-codex");
+    expect(externalCli.providerIds).not.toContain("opencode-go");
     expect(externalCli.providerIds).not.toContain("claude-cli");
-    expect(externalCli.profileIds).toEqual(["opencode-go:default"]);
+    expect(externalCli.profileIds).toEqual(["openai-codex:default"]);
   });
 
   it("disables external CLI auth overlays when config has no provider signal", async () => {
@@ -505,11 +511,7 @@ describe("models.authStatus", () => {
     expect(call?.[0]?.providers).toBeUndefined();
   });
 
-  it("normalizes expectsOAuth provider ids to match buildAuthHealthSummary", async () => {
-    // Config uses alias `z.ai`; buildAuthHealthSummary normalizes to `zai`.
-    // Without normalization, expectsOAuth.has(prov.provider) fires on the
-    // raw `z.ai` key but prov.provider is `zai`, so the "configured oauth
-    // but no oauth profile" signal silently skipped the alias path.
+  it("filters unsupported configured provider aliases from auth status", async () => {
     mocks.getRuntimeConfig.mockReturnValue({
       models: { providers: { "z.ai": { auth: "oauth" } } },
     });
@@ -536,16 +538,18 @@ describe("models.authStatus", () => {
     });
     const opts = createOptions();
     await handler(opts);
+    const call = firstBuildAuthHealthSummaryCall();
+    expect(call?.[0]?.providers).toBeUndefined();
     const [, payload] = firstRespondCall(opts) ?? [];
     const result = payload as ModelAuthStatusResult;
-    expect(result.providers[0]?.status).toBe("missing");
+    expect(result.providers).toEqual([]);
   });
 
   it("flags provider configured auth:oauth but with only api_key profile as missing", async () => {
     // Config says provider should use OAuth; store has only an api_key
     // credential (e.g. operator switched modes but forgot to login).
     mocks.getRuntimeConfig.mockReturnValue({
-      models: { providers: { anthropic: { auth: "oauth" } } },
+      models: { providers: { openai: { auth: "oauth" } } },
     });
     mocks.buildAuthHealthSummary.mockReturnValue({
       now: 0,
@@ -553,16 +557,16 @@ describe("models.authStatus", () => {
       profiles: [],
       providers: [
         {
-          provider: "anthropic",
+          provider: "openai",
           status: "static",
           profiles: [
             {
-              profileId: "anthropic:default",
-              provider: "anthropic",
+              profileId: "openai:default",
+              provider: "openai",
               type: "api_key",
               status: "static",
               source: "store",
-              label: "anthropic:default",
+              label: "openai:default",
             },
           ],
         },
@@ -609,15 +613,15 @@ describe("models.authLogout", () => {
   });
 
   it("removes provider auth profiles and invalidates the status cache", async () => {
-    mocks.listProfilesForProvider.mockReturnValue(["openrouter:default"]);
+    mocks.listProfilesForProvider.mockReturnValue(["openai:default"]);
     await handler(createOptions());
     expect(mocks.buildAuthHealthSummary).toHaveBeenCalledTimes(1);
 
-    const opts = createLogoutOptions({ provider: "OpenRouter" });
+    const opts = createLogoutOptions({ provider: "OpenAI" });
     await logoutHandler(opts);
 
     expect(mocks.removeProviderAuthProfilesWithLock).toHaveBeenCalledWith({
-      provider: "openrouter",
+      provider: "openai",
       agentDir: "/tmp/agent",
     });
     expect(mocks.refreshActiveSecretsRuntimeSnapshot).toHaveBeenCalledTimes(1);
@@ -625,52 +629,52 @@ describe("models.authLogout", () => {
     expect(mocks.warmCurrentProviderAuthState).toHaveBeenCalledWith({});
     const [ok, payload] = firstRespondCall(opts) ?? [];
     expect(ok).toBe(true);
-    expect((payload as ModelAuthLogoutResult).removedProfiles).toEqual(["openrouter:default"]);
+    expect((payload as ModelAuthLogoutResult).removedProfiles).toEqual(["openai:default"]);
 
     await handler(createOptions());
     expect(mocks.buildAuthHealthSummary).toHaveBeenCalledTimes(2);
   });
 
   it("aborts active runs for the removed provider only", async () => {
-    const opts = createLogoutOptions({ provider: "openrouter" });
-    const openrouterRun = createActiveRun("openrouter");
+    const opts = createLogoutOptions({ provider: "openai" });
     const openaiRun = createActiveRun("openai");
-    opts.context.chatAbortControllers.set("run-openrouter", openrouterRun);
+    const codexRun = createActiveRun("openai-codex");
     opts.context.chatAbortControllers.set("run-openai", openaiRun);
+    opts.context.chatAbortControllers.set("run-codex", codexRun);
 
     await logoutHandler(opts);
 
-    expect(openrouterRun.controller.signal.aborted).toBe(true);
-    expect(openaiRun.controller.signal.aborted).toBe(false);
-    expect(opts.context.chatAbortControllers.has("run-openrouter")).toBe(false);
-    expect(opts.context.chatAbortControllers.has("run-openai")).toBe(true);
+    expect(openaiRun.controller.signal.aborted).toBe(true);
+    expect(codexRun.controller.signal.aborted).toBe(false);
+    expect(opts.context.chatAbortControllers.has("run-openai")).toBe(false);
+    expect(opts.context.chatAbortControllers.has("run-codex")).toBe(true);
     expect(opts.context.removeChatRun).toHaveBeenCalledWith(
-      "run-openrouter",
-      "run-openrouter",
-      openrouterRun.sessionKey,
+      "run-openai",
+      "run-openai",
+      openaiRun.sessionKey,
     );
     expect(opts.context.broadcast).toHaveBeenCalledWith(
       "chat",
       expect.objectContaining({
-        runId: "run-openrouter",
+        runId: "run-openai",
         state: "aborted",
         stopReason: "auth-revoked",
       }),
     );
     const [, payload] = firstRespondCall(opts) ?? [];
-    expect((payload as ModelAuthLogoutResult).abortedRunIds).toEqual(["run-openrouter"]);
+    expect((payload as ModelAuthLogoutResult).abortedRunIds).toEqual(["run-openai"]);
   });
 
   it("aborts provider runs but preserves config SecretRef auth", async () => {
     const cfg = {
       models: {
         providers: {
-          openrouter: {
+          openai: {
             auth: "api-key",
             apiKey: {
               source: "env",
               provider: "default",
-              id: "OPENROUTER_API_KEY",
+              id: "OPENAI_API_KEY",
             },
           },
         },
@@ -678,41 +682,41 @@ describe("models.authLogout", () => {
     };
     mocks.getRuntimeConfig.mockReturnValue(cfg);
     mocks.listProfilesForProvider.mockReturnValue([]);
-    const opts = createLogoutOptions({ provider: "openrouter" });
-    const activeRun = createActiveRun("openrouter");
-    opts.context.chatAbortControllers.set("run-openrouter", activeRun);
+    const opts = createLogoutOptions({ provider: "openai" });
+    const activeRun = createActiveRun("openai");
+    opts.context.chatAbortControllers.set("run-openai", activeRun);
 
     await logoutHandler(opts);
 
     expect(mocks.removeProviderAuthProfilesWithLock).toHaveBeenCalledWith({
-      provider: "openrouter",
+      provider: "openai",
       agentDir: "/tmp/agent",
     });
-    expect(cfg.models.providers.openrouter.apiKey).toEqual({
+    expect(cfg.models.providers.openai.apiKey).toEqual({
       source: "env",
       provider: "default",
-      id: "OPENROUTER_API_KEY",
+      id: "OPENAI_API_KEY",
     });
     expect(activeRun.controller.signal.aborted).toBe(true);
     const [ok, payload] = firstRespondCall(opts) ?? [];
     expect(ok).toBe(true);
     expect((payload as ModelAuthLogoutResult).removedProfiles).toEqual([]);
-    expect((payload as ModelAuthLogoutResult).abortedRunIds).toEqual(["run-openrouter"]);
+    expect((payload as ModelAuthLogoutResult).abortedRunIds).toEqual(["run-openai"]);
   });
 
   it("removes inherited main-store auth profiles", async () => {
-    mocks.listProfilesForProvider.mockReturnValue(["openrouter:main"]);
+    mocks.listProfilesForProvider.mockReturnValue(["openai:main"]);
     mocks.resolvePersistedAuthProfileOwnerAgentDir.mockReturnValue(undefined);
-    const opts = createLogoutOptions({ provider: "openrouter" });
+    const opts = createLogoutOptions({ provider: "openai" });
 
     await logoutHandler(opts);
 
     expect(mocks.removeProviderAuthProfilesWithLock).toHaveBeenCalledWith({
-      provider: "openrouter",
+      provider: "openai",
       agentDir: "/tmp/agent",
     });
     expect(mocks.removeProviderAuthProfilesWithLock).toHaveBeenCalledWith({
-      provider: "openrouter",
+      provider: "openai",
       agentDir: undefined,
     });
     const [ok] = firstRespondCall(opts) ?? [];
@@ -720,27 +724,27 @@ describe("models.authLogout", () => {
   });
 
   it("aborts active runs that share a provider auth alias", async () => {
-    const opts = createLogoutOptions({ provider: "byteplus" });
-    const aliasedRun = createActiveRun("byteplus-plan", "byteplus");
-    opts.context.chatAbortControllers.set("run-byteplus-plan", aliasedRun);
+    const opts = createLogoutOptions({ provider: "openai-codex" });
+    const aliasedRun = createActiveRun("openai-codex-plan", "openai-codex");
+    opts.context.chatAbortControllers.set("run-openai-codex-plan", aliasedRun);
 
     await logoutHandler(opts);
 
     expect(aliasedRun.controller.signal.aborted).toBe(true);
     const [, payload] = firstRespondCall(opts) ?? [];
-    expect((payload as ModelAuthLogoutResult).abortedRunIds).toEqual(["run-byteplus-plan"]);
+    expect((payload as ModelAuthLogoutResult).abortedRunIds).toEqual(["run-openai-codex-plan"]);
   });
 
   it("does not abort runs when auth profile removal fails", async () => {
     mocks.removeProviderAuthProfilesWithLock.mockResolvedValue(null);
-    const opts = createLogoutOptions({ provider: "openrouter" });
-    const activeRun = createActiveRun("openrouter");
-    opts.context.chatAbortControllers.set("run-openrouter", activeRun);
+    const opts = createLogoutOptions({ provider: "openai" });
+    const activeRun = createActiveRun("openai");
+    opts.context.chatAbortControllers.set("run-openai", activeRun);
 
     await logoutHandler(opts);
 
     expect(activeRun.controller.signal.aborted).toBe(false);
-    expect(opts.context.chatAbortControllers.has("run-openrouter")).toBe(true);
+    expect(opts.context.chatAbortControllers.has("run-openai")).toBe(true);
     const [ok, payload, error] = firstRespondCall(opts) ?? [];
     expect(ok).toBe(false);
     expect(payload).toBeUndefined();
@@ -749,14 +753,14 @@ describe("models.authLogout", () => {
 
   it("does not abort runs when runtime auth snapshot refresh fails", async () => {
     mocks.refreshActiveSecretsRuntimeSnapshot.mockRejectedValue(new Error("refresh failed"));
-    const opts = createLogoutOptions({ provider: "openrouter" });
-    const activeRun = createActiveRun("openrouter");
-    opts.context.chatAbortControllers.set("run-openrouter", activeRun);
+    const opts = createLogoutOptions({ provider: "openai" });
+    const activeRun = createActiveRun("openai");
+    opts.context.chatAbortControllers.set("run-openai", activeRun);
 
     await logoutHandler(opts);
 
     expect(activeRun.controller.signal.aborted).toBe(false);
-    expect(opts.context.chatAbortControllers.has("run-openrouter")).toBe(true);
+    expect(opts.context.chatAbortControllers.has("run-openai")).toBe(true);
     const [ok, payload, error] = firstRespondCall(opts) ?? [];
     expect(ok).toBe(false);
     expect(payload).toBeUndefined();
@@ -769,6 +773,16 @@ describe("models.authLogout", () => {
     const [ok, , error] = firstRespondCall(opts) ?? [];
     expect(ok).toBe(false);
     expect(error?.message).toBe("provider is required");
+  });
+
+  it("rejects unsupported providers", async () => {
+    const opts = createLogoutOptions({ provider: "openrouter" });
+    await logoutHandler(opts);
+    const [ok, payload, error] = firstRespondCall(opts) ?? [];
+    expect(ok).toBe(false);
+    expect(payload).toBeUndefined();
+    expect(error?.message).toContain('Unsupported provider "openrouter"');
+    expect(mocks.removeProviderAuthProfilesWithLock).not.toHaveBeenCalled();
   });
 });
 

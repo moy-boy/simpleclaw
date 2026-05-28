@@ -79,10 +79,18 @@ function readJson(path: string): unknown {
 }
 
 describe("oxlint config", () => {
-  it("includes bundled extensions in type-aware lint coverage", () => {
+  it("includes supported bundled extensions in root type-aware lint coverage", () => {
     const tsconfig = readJson("config/tsconfig/oxlint.json") as OxlintTsconfig;
 
-    expect(tsconfig.include).toContain("../../extensions/**/*");
+    expect(tsconfig.include).toEqual(
+      expect.arrayContaining([
+        "../../extensions/codex/**/*",
+        "../../extensions/discord/**/*",
+        "../../extensions/openai/**/*",
+        "../../extensions/telegram/**/*",
+      ]),
+    );
+    expect(tsconfig.include).not.toContain("../../extensions/**/*");
     expect(tsconfig.exclude ?? []).not.toContain("../../extensions");
   });
 

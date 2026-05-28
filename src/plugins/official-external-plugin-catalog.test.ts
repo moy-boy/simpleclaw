@@ -16,50 +16,8 @@ function expectCatalogEntry(id: string): OfficialExternalPluginCatalogEntry {
 }
 
 describe("official external plugin catalog", () => {
-  it("resolves third-party channel lookup aliases to published plugin ids", () => {
-    const wecomByChannel = expectCatalogEntry("wecom");
-    const wecomByPlugin = expectCatalogEntry("wecom-openclaw-plugin");
-    const yuanbaoByChannel = expectCatalogEntry("yuanbao");
-
-    expect(resolveOfficialExternalPluginId(wecomByChannel)).toBe("wecom-openclaw-plugin");
-    expect(resolveOfficialExternalPluginId(wecomByPlugin)).toBe("wecom-openclaw-plugin");
-    expect(resolveOfficialExternalPluginInstall(wecomByChannel)?.npmSpec).toBe(
-      "@wecom/wecom-openclaw-plugin@2026.5.7",
-    );
-    expect(resolveOfficialExternalPluginId(yuanbaoByChannel)).toBe("openclaw-plugin-yuanbao");
-    expect(resolveOfficialExternalPluginInstall(yuanbaoByChannel)?.npmSpec).toBe(
-      "openclaw-plugin-yuanbao@2.13.1",
-    );
-  });
-
-  it("keeps official launch package specs on the production package names", () => {
-    expect(resolveOfficialExternalPluginInstall(expectCatalogEntry("acpx"))?.npmSpec).toBe(
-      "@openclaw/acpx",
-    );
-    expect(resolveOfficialExternalPluginInstall(expectCatalogEntry("googlechat"))?.npmSpec).toBe(
-      "@openclaw/googlechat",
-    );
-    expect(resolveOfficialExternalPluginInstall(expectCatalogEntry("line"))?.npmSpec).toBe(
-      "@openclaw/line",
-    );
-  });
-
-  it("allows invalid-config recovery for externalized stock plugins", () => {
-    expect(resolveOfficialExternalPluginInstall(expectCatalogEntry("brave"))).toMatchObject({
-      npmSpec: "@openclaw/brave-plugin",
-      allowInvalidConfigRecovery: true,
-    });
-    expect(resolveOfficialExternalPluginInstall(expectCatalogEntry("slack"))).toMatchObject({
-      npmSpec: "@openclaw/slack",
-      allowInvalidConfigRecovery: true,
-    });
-    expect(resolveOfficialExternalPluginInstall(expectCatalogEntry("discord"))).toMatchObject({
-      npmSpec: "@openclaw/discord",
-      allowInvalidConfigRecovery: true,
-    });
-  });
-
-  it("lists Matrix as an official external ClawHub channel after cutover", () => {
+  it("keeps the official channel catalog limited to Discord", () => {
+    const discord = expectCatalogEntry("discord");
     const ids = new Set<string>();
     for (const entry of listOfficialExternalPluginCatalogEntries()) {
       const pluginId = resolveOfficialExternalPluginId(entry);
@@ -68,14 +26,22 @@ describe("official external plugin catalog", () => {
       }
     }
 
-    expect(ids.has("matrix")).toBe(true);
-    expect(ids.has("mattermost")).toBe(false);
-    expect(resolveOfficialExternalPluginInstall(expectCatalogEntry("matrix"))).toEqual({
-      clawhubSpec: "clawhub:@openclaw/matrix",
-      npmSpec: "@openclaw/matrix",
-      defaultChoice: "clawhub",
-      minHostVersion: ">=2026.4.10",
+    expect(resolveOfficialExternalPluginId(discord)).toBe("discord");
+    expect(resolveOfficialExternalPluginInstall(discord)).toMatchObject({
+      npmSpec: "@openclaw/discord",
       allowInvalidConfigRecovery: true,
     });
+    expect(ids).toEqual(new Set(["discord", "codex"]));
+  });
+
+  it("keeps the official external provider catalog limited to Codex", () => {
+    const codex = expectCatalogEntry("codex");
+    expect(resolveOfficialExternalPluginId(codex)).toBe("codex");
+    expect(resolveOfficialExternalPluginInstall(codex)).toMatchObject({
+      npmSpec: "@openclaw/codex",
+      defaultChoice: "npm",
+    });
+    expect(getOfficialExternalPluginCatalogEntry("amazon-bedrock")).toBeUndefined();
+    expect(getOfficialExternalPluginCatalogEntry("anthropic-vertex")).toBeUndefined();
   });
 });

@@ -5,6 +5,11 @@ import { resolveAgentModelFallbackValues, toAgentModelListLike } from "../../con
 import type { AgentModelEntryConfig } from "../../config/types.agent-defaults.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { type RuntimeEnv, writeRuntimeJson } from "../../runtime.js";
+import {
+  formatUnsupportedModelRefMessage,
+  isSupportedModelRef,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 import { loadModelsConfig } from "./load-config.js";
 import {
   DEFAULT_PROVIDER,
@@ -87,7 +92,14 @@ export async function addFallbackCommand(
   runtime: RuntimeEnv,
 ) {
   const updated = await updateConfig((cfg) => {
+    if (shouldEnforceSupportedModelProviderIds(cfg) && !isSupportedModelRef(modelRaw)) {
+      throw new Error(formatUnsupportedModelRefMessage(modelRaw));
+    }
     const resolved = resolveModelTarget({ raw: modelRaw, cfg });
+    const resolvedKey = modelKey(resolved.provider, resolved.model);
+    if (shouldEnforceSupportedModelProviderIds(cfg) && !isSupportedModelRef(resolvedKey)) {
+      throw new Error(formatUnsupportedModelRefMessage(resolvedKey));
+    }
     const nextModels = {
       ...cfg.agents?.defaults?.models,
     } as Record<string, AgentModelEntryConfig>;
@@ -120,8 +132,14 @@ export async function removeFallbackCommand(
   runtime: RuntimeEnv,
 ) {
   const updated = await updateConfig((cfg) => {
+    if (shouldEnforceSupportedModelProviderIds(cfg) && !isSupportedModelRef(modelRaw)) {
+      throw new Error(formatUnsupportedModelRefMessage(modelRaw));
+    }
     const resolved = resolveModelTarget({ raw: modelRaw, cfg });
     const targetKey = modelKey(resolved.provider, resolved.model);
+    if (shouldEnforceSupportedModelProviderIds(cfg) && !isSupportedModelRef(targetKey)) {
+      throw new Error(formatUnsupportedModelRefMessage(targetKey));
+    }
     const aliasIndex = buildModelAliasIndex({
       cfg,
       defaultProvider: DEFAULT_PROVIDER,

@@ -18,7 +18,7 @@ describe("resolveMissingOfficialExternalChannelPluginRepairHint", () => {
   it("returns an install hint when a configured official external channel has no owner", () => {
     mocks.resolveConfiguredChannelPresencePolicy.mockReturnValue([
       {
-        channelId: "feishu",
+        channelId: "discord",
         sources: ["explicit-config"],
         effective: false,
         pluginIds: [],
@@ -28,50 +28,25 @@ describe("resolveMissingOfficialExternalChannelPluginRepairHint", () => {
 
     expect(
       resolveMissingOfficialExternalChannelPluginRepairHint({
-        config: { channels: { feishu: { appId: "cli_xxx" } } },
-        channelId: "feishu",
+        config: { channels: { discord: { token: "token" } } },
+        channelId: "discord",
       }),
     ).toEqual({
-      pluginId: "feishu",
-      channelId: "feishu",
-      label: "Feishu",
-      installSpec: "@openclaw/feishu",
-      installCommand: "openclaw plugins install @openclaw/feishu",
+      pluginId: "discord",
+      channelId: "discord",
+      label: "Discord",
+      installSpec: "@openclaw/discord",
+      installCommand: "openclaw plugins install @openclaw/discord",
       doctorFixCommand: "openclaw doctor --fix",
       repairHint:
-        "Install the official external plugin with: openclaw plugins install @openclaw/feishu, or run: openclaw doctor --fix.",
-    });
-  });
-
-  it("prefers the ClawHub install hint for externalized WhatsApp", () => {
-    mocks.resolveConfiguredChannelPresencePolicy.mockReturnValue([
-      {
-        channelId: "whatsapp",
-        sources: ["explicit-config"],
-        effective: false,
-        pluginIds: [],
-        blockedReasons: ["no-channel-owner"],
-      },
-    ]);
-
-    expect(
-      resolveMissingOfficialExternalChannelPluginRepairHint({
-        config: { channels: { whatsapp: { enabled: true } } },
-        channelId: "whatsapp",
-      }),
-    ).toMatchObject({
-      pluginId: "whatsapp",
-      channelId: "whatsapp",
-      label: "WhatsApp",
-      installSpec: "clawhub:@openclaw/whatsapp",
-      installCommand: "openclaw plugins install clawhub:@openclaw/whatsapp",
+        "Install the official external plugin with: openclaw plugins install @openclaw/discord, or run: openclaw doctor --fix.",
     });
   });
 
   it("does not return install hints for policy-blocked official external channel owners", () => {
     mocks.resolveConfiguredChannelPresencePolicy.mockReturnValue([
       {
-        channelId: "whatsapp",
+        channelId: "discord",
         sources: ["explicit-config"],
         effective: false,
         pluginIds: [],
@@ -81,8 +56,8 @@ describe("resolveMissingOfficialExternalChannelPluginRepairHint", () => {
 
     expect(
       resolveMissingOfficialExternalChannelPluginRepairHint({
-        config: { channels: { whatsapp: { enabled: true } } },
-        channelId: "whatsapp",
+        config: { channels: { discord: { enabled: true } } },
+        channelId: "discord",
       }),
     ).toBeNull();
   });
@@ -90,18 +65,18 @@ describe("resolveMissingOfficialExternalChannelPluginRepairHint", () => {
   it("does not return install hints for active official external channel owners", () => {
     mocks.resolveConfiguredChannelPresencePolicy.mockReturnValue([
       {
-        channelId: "whatsapp",
+        channelId: "discord",
         sources: ["explicit-config"],
         effective: true,
-        pluginIds: ["whatsapp"],
+        pluginIds: ["discord"],
         blockedReasons: [],
       },
     ]);
 
     expect(
       resolveMissingOfficialExternalChannelPluginRepairHint({
-        config: { channels: { whatsapp: { enabled: true } } },
-        channelId: "whatsapp",
+        config: { channels: { discord: { enabled: true } } },
+        channelId: "discord",
       }),
     ).toBeNull();
   });

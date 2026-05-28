@@ -4,7 +4,6 @@
 
 export const DEFAULT_LIVE_RETRIES = 1;
 const LIVE_ACP_TIMEOUT_MS = 20 * 60 * 1000;
-const LIVE_CLI_TIMEOUT_MS = 20 * 60 * 1000;
 const LIVE_PROFILE_TIMEOUT_MS = 30 * 60 * 1000;
 const OPENWEBUI_TIMEOUT_MS = 20 * 60 * 1000;
 const RELEASE_OPENWEBUI_COMMAND =
@@ -57,20 +56,8 @@ function liveProviderResource(provider) {
   if (!provider) {
     return undefined;
   }
-  if (provider === "claude-cli" || provider === "claude") {
-    return "live:claude";
-  }
   if (provider === "codex-cli" || provider === "codex") {
     return "live:codex";
-  }
-  if (provider === "droid") {
-    return "live:droid";
-  }
-  if (provider === "google-gemini-cli" || provider === "gemini") {
-    return "live:gemini";
-  }
-  if (provider === "opencode") {
-    return "live:opencode";
   }
   if (provider === "openai") {
     return "live:openai";
@@ -238,50 +225,29 @@ function kitchenSinkRpcLane() {
 }
 
 export const mainLanes = [
-  liveLane("live-models", liveDockerScriptCommand("test-live-models-docker.sh"), {
-    providers: ["claude-cli", "google-gemini-cli"],
-    timeoutMs: LIVE_PROFILE_TIMEOUT_MS,
-    weight: 4,
-  }),
   liveLane(
-    "live-gateway",
+    "live-models",
     liveDockerScriptCommand(
-      "test-live-gateway-models-docker.sh",
-      "OPENCLAW_IMAGE=openclaw:local-live-gateway OPENCLAW_DOCKER_BUILD_EXTENSIONS=matrix OPENCLAW_LIVE_GATEWAY_PROVIDERS=claude-cli,google-gemini-cli",
-      { skipBuild: false },
+      "test-live-models-docker.sh",
+      "OPENCLAW_LIVE_PROVIDERS=openai OPENCLAW_LIVE_MAX_MODELS=6",
     ),
     {
-      providers: ["claude-cli", "google-gemini-cli"],
+      provider: "openai",
       timeoutMs: LIVE_PROFILE_TIMEOUT_MS,
       weight: 4,
     },
   ),
   liveLane(
-    "live-cli-backend-claude",
+    "live-gateway",
     liveDockerScriptCommand(
-      "test-live-cli-backend-docker.sh",
-      "OPENCLAW_LIVE_CLI_BACKEND_MODEL=claude-cli/claude-sonnet-4-6",
+      "test-live-gateway-models-docker.sh",
+      "OPENCLAW_IMAGE=openclaw:local-live-gateway OPENCLAW_DOCKER_BUILD_EXTENSIONS=openai,discord,telegram OPENCLAW_LIVE_GATEWAY_PROVIDERS=openai OPENCLAW_LIVE_GATEWAY_MODELS=openai/gpt-5.5 OPENCLAW_LIVE_GATEWAY_MAX_MODELS=1",
+      { skipBuild: false },
     ),
     {
-      cacheKey: "cli-backend-claude",
-      provider: "claude-cli",
-      resources: ["npm"],
-      timeoutMs: LIVE_CLI_TIMEOUT_MS,
-      weight: 3,
-    },
-  ),
-  liveLane(
-    "live-cli-backend-gemini",
-    liveDockerScriptCommand(
-      "test-live-cli-backend-docker.sh",
-      "OPENCLAW_LIVE_CLI_BACKEND_MODEL=google-gemini-cli/gemini-3-flash-preview",
-    ),
-    {
-      cacheKey: "cli-backend-gemini",
-      provider: "google-gemini-cli",
-      resources: ["npm"],
-      timeoutMs: LIVE_CLI_TIMEOUT_MS,
-      weight: 3,
+      provider: "openai",
+      timeoutMs: LIVE_PROFILE_TIMEOUT_MS,
+      weight: 4,
     },
   ),
   liveLane("openwebui", "OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openwebui", {
@@ -321,8 +287,8 @@ export const mainLanes = [
     { resources: ["service"], stateScenario: "empty", weight: 3 },
   ),
   npmLane(
-    "npm-onboard-slack-channel-agent",
-    "OPENCLAW_NPM_ONBOARD_CHANNEL=slack OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:npm-onboard-channel-agent",
+    "npm-onboard-telegram-channel-agent",
+    "OPENCLAW_NPM_ONBOARD_CHANNEL=telegram OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:npm-onboard-channel-agent",
     { resources: ["service"], stateScenario: "empty", weight: 3 },
   ),
   npmLane(
@@ -532,62 +498,12 @@ export const tailLanes = [
   liveCodexNpmPluginLane(),
   livePluginToolLane(),
   liveLane(
-    "live-acp-bind-claude",
-    liveDockerScriptCommand("test-live-acp-bind-docker.sh", "OPENCLAW_LIVE_ACP_BIND_AGENT=claude"),
-    {
-      cacheKey: "acp-bind-claude",
-      provider: "claude-cli",
-      resources: ["npm"],
-      timeoutMs: LIVE_ACP_TIMEOUT_MS,
-      weight: 3,
-    },
-  ),
-  liveLane(
     "live-acp-bind-codex",
     liveDockerScriptCommand("test-live-acp-bind-docker.sh", "OPENCLAW_LIVE_ACP_BIND_AGENT=codex"),
     {
       cacheKey: "acp-bind-codex",
       provider: "codex-cli",
       resources: ["live:openai", "npm"],
-      timeoutMs: LIVE_ACP_TIMEOUT_MS,
-      weight: 3,
-    },
-  ),
-  liveLane(
-    "live-acp-bind-droid",
-    liveDockerScriptCommand(
-      "test-live-acp-bind-docker.sh",
-      "OPENCLAW_LIVE_ACP_BIND_AGENT=droid OPENCLAW_LIVE_ACP_BIND_REQUIRE_TRANSCRIPT=1",
-    ),
-    {
-      cacheKey: "acp-bind-droid",
-      provider: "droid",
-      resources: ["npm"],
-      timeoutMs: LIVE_ACP_TIMEOUT_MS,
-      weight: 3,
-    },
-  ),
-  liveLane(
-    "live-acp-bind-gemini",
-    liveDockerScriptCommand("test-live-acp-bind-docker.sh", "OPENCLAW_LIVE_ACP_BIND_AGENT=gemini"),
-    {
-      cacheKey: "acp-bind-gemini",
-      provider: "google-gemini-cli",
-      resources: ["npm"],
-      timeoutMs: LIVE_ACP_TIMEOUT_MS,
-      weight: 3,
-    },
-  ),
-  liveLane(
-    "live-acp-bind-opencode",
-    liveDockerScriptCommand(
-      "test-live-acp-bind-docker.sh",
-      "OPENCLAW_LIVE_ACP_BIND_AGENT=opencode OPENCLAW_LIVE_ACP_BIND_REQUIRE_TRANSCRIPT=1",
-    ),
-    {
-      cacheKey: "acp-bind-opencode",
-      provider: "opencode",
-      resources: ["npm"],
       timeoutMs: LIVE_ACP_TIMEOUT_MS,
       weight: 3,
     },
@@ -677,17 +593,6 @@ const releasePathPackageInstallOpenAiLanes = [
   }),
 ];
 
-const releasePathPackageInstallAnthropicLanes = [
-  npmLane(
-    "install-e2e-anthropic",
-    "OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=anthropic OPENCLAW_INSTALL_E2E_IMAGE=openclaw-install-e2e-anthropic:local pnpm test:install:e2e",
-    {
-      resources: ["service"],
-      weight: 3,
-    },
-  ),
-];
-
 const releasePathPackageUpdateCoreLanes = [
   npmLane(
     "npm-onboard-channel-agent",
@@ -700,8 +605,8 @@ const releasePathPackageUpdateCoreLanes = [
     { resources: ["service"], stateScenario: "empty", weight: 3 },
   ),
   npmLane(
-    "npm-onboard-slack-channel-agent",
-    "OPENCLAW_NPM_ONBOARD_CHANNEL=slack OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:npm-onboard-channel-agent",
+    "npm-onboard-telegram-channel-agent",
+    "OPENCLAW_NPM_ONBOARD_CHANNEL=telegram OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:npm-onboard-channel-agent",
     { resources: ["service"], stateScenario: "empty", weight: 3 },
   ),
   ...createPackageUpdateMaintenanceLanes(),
@@ -746,7 +651,6 @@ const primaryReleasePathChunks = {
     }),
   ],
   "package-update-openai": releasePathPackageInstallOpenAiLanes,
-  "package-update-anthropic": releasePathPackageInstallAnthropicLanes,
   "package-update-core": releasePathPackageUpdateCoreLanes,
   "plugins-runtime-plugins": releasePathPluginRuntimePluginLanes,
   "plugins-runtime-services": releasePathPluginRuntimeServiceLanes,
@@ -764,7 +668,6 @@ const primaryReleasePathChunks = {
 const primaryReleasePathChunkProfiles = {
   core: ["stable", "full"],
   "package-update-openai": ["beta", "stable", "full"],
-  "package-update-anthropic": ["beta", "stable", "full"],
   "package-update-core": ["beta", "stable", "full"],
   "plugins-runtime-plugins": ["stable", "full"],
   "plugins-runtime-services": ["stable", "full"],
@@ -780,11 +683,7 @@ const primaryReleasePathChunkProfiles = {
 };
 
 const legacyReleasePathChunks = {
-  "package-update": [
-    ...releasePathPackageInstallOpenAiLanes,
-    ...releasePathPackageInstallAnthropicLanes,
-    ...releasePathPackageUpdateCoreLanes,
-  ],
+  "package-update": [...releasePathPackageInstallOpenAiLanes, ...releasePathPackageUpdateCoreLanes],
   "plugins-runtime-core": releasePathPluginRuntimeCoreLanes,
   "plugins-runtime": releasePathPluginRuntimeLanes,
   "plugins-integrations": [...releasePathPluginRuntimeLanes, ...releasePathBundledChannelLanes],

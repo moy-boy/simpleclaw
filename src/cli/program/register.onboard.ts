@@ -11,6 +11,7 @@ import type {
   SecretInputMode,
   TailscaleMode,
 } from "../../commands/onboard-types.js";
+import { isSupportedSubscriptionAuthChoice } from "../../commands/supported-surface.js";
 import { resolveManifestProviderOnboardAuthFlags } from "../../plugins/provider-auth-choices.js";
 import { formatDocsLink } from "../../terminal/links.js";
 import { theme } from "../../terminal/theme.js";
@@ -46,6 +47,7 @@ const AUTH_CHOICE_HELP = formatAuthChoiceChoicesForCli({
 });
 
 type OnboardAuthFlag = {
+  readonly authChoice?: string;
   readonly cliOption: string;
   readonly description: string;
   readonly optionKey: string;
@@ -65,6 +67,9 @@ function resolveOnboardAuthFlags(): OnboardAuthFlag[] {
   const seenCliFlags = new Set<string>();
   const flags: OnboardAuthFlag[] = [];
   for (const flag of [...CORE_ONBOARD_AUTH_FLAGS, ...resolveManifestProviderOnboardAuthFlags()]) {
+    if (!isSupportedSubscriptionAuthChoice(flag.authChoice ?? "")) {
+      continue;
+    }
     const cliFlags = extractCliFlags(flag.cliOption);
     if (cliFlags.some((cliFlag) => seenCliFlags.has(cliFlag))) {
       continue;
@@ -113,18 +118,8 @@ export function registerOnboardCommand(program: Command): void {
     .option("--mode <mode>", "Onboard mode: local|remote")
     .option("--auth-choice <choice>", `Auth: ${AUTH_CHOICE_HELP}`)
     .option(
-      "--token-provider <id>",
-      "Token provider id (non-interactive; used with --auth-choice token)",
-    )
-    .option("--token <token>", "Token value (non-interactive; used with --auth-choice token)")
-    .option(
-      "--token-profile-id <id>",
-      "Auth profile id (non-interactive; default: <provider>:manual)",
-    )
-    .option("--token-expires-in <duration>", "Optional token expiry duration (e.g. 365d, 12h)")
-    .option(
       "--secret-input-mode <mode>",
-      "API key persistence mode: plaintext|ref (default: plaintext)",
+      "Secret persistence mode: plaintext|ref (default: plaintext)",
     )
     .option("--cloudflare-ai-gateway-account-id <id>", "Cloudflare Account ID")
     .option("--cloudflare-ai-gateway-gateway-id <id>", "Cloudflare AI Gateway ID");
@@ -134,16 +129,6 @@ export function registerOnboardCommand(program: Command): void {
   }
 
   command
-    .option("--custom-base-url <url>", "Custom provider base URL")
-    .option("--custom-api-key <key>", "Custom provider API key (optional)")
-    .option("--custom-model-id <id>", "Custom provider model ID")
-    .option("--custom-provider-id <id>", "Custom provider ID (optional; auto-derived by default)")
-    .option(
-      "--custom-compatibility <mode>",
-      "Custom provider API compatibility: openai|anthropic (default: openai)",
-    )
-    .option("--custom-image-input", "Mark the custom provider model as image-capable")
-    .option("--custom-text-input", "Mark the custom provider model as text-only")
     .option("--gateway-port <port>", "Gateway port")
     .option("--gateway-bind <mode>", "Gateway bind: loopback|tailnet|lan|auto|custom")
     .option("--gateway-auth <mode>", "Gateway auth: token|password")
@@ -205,25 +190,10 @@ export function registerOnboardCommand(program: Command): void {
           flow: opts.flow as "quickstart" | "advanced" | "manual" | "import" | undefined,
           mode: opts.mode as "local" | "remote" | undefined,
           authChoice: opts.authChoice as AuthChoice | undefined,
-          tokenProvider: opts.tokenProvider as string | undefined,
-          token: opts.token as string | undefined,
-          tokenProfileId: opts.tokenProfileId as string | undefined,
-          tokenExpiresIn: opts.tokenExpiresIn as string | undefined,
           secretInputMode: opts.secretInputMode as SecretInputMode | undefined,
           ...providerAuthOptionValues,
           cloudflareAiGatewayAccountId: opts.cloudflareAiGatewayAccountId as string | undefined,
           cloudflareAiGatewayGatewayId: opts.cloudflareAiGatewayGatewayId as string | undefined,
-          customBaseUrl: opts.customBaseUrl as string | undefined,
-          customApiKey: opts.customApiKey as string | undefined,
-          customModelId: opts.customModelId as string | undefined,
-          customProviderId: opts.customProviderId as string | undefined,
-          customCompatibility: opts.customCompatibility as "openai" | "anthropic" | undefined,
-          customImageInput:
-            opts.customTextInput === true
-              ? false
-              : opts.customImageInput === true
-                ? true
-                : undefined,
           gatewayPort:
             typeof gatewayPort === "number" && Number.isFinite(gatewayPort)
               ? gatewayPort

@@ -170,13 +170,13 @@ describe("scripts/mantis/publish-pr-evidence", () => {
       manifestPath,
       JSON.stringify({
         schemaVersion: 1,
-        id: "slack-desktop-smoke",
-        title: "Mantis Slack Desktop Smoke QA",
+        id: "telegram-live",
+        title: "Mantis Telegram Live QA",
         summary: "Mantis could not finish VM setup.",
-        scenario: "slack-openclaw-desktop-smoke",
+        scenario: "telegram-live",
         comparison: {
           candidate: {
-            expected: "Slack QA and VM gateway setup pass",
+            expected: "Telegram QA passes",
             sha: "bbb",
             status: "fail",
           },
@@ -184,25 +184,25 @@ describe("scripts/mantis/publish-pr-evidence", () => {
         },
         artifacts: [
           {
-            alt: "Slack Web desktop screenshot from the Mantis VM",
+            alt: "Telegram observed message screenshot",
             inline: true,
-            kind: "desktopScreenshot",
-            label: "Slack desktop/VNC browser",
+            kind: "screenshot",
+            label: "Telegram observed message",
             lane: "candidate",
-            path: "slack-desktop-smoke.png",
+            path: "telegram-observed-message.png",
             required: false,
-            targetPath: "slack-desktop.png",
+            targetPath: "telegram-observed-message.png",
           },
           {
             kind: "metadata",
-            label: "Slack desktop summary",
+            label: "Telegram summary",
             lane: "run",
             path: "summary.json",
             targetPath: "summary.json",
           },
           {
             kind: "report",
-            label: "Slack desktop report",
+            label: "Telegram report",
             lane: "run",
             path: "report.md",
             targetPath: "report.md",
@@ -220,11 +220,11 @@ describe("scripts/mantis/publish-pr-evidence", () => {
     const body = renderEvidenceComment({
       artifactUrl: "https://github.com/openclaw/openclaw/actions/runs/1/artifacts/2",
       manifest,
-      marker: "<!-- mantis-slack-desktop-smoke -->",
-      rawBase: "https://qa.openclaw.ai/mantis/slack/pr-1/run-1",
+      marker: "<!-- mantis-telegram-live -->",
+      rawBase: "https://qa.openclaw.ai/mantis/telegram/pr-1/run-1",
       requestSource: "workflow_dispatch",
       runUrl: "https://github.com/openclaw/openclaw/actions/runs/1",
-      treeUrl: "https://qa.openclaw.ai/mantis/slack/pr-1/run-1",
+      treeUrl: "https://qa.openclaw.ai/mantis/telegram/pr-1/run-1",
     });
 
     expect(body).toContain("Summary: Mantis could not finish VM setup.");

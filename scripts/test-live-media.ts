@@ -18,7 +18,7 @@ const { spawnPnpmRunner: _spawnPnpmRunner } = require("./pnpm-runner.mjs") as {
   spawnPnpmRunner: SpawnPnpmRunner;
 };
 
-export type MediaSuiteId = "image" | "music" | "video";
+export type MediaSuiteId = "image" | "video";
 
 export type MediaSuiteConfig = {
   id: MediaSuiteId;
@@ -33,49 +33,17 @@ export const MEDIA_SUITES: Record<MediaSuiteId, MediaSuiteConfig> = {
     id: "image",
     testFile: "test/image-generation.runtime.live.test.ts",
     providerEnvVar: "OPENCLAW_LIVE_IMAGE_GENERATION_PROVIDERS",
-    providers: ["deepinfra", "fal", "google", "minimax", "openai", "vydra", "xai"],
-  },
-  music: {
-    id: "music",
-    testFile: "extensions/music-generation-providers.live.test.ts",
-    providerEnvVar: "OPENCLAW_LIVE_MUSIC_GENERATION_PROVIDERS",
-    providers: ["google", "minimax"],
+    providers: ["openai"],
   },
   video: {
     id: "video",
     testFile: "extensions/video-generation-providers.live.test.ts",
     providerEnvVar: "OPENCLAW_LIVE_VIDEO_GENERATION_PROVIDERS",
-    providers: [
-      "alibaba",
-      "byteplus",
-      "deepinfra",
-      "fal",
-      "google",
-      "minimax",
-      "openai",
-      "qwen",
-      "runway",
-      "together",
-      "vydra",
-      "xai",
-    ],
-    defaultProviders: [
-      "alibaba",
-      "byteplus",
-      "deepinfra",
-      "google",
-      "minimax",
-      "openai",
-      "qwen",
-      "runway",
-      "together",
-      "vydra",
-      "xai",
-    ],
+    providers: ["openai"],
   },
 };
 
-const DEFAULT_SUITES: MediaSuiteId[] = ["image", "music", "video"];
+const DEFAULT_SUITES: MediaSuiteId[] = ["image", "video"];
 
 export type CliOptions = {
   suites: MediaSuiteId[];
@@ -115,7 +83,7 @@ function parseCsv(raw: string | undefined): Set<string> | null {
 
 function parseSuiteToken(raw: string): MediaSuiteId | null {
   const normalized = raw.trim().toLowerCase();
-  if (normalized === "image" || normalized === "music" || normalized === "video") {
+  if (normalized === "image" || normalized === "video") {
     return normalized;
   }
   return null;
@@ -164,7 +132,7 @@ export function parseArgs(argv: string[]): CliOptions {
       index += 1;
       continue;
     }
-    if (arg === "--image-providers" || arg === "--music-providers" || arg === "--video-providers") {
+    if (arg === "--image-providers" || arg === "--video-providers") {
       const suite = parseSuiteToken(arg.slice(2, arg.indexOf("-providers")));
       if (!suite) {
         throw new Error(`Unknown suite flag: ${arg}`);
@@ -197,7 +165,6 @@ export function parseArgs(argv: string[]): CliOptions {
     }
     if (arg === "all") {
       suites.add("image");
-      suites.add("music");
       suites.add("video");
       continue;
     }
@@ -278,20 +245,18 @@ function printHelp(): void {
 Usage:
   pnpm test:live:media
   pnpm test:live:media image
-  pnpm test:live:media image video --providers openai,google,minimax
-  pnpm test:live:media video --video-providers openai,runway --all-providers
+  pnpm test:live:media image video --providers openai
+  pnpm test:live:media video --video-providers openai --all-providers
 
 Defaults:
-  - runs image + music + video
+  - runs image + video
   - auto-loads missing provider env vars from ~/.profile
   - narrows each suite to providers that currently have usable auth
-  - skips the slow fal video smoke by default; pass --video-providers fal to run it
   - forwards extra args to scripts/test-live.mjs
 
 Flags:
   --providers <csv>         global provider filter
   --image-providers <csv>   image-suite provider filter
-  --music-providers <csv>   music-suite provider filter
   --video-providers <csv>   video-suite provider filter
   --all-providers           do not auto-filter by available auth
   --quiet | --no-quiet      passed through to test:live

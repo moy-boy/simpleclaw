@@ -174,12 +174,7 @@ describe("resolveReleaseNpmCommand", () => {
       }),
     ).toEqual({
       command: "C:\\Windows\\System32\\cmd.exe",
-      args: [
-        "/d",
-        "/s",
-        "/c",
-        '""C:\\Program Files\\nodejs\\npm.cmd" pack --dry-run --json"',
-      ],
+      args: ["/d", "/s", "/c", '""C:\\Program Files\\nodejs\\npm.cmd" pack --dry-run --json"'],
       shell: false,
       windowsVerbatimArguments: true,
     });
@@ -661,11 +656,25 @@ describe("resolveMissingPackBuildHint", () => {
     );
   });
 
-  it("points combined runtime and Control UI misses at both build commands", () => {
+  it("points combined runtime and Control UI misses at pnpm build", () => {
     expect(
       resolveMissingPackBuildHint(["dist/build-info.json", "dist/control-ui/index.html"]),
     ).toBe(
-      "release-check: build and Control UI artifacts are missing. Run `pnpm build && pnpm ui:build` before `pnpm release:check`.",
+      "release-check: build and Control UI artifacts are missing. Run `pnpm build` before `pnpm release:check`.",
+    );
+  });
+
+  it("points missing plugin SDK package artifacts at the CI artifact build", () => {
+    expect(resolveMissingPackBuildHint(["dist/plugin-sdk/index.d.ts"])).toBe(
+      "release-check: plugin SDK package artifacts are missing. Run `pnpm build:ci-artifacts` before `pnpm release:check`.",
+    );
+  });
+
+  it("uses the CI artifact build when plugin SDK artifacts are missing with other dist files", () => {
+    expect(
+      resolveMissingPackBuildHint(["dist/build-info.json", "dist/plugin-sdk/index.d.ts"]),
+    ).toBe(
+      "release-check: plugin SDK package artifacts are missing. Run `pnpm build:ci-artifacts` before `pnpm release:check`.",
     );
   });
 

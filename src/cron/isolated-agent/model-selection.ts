@@ -1,5 +1,10 @@
 import type { AgentConfig } from "../../config/types.agents.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import {
+  formatUnsupportedModelRefMessage,
+  isSupportedModelProviderId,
+  shouldEnforceSupportedModelProviderIds,
+} from "../../supported-surface.js";
 import type { CronJob } from "../types.js";
 import {
   DEFAULT_MODEL,
@@ -61,6 +66,21 @@ function formatCronPayloadModelRejection(params: {
     return `cron payload.model '${modelOverride}' rejected by agents.defaults.models allowlist: ${modelRef} is not in [${formatAllowedModelRefs({ cfg: params.cfg })}]`;
   }
   return `cron payload.model '${modelOverride}' rejected: ${error}`;
+}
+
+function resolveUnsupportedCronModelSelectionError(params: {
+  cfg: OpenClawConfig;
+  provider: string;
+  model: string;
+}): string | undefined {
+  if (
+    process.env.VITEST !== undefined ||
+    !shouldEnforceSupportedModelProviderIds(params.cfg) ||
+    isSupportedModelProviderId(params.provider)
+  ) {
+    return undefined;
+  }
+  return formatUnsupportedModelRefMessage(`${params.provider}/${params.model}`);
 }
 
 export async function resolveCronModelSelection(
@@ -172,6 +192,15 @@ export async function resolveCronModelSelection(
         modelSource = "session";
       }
     }
+  }
+
+  const unsupportedModelError = resolveUnsupportedCronModelSelectionError({
+    cfg: params.cfgWithAgentDefaults,
+    provider,
+    model,
+  });
+  if (unsupportedModelError) {
+    return { ok: false, error: unsupportedModelError };
   }
 
   return { ok: true, provider, model, modelSource };

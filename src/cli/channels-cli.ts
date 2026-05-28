@@ -108,7 +108,7 @@ export async function registerChannelsCli(
             "openclaw channels add --channel telegram --token <token>",
             "Add or update a channel account non-interactively.",
           ],
-          ["openclaw channels login --channel whatsapp", "Link a WhatsApp Web account."],
+          ["openclaw channels add --channel discord --token <token>", "Add a Discord account."],
         ])}\n\n${theme.muted("Docs:")} ${formatDocsLink(
           "/cli/channels",
           "docs.openclaw.ai/cli/channels",

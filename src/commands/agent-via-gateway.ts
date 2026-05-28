@@ -1,10 +1,19 @@
 import { randomUUID } from "node:crypto";
 import { resolveSendableOutboundReplyParts } from "openclaw/plugin-sdk/reply-payload";
-import { listAgentIds, resolveDefaultAgentId } from "../agents/agent-scope.js";
+import {
+  listAgentIds,
+  resolveAgentExplicitModelPrimary,
+  resolveAgentModelFallbacksOverride,
+  resolveDefaultAgentId,
+} from "../agents/agent-scope.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import type { CliDeps } from "../cli/deps.types.js";
 import { withProgress } from "../cli/progress.js";
 import { getRuntimeConfig } from "../config/config.js";
+import {
+  resolveAgentModelFallbackValues,
+  resolveAgentModelPrimaryValue,
+} from "../config/model-input.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import {
   callGateway,
@@ -24,9 +33,16 @@ import {
 } from "../routing/session-key.js";
 import { type RuntimeEnv, writeRuntimeJson } from "../runtime.js";
 import { normalizeOptionalString } from "../shared/string-coerce.js";
+import { assertSupportedResolvedModelRef } from "../supported-model-policy.js";
 import { normalizeMessageChannel } from "../utils/message-channel.js";
 import { agentCommand } from "./agent.js";
 import { buildExplicitSessionIdSessionKey, resolveSessionKeyForRequest } from "./agent/session.js";
+import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+  shouldEnforceSupportedModelProviderIds,
+} from "./supported-surface.js";
 
 type AgentGatewayResult = {
   payloads?: Array<{
@@ -212,6 +228,80 @@ function normalizeSessionKeyOptsForDispatch(opts: AgentCliOpts): AgentCliOpts {
     ...opts,
     sessionKey,
   };
+}
+
+function assertSupportedAgentDeliveryChannels(
+  cfg: OpenClawConfig,
+  opts: Pick<AgentCliOpts, "channel" | "replyChannel">,
+): void {
+  if (!shouldEnforceSupportedChannelIds(cfg)) {
+    return;
+  }
+  const channels = [
+    normalizeMessageChannel(opts.channel),
+    normalizeMessageChannel(opts.replyChannel),
+  ].filter((channel): channel is string => Boolean(channel));
+  for (const channel of channels) {
+    if (!isSupportedChannelId(channel)) {
+      throw new Error(formatUnsupportedChannelMessage(channel));
+    }
+  }
+}
+
+function resolveAgentIdForModelPolicy(cfg: OpenClawConfig, opts: AgentCliOpts): string {
+  const agentIdRaw = opts.agent?.trim();
+  if (agentIdRaw) {
+    return normalizeAgentId(agentIdRaw);
+  }
+  const sessionKey = opts.sessionKey?.trim();
+  if (sessionKey && classifySessionKeyShape(sessionKey) === "agent") {
+    return resolveAgentIdFromSessionKey(sessionKey);
+  }
+  if (opts.to || opts.sessionId || sessionKey) {
+    const resolvedSessionKey = resolveSessionKeyForRequest({
+      cfg,
+      to: opts.to,
+      sessionId: opts.sessionId,
+      sessionKey,
+    }).sessionKey;
+    if (classifySessionKeyShape(resolvedSessionKey) === "agent") {
+      return resolveAgentIdFromSessionKey(resolvedSessionKey);
+    }
+  }
+  return resolveDefaultAgentId(cfg);
+}
+
+function assertSupportedAgentModels(cfg: OpenClawConfig, opts: AgentCliOpts): void {
+  if (!shouldEnforceSupportedModelProviderIds(cfg)) {
+    return;
+  }
+  const model = normalizeOptionalString(opts.model);
+  if (model) {
+    assertSupportedResolvedModelRef({ cfg, raw: model });
+    return;
+  }
+
+  const agentId = resolveAgentIdForModelPolicy(cfg, opts);
+  const configuredDefault = resolveAgentModelPrimaryValue(cfg.agents?.defaults?.model);
+  const configuredFallbacks = resolveAgentModelFallbackValues(cfg.agents?.defaults?.model);
+  const agentPrimary = resolveAgentExplicitModelPrimary(cfg, agentId);
+  const agentFallbacks = resolveAgentModelFallbacksOverride(cfg, agentId);
+  const modelRefs = [
+    agentPrimary ?? configuredDefault,
+    ...(agentFallbacks ?? configuredFallbacks),
+  ].flatMap((value) => {
+    const normalized = normalizeOptionalString(value);
+    return normalized ? [normalized] : [];
+  });
+
+  for (const modelRef of modelRefs) {
+    assertSupportedResolvedModelRef({ cfg, raw: modelRef });
+  }
+}
+
+function assertSupportedAgentCliSurface(cfg: OpenClawConfig, opts: AgentCliOpts): void {
+  assertSupportedAgentDeliveryChannels(cfg, opts);
+  assertSupportedAgentModels(cfg, opts);
 }
 
 function isAbortError(err: unknown): boolean {
@@ -518,11 +608,12 @@ async function agentViaGatewayCommand(
   }
   if (!opts.to && !opts.sessionId && !opts.agent && !explicitSessionKey) {
     throw new Error(
-      `No target session selected. Use --agent <id>, --session-key <key>, --session-id <id>, or --to <E.164>. Run ${formatCliCommand("openclaw agents list")} to see agents.`,
+      `No target session selected. Use --agent <id>, --session-key <key>, --session-id <id>, or --to <target>. Run ${formatCliCommand("openclaw agents list")} to see agents.`,
     );
   }
 
   const cfg = getRuntimeConfig();
+  assertSupportedAgentCliSurface(cfg, opts);
   const agentIdRaw = opts.agent?.trim();
   const agentId = agentIdRaw ? normalizeAgentId(agentIdRaw) : undefined;
   if (agentId) {
@@ -702,6 +793,8 @@ export async function agentCliCommand(
   protectJsonStdout(opts);
   const dispatchOpts = normalizeSessionKeyOptsForDispatch(opts);
   validateExplicitSessionKeyForDispatch(dispatchOpts);
+  const cfg = getRuntimeConfig();
+  assertSupportedAgentCliSurface(cfg, dispatchOpts);
   const gatewayDispatchOpts = dispatchOpts.runId
     ? dispatchOpts
     : { ...dispatchOpts, runId: randomIdempotencyKey() };

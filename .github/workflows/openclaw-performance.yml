@@ -358,7 +358,6 @@ jobs:
             source_runs=3
           fi
 
-          mkdir -p "$SOURCE_PERF_DIR/mock-hello"
           if ! node -e "const fs=require('node:fs'); const scripts=require('./package.json').scripts||{}; process.exit(scripts['test:gateway:cpu-scenarios'] && scripts.openclaw && fs.existsSync('scripts/bench-cli-startup.ts') ? 0 : 1)"; then
             cat > "$SOURCE_PERF_DIR/index.md" <<EOF
           # OpenClaw Source Performance
@@ -390,16 +389,6 @@ jobs:
             --startup-case allInternalHooks \
             --startup-case fiftyPlugins \
             --startup-case fiftyStartupLazyPlugins
-
-          for run_index in $(seq 1 "$source_runs"); do
-            run_dir="$SOURCE_PERF_DIR/mock-hello/run-$(printf '%03d' "$run_index")"
-            pnpm openclaw qa suite \
-              --provider-mode mock-openai \
-              --model "mock-openai/${PERFORMANCE_MODEL_ID}" \
-              --concurrency 1 \
-              --output-dir "$(realpath --relative-to="$GITHUB_WORKSPACE" "$run_dir")" \
-              --scenario channel-chat-baseline
-          done
 
           gateway_home="$(mktemp -d)"
           gateway_port="$(node -e "const net=require('node:net'); const s=net.createServer(); s.listen(0,'127.0.0.1',()=>{ console.log(s.address().port); s.close(); });")"

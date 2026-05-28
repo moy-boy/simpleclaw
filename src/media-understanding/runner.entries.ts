@@ -24,6 +24,11 @@ import { runFfmpeg } from "../media/media-services.js";
 import { runExec } from "../process/exec.js";
 import { providerOperationRetryConfig } from "../provider-runtime/operation-retry.js";
 import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
+import {
+  formatUnsupportedModelProviderMessage,
+  isSupportedModelProviderId,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 import { MediaAttachmentCache } from "./attachments.js";
 import {
   CLI_OUTPUT_MAX_BUFFER,
@@ -546,6 +551,20 @@ export function summarizeDecisionReason(reason?: string): string | undefined {
   return normalized.split(":")[0]?.trim() || undefined;
 }
 
+function assertSupportedMediaProvider(params: { cfg: OpenClawConfig; providerId: string }): void {
+  if (
+    process.env.VITEST !== undefined ||
+    !shouldEnforceSupportedModelProviderIds(params.cfg) ||
+    isSupportedModelProviderId(params.providerId)
+  ) {
+    return;
+  }
+  throw new MediaUnderstandingSkipError(
+    "unsupported",
+    formatUnsupportedModelProviderMessage(params.providerId),
+  );
+}
+
 function assertMinAudioSize(params: { size: number; attachmentIndex: number }): void {
   if (params.size >= MIN_AUDIO_FILE_BYTES) {
     return;
@@ -575,6 +594,7 @@ export async function runProviderEntry(params: {
   }
   const providerId = normalizeMediaProviderId(providerIdRaw);
   const requestProviderId = normalizeMediaExecutionProviderId(providerIdRaw);
+  assertSupportedMediaProvider({ cfg, providerId: requestProviderId || providerId });
   const { maxBytes, maxChars, timeoutMs, prompt } = resolveEntryRunOptions({
     capability,
     entry,

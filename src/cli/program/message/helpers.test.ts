@@ -10,6 +10,11 @@ vi.mock("../../../channels/plugins/index.js", () => ({
   getChannelPlugin: getChannelPluginMock,
 }));
 
+const getRuntimeConfigMock = vi.fn(() => ({}));
+vi.mock("../../../config/config.js", () => ({
+  getRuntimeConfig: getRuntimeConfigMock,
+}));
+
 vi.mock("../../../globals.js", () => ({
   danger: (s: string) => s,
   setVerbose: vi.fn(),
@@ -121,6 +126,7 @@ describe("runMessageAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getChannelPluginMock.mockReset();
+    getRuntimeConfigMock.mockReset().mockReturnValue({});
     mockChannelExecutionModes({ telegram: "gateway" });
     messageCommandMock.mockClear().mockResolvedValue(undefined);
     hasHooksMock.mockClear().mockReturnValue(false);
@@ -157,6 +163,23 @@ describe("runMessageAction", () => {
       scope: "configured-channels",
       onlyChannelIds: ["discord"],
     });
+  });
+
+  it("rejects unsupported scoped channels when simplified plugin allowlist is active", async () => {
+    getRuntimeConfigMock.mockReturnValue({
+      plugins: {
+        allow: ["telegram", "discord", "openai", "codex"],
+        bundledDiscovery: "allowlist",
+      },
+    });
+
+    await runSendAction({ channel: "slack" });
+
+    expect(messageCommandMock).not.toHaveBeenCalled();
+    expect(errorMock).toHaveBeenCalledWith(
+      'Error: Unsupported channel "slack". This setup supports Telegram and Discord only.',
+    );
+    expect(exitMock).toHaveBeenCalledWith(1);
   });
 
   it("skips local plugin preload for any gateway-owned scoped channel action", async () => {

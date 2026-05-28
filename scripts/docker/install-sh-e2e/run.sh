@@ -16,13 +16,11 @@ fi
 source "$VERIFY_HELPER_PATH"
 
 INSTALL_URL="${OPENCLAW_INSTALL_URL:-https://openclaw.bot/install.sh}"
-MODELS_MODE="${OPENCLAW_E2E_MODELS:-both}" # both|openai|anthropic
+MODELS_MODE="${OPENCLAW_E2E_MODELS:-openai}"
 INSTALL_TAG="${OPENCLAW_INSTALL_TAG:-latest}"
 E2E_PREVIOUS_VERSION="${OPENCLAW_INSTALL_E2E_PREVIOUS:-}"
 SKIP_PREVIOUS="${OPENCLAW_INSTALL_E2E_SKIP_PREVIOUS:-0}"
 OPENAI_API_KEY="${OPENAI_API_KEY:-}"
-ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
-ANTHROPIC_API_TOKEN="${ANTHROPIC_API_TOKEN:-}"
 AGENT_TURN_TIMEOUT_SECONDS="${OPENCLAW_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS:-300}"
 AGENT_TURNS_PARALLEL="${OPENCLAW_INSTALL_E2E_AGENT_TURNS_PARALLEL:-1}"
 AGENT_TOOL_SMOKE="${OPENCLAW_INSTALL_E2E_AGENT_TOOL_SMOKE:-1}"
@@ -68,25 +66,13 @@ export NPM_CONFIG_PREFIX="${NPM_CONFIG_PREFIX:-$HOME/.npm-global}"
 mkdir -p "$NPM_CONFIG_PREFIX"
 export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
 
-if [[ "$MODELS_MODE" != "both" && "$MODELS_MODE" != "openai" && "$MODELS_MODE" != "anthropic" ]]; then
-  echo "ERROR: OPENCLAW_E2E_MODELS must be one of: both|openai|anthropic" >&2
+if [[ "$MODELS_MODE" != "openai" ]]; then
+  echo "ERROR: OPENCLAW_E2E_MODELS must be openai" >&2
   exit 2
 fi
 
-if [[ "$MODELS_MODE" == "both" ]]; then
-  if [[ -z "$OPENAI_API_KEY" ]]; then
-    echo "ERROR: OPENCLAW_E2E_MODELS=both requires OPENAI_API_KEY." >&2
-    exit 2
-  fi
-  if [[ -z "$ANTHROPIC_API_TOKEN" && -z "$ANTHROPIC_API_KEY" ]]; then
-    echo "ERROR: OPENCLAW_E2E_MODELS=both requires ANTHROPIC_API_TOKEN or ANTHROPIC_API_KEY." >&2
-    exit 2
-  fi
-elif [[ "$MODELS_MODE" == "openai" && -z "$OPENAI_API_KEY" ]]; then
+if [[ -z "$OPENAI_API_KEY" ]]; then
   echo "ERROR: OPENCLAW_E2E_MODELS=openai requires OPENAI_API_KEY." >&2
-  exit 2
-elif [[ "$MODELS_MODE" == "anthropic" && -z "$ANTHROPIC_API_TOKEN" && -z "$ANTHROPIC_API_KEY" ]]; then
-  echo "ERROR: OPENCLAW_E2E_MODELS=anthropic requires ANTHROPIC_API_TOKEN or ANTHROPIC_API_KEY." >&2
   exit 2
 fi
 
@@ -323,7 +309,7 @@ run_agent_turn_logged() {
 
 skip_profile_for_billing_drift() {
   local profile="$1"
-  echo "SKIP: Anthropic billing drift during installer agent tool smoke ($profile)"
+  echo "SKIP: provider billing drift during installer agent tool smoke ($profile)"
   cleanup_profile
   trap - EXIT
 }
@@ -362,17 +348,6 @@ wait_agent_turn_batch() {
 }
 
 agent_turn_outputs_include_billing_drift() {
-  local provider="$1"
-  shift
-  if [[ "$provider" != "anthropic" ]]; then
-    return 1
-  fi
-  local output
-  for output in "$@"; do
-    if [[ -f "$output" ]] && grep -Eiq "credit balance is too low|billing has been disabled|insufficient credit|monthly limit exceeded" "$output"; then
-      return 0
-    fi
-  done
   return 1
 }
 
@@ -575,60 +550,21 @@ run_profile() {
   local profile="$1"
   local port="$2"
   local workspace="$3"
-  local agent_model_provider="$4" # "openai"|"anthropic"
+  local agent_model_provider="openai"
   CURRENT_AGENT_MODEL_PROVIDER="$agent_model_provider"
 
   phase_mark_start "Onboard ($profile)"
-	  if [[ "$agent_model_provider" == "openai" ]]; then
-	    openclaw --profile "$profile" onboard \
-	      --non-interactive \
-	      --accept-risk \
-	      --flow quickstart \
-	      --auth-choice openai-api-key \
-	      --openai-api-key "$OPENAI_API_KEY" \
-	      --gateway-port "$port" \
-	      --gateway-bind loopback \
+  openclaw --profile "$profile" onboard \
+    --non-interactive \
+    --accept-risk \
+    --flow quickstart \
+    --auth-choice openai-api-key \
+    --openai-api-key "$OPENAI_API_KEY" \
+    --gateway-port "$port" \
+    --gateway-bind loopback \
       --gateway-auth token \
       --workspace "$workspace" \
       --skip-health
-	  elif [[ -n "$ANTHROPIC_API_KEY" ]]; then
-	    openclaw --profile "$profile" onboard \
-	      --non-interactive \
-	      --accept-risk \
-	      --flow quickstart \
-	      --auth-choice apiKey \
-	      --anthropic-api-key "$ANTHROPIC_API_KEY" \
-	      --gateway-port "$port" \
-      --gateway-bind loopback \
-      --gateway-auth token \
-      --workspace "$workspace" \
-      --skip-health
-	  elif [[ -n "$ANTHROPIC_API_TOKEN" ]]; then
-	    openclaw --profile "$profile" onboard \
-	      --non-interactive \
-	      --accept-risk \
-	      --flow quickstart \
-	      --auth-choice token \
-	      --token-provider anthropic \
-	      --token "$ANTHROPIC_API_TOKEN" \
-	      --gateway-port "$port" \
-      --gateway-bind loopback \
-      --gateway-auth token \
-      --workspace "$workspace" \
-      --skip-health
-	  else
-	    openclaw --profile "$profile" onboard \
-	      --non-interactive \
-	      --accept-risk \
-	      --flow quickstart \
-	      --auth-choice apiKey \
-	      --anthropic-api-key "$ANTHROPIC_API_KEY" \
-	      --gateway-port "$port" \
-	      --gateway-bind loopback \
-      --gateway-auth token \
-      --workspace "$workspace" \
-      --skip-health
-  fi
   phase_mark_passed "Onboard ($profile)"
 
   phase_mark_start "Verify workspace identity files ($profile)"
@@ -646,22 +582,13 @@ run_profile() {
   phase_mark_start "Configure models ($profile)"
   local agent_model
   local image_model
-  if [[ "$agent_model_provider" == "openai" ]]; then
-    agent_model="$(set_agent_model "$profile" \
-      "$OPENAI_AGENT_MODEL" \
-      "openai/gpt-5.5" \
-      "openai/gpt-5.4-mini")"
-    openclaw --profile "$profile" config set models.providers.openai "{\"baseUrl\":\"https://api.openai.com/v1\",\"models\":[],\"timeoutSeconds\":${OPENAI_PROVIDER_TIMEOUT_SECONDS},\"agentRuntime\":{\"id\":\"pi\"}}" --strict-json >/dev/null
-    image_model="$(set_image_model "$profile" \
-      "openai/gpt-5.4-image-2")"
-  else
-    agent_model="$(set_agent_model "$profile" \
-      "anthropic/claude-opus-4-6" \
-      "claude-opus-4-6")"
-    image_model="$(set_image_model "$profile" \
-      "anthropic/claude-opus-4-6" \
-      "claude-opus-4-6")"
-  fi
+  agent_model="$(set_agent_model "$profile" \
+    "$OPENAI_AGENT_MODEL" \
+    "openai/gpt-5.5" \
+    "openai/gpt-5.4-mini")"
+  openclaw --profile "$profile" config set models.providers.openai "{\"baseUrl\":\"https://api.openai.com/v1\",\"models\":[],\"timeoutSeconds\":${OPENAI_PROVIDER_TIMEOUT_SECONDS},\"agentRuntime\":{\"id\":\"pi\"}}" --strict-json >/dev/null
+  image_model="$(set_image_model "$profile" \
+    "openai/gpt-5.4-image-2")"
   echo "model=$agent_model"
   echo "imageModel=$image_model"
   phase_mark_passed "Configure models ($profile)"
@@ -849,12 +776,6 @@ run_profile() {
   trap - EXIT
 }
 
-if [[ "$MODELS_MODE" == "openai" || "$MODELS_MODE" == "both" ]]; then
-  run_profile "e2e-openai" "18789" "/tmp/openclaw-e2e-openai" "openai"
-fi
-
-if [[ "$MODELS_MODE" == "anthropic" || "$MODELS_MODE" == "both" ]]; then
-  run_profile "e2e-anthropic" "18799" "/tmp/openclaw-e2e-anthropic" "anthropic"
-fi
+run_profile "e2e-openai" "18789" "/tmp/openclaw-e2e-openai"
 
 echo "OK"

@@ -22,22 +22,6 @@ export function resolveProviderAuth(input: {
   modelId?: string;
 }): ProviderAuth {
   const providerDefaults: Record<Provider, Omit<ProviderAuth, "apiKeyValue">> = {
-    anthropic: {
-      apiKeyEnv: input.apiKeyEnv || "ANTHROPIC_API_KEY",
-      authChoice: "apiKey",
-      authKeyFlag: "anthropic-api-key",
-      modelId:
-        input.modelId ||
-        process.env.OPENCLAW_PARALLELS_ANTHROPIC_MODEL ||
-        "anthropic/claude-sonnet-4-6",
-    },
-    minimax: {
-      apiKeyEnv: input.apiKeyEnv || "MINIMAX_API_KEY",
-      authChoice: "minimax-global-api",
-      authKeyFlag: "minimax-api-key",
-      modelId:
-        input.modelId || process.env.OPENCLAW_PARALLELS_MINIMAX_MODEL || "minimax/MiniMax-M2.7",
-    },
     openai: {
       apiKeyEnv: input.apiKeyEnv || "OPENAI_API_KEY",
       authChoice: "openai-api-key",
@@ -59,7 +43,7 @@ export function resolveWindowsProviderAuth(input: {
   modelId?: string;
 }): ProviderAuth {
   const auth = resolveProviderAuth(input);
-  if (input.provider !== "openai" || input.modelId) {
+  if (input.modelId) {
     return auth;
   }
   const windowsModel = process.env.OPENCLAW_PARALLELS_WINDOWS_OPENAI_MODEL?.trim();
@@ -150,7 +134,7 @@ export function modelProviderConfigBatchJson(modelId: string, platform: Platform
 }
 
 export function parseProvider(value: string): Provider {
-  if (value === "openai" || value === "anthropic" || value === "minimax") {
+  if (value === "openai") {
     return value;
   }
   return die(`invalid --provider: ${value}`);

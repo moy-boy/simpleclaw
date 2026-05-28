@@ -68,6 +68,10 @@ describe("setupCommand", () => {
         gateway: {
           mode: "local",
         },
+        plugins: {
+          allow: ["telegram", "discord", "openai", "codex"],
+          bundledDiscovery: "allowlist",
+        },
       });
     });
   });

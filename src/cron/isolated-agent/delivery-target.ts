@@ -15,6 +15,11 @@ import type { OutboundChannel } from "../../infra/outbound/targets.js";
 import { normalizeAccountId } from "../../routing/session-key.js";
 import { createLazyImportLoader } from "../../shared/lazy-promise.js";
 import { normalizeOptionalThreadValue } from "../../shared/string-coerce.js";
+import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+} from "../../supported-surface.js";
 import { resolveCronStoredDeliveryContext } from "../delivery-context.js";
 import { resolveCronAgentSessionKey } from "./session-key.js";
 
@@ -121,6 +126,15 @@ function stripSelectedProviderPrefix(params: {
   const stripped = stripTargetProviderPrefix(trimmed, params.channel).trim();
   return stripped || undefined;
 }
+
+function isUnsupportedCronDeliveryChannel(cfg: OpenClawConfig, channel: string): boolean {
+  return (
+    process.env.VITEST === undefined &&
+    shouldEnforceSupportedChannelIds(cfg) &&
+    !isSupportedChannelId(channel)
+  );
+}
+
 export async function resolveDeliveryTarget(
   cfg: OpenClawConfig,
   agentId: string,
@@ -246,6 +260,17 @@ export async function resolveDeliveryTarget(
       error:
         channelResolutionError ??
         new Error("Channel is required when delivery.channel=last has no previous channel."),
+    };
+  }
+  if (isUnsupportedCronDeliveryChannel(cfg, channel)) {
+    return {
+      ok: false,
+      channel,
+      to: undefined,
+      accountId,
+      threadId: undefined,
+      mode,
+      error: new Error(formatUnsupportedChannelMessage(channel)),
     };
   }
 

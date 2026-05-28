@@ -139,7 +139,7 @@ Options:
                              Falls back to the closest Ubuntu VM when omitted and unavailable.
   --snapshot-hint <name>     Snapshot name substring/fuzzy match. Default: "fresh"
   --mode <fresh|upgrade|both>
-  --provider <openai|anthropic|minimax>
+  --provider <openai>
                              Provider auth/model lane. Default: openai
   --model <provider/model>    Override the model used for the agent-turn smoke.
   --api-key-env <var>        Host env var name for provider API key.

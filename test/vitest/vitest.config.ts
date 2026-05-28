@@ -6,6 +6,7 @@ import {
   nonIsolatedRunnerPath,
   sharedVitestConfig,
 } from "./vitest.shared.config.ts";
+import { supportedExtensionVitestProjectConfigs } from "./vitest.supported-extension-projects.mjs";
 
 export { resolveDefaultVitestPool, resolveLocalVitestMaxWorkers, resolveLocalVitestScheduling };
 
@@ -54,31 +55,7 @@ export const rootVitestProjects = [
   "test/vitest/vitest.utils.config.ts",
   "test/vitest/vitest.wizard.config.ts",
   "test/vitest/vitest.channels.config.ts",
-  "test/vitest/vitest.extension-acpx.config.ts",
-  "test/vitest/vitest.extension-diffs.config.ts",
-  "test/vitest/vitest.extension-discord.config.ts",
-  "test/vitest/vitest.extension-feishu.config.ts",
-  "test/vitest/vitest.extension-imessage.config.ts",
-  "test/vitest/vitest.extension-irc.config.ts",
-  "test/vitest/vitest.extension-line.config.ts",
-  "test/vitest/vitest.extension-mattermost.config.ts",
-  "test/vitest/vitest.extension-matrix.config.ts",
-  "test/vitest/vitest.extension-memory.config.ts",
-  "test/vitest/vitest.extension-msteams.config.ts",
-  "test/vitest/vitest.extension-messaging.config.ts",
-  "test/vitest/vitest.extension-provider-openai.config.ts",
-  "test/vitest/vitest.extension-providers.config.ts",
-  "test/vitest/vitest.extension-signal.config.ts",
-  "test/vitest/vitest.extension-slack.config.ts",
-  "test/vitest/vitest.extension-telegram.config.ts",
-  "test/vitest/vitest.extension-voice-call.config.ts",
-  "test/vitest/vitest.extension-whatsapp.config.ts",
-  "test/vitest/vitest.extension-zalo.config.ts",
-  "test/vitest/vitest.extension-browser.config.ts",
-  "test/vitest/vitest.extension-qa.config.ts",
-  "test/vitest/vitest.extension-media.config.ts",
-  "test/vitest/vitest.extension-misc.config.ts",
-  "test/vitest/vitest.extensions.config.ts",
+  ...supportedExtensionVitestProjectConfigs,
 ] as const;
 
 export default defineConfig({

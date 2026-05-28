@@ -58,6 +58,12 @@ const transformConfigWithPendingPluginInstallsMock = vi.hoisted(() =>
 const wizardMocks = vi.hoisted(() => ({
   createClackPrompter: vi.fn(),
 }));
+const onboardChannelMocks = vi.hoisted(() => ({
+  setupChannels: vi.fn(async (...args: unknown[]) => args[0]),
+}));
+const authChoiceMocks = vi.hoisted(() => ({
+  warnIfModelConfigLooksOff: vi.fn(),
+}));
 
 vi.mock("../config/config.js", async () => ({
   ...(await vi.importActual<typeof import("../config/config.js")>("../config/config.js")),
@@ -77,6 +83,15 @@ vi.mock("../wizard/clack-prompter.js", () => ({
   createClackPrompter: wizardMocks.createClackPrompter,
 }));
 
+vi.mock("./onboard-channels.js", () => ({
+  setupChannels: onboardChannelMocks.setupChannels,
+}));
+
+vi.mock("./auth-choice.js", async () => ({
+  ...(await vi.importActual<typeof import("./auth-choice.js")>("./auth-choice.js")),
+  warnIfModelConfigLooksOff: authChoiceMocks.warnIfModelConfigLooksOff,
+}));
+
 import { WizardCancelledError } from "../wizard/prompts.js";
 import { agentsAddCommand, testing } from "./agents.commands.add.js";
 
@@ -89,6 +104,10 @@ describe("agents add command", () => {
     replaceConfigFileMock.mockClear();
     transformConfigWithPendingPluginInstallsMock.mockClear();
     wizardMocks.createClackPrompter.mockClear();
+    onboardChannelMocks.setupChannels.mockClear();
+    onboardChannelMocks.setupChannels.mockImplementation(async (...args: unknown[]) => args[0]);
+    authChoiceMocks.warnIfModelConfigLooksOff.mockClear();
+    authChoiceMocks.warnIfModelConfigLooksOff.mockResolvedValue(undefined);
     runtime.log.mockClear();
     runtime.error.mockClear();
     runtime.exit.mockClear();
@@ -134,6 +153,28 @@ describe("agents add command", () => {
 
     await agentsAddCommand({}, runtime);
 
+    expect(runtime.exit).toHaveBeenCalledWith(1);
+    expect(writeConfigFileMock).not.toHaveBeenCalled();
+  });
+
+  it("limits the interactive channel wizard to Telegram and Discord", async () => {
+    readConfigFileSnapshotMock.mockResolvedValue({ ...baseConfigSnapshot });
+    onboardChannelMocks.setupChannels.mockRejectedValue(new WizardCancelledError());
+    wizardMocks.createClackPrompter.mockReturnValue({
+      intro: vi.fn(),
+      text: vi.fn().mockResolvedValueOnce("Work").mockResolvedValueOnce("/tmp/work"),
+      confirm: vi.fn().mockResolvedValue(false),
+      note: vi.fn(),
+      outro: vi.fn(),
+    });
+
+    await agentsAddCommand({}, runtime);
+
+    expect(onboardChannelMocks.setupChannels).toHaveBeenCalledOnce();
+    const options = onboardChannelMocks.setupChannels.mock.calls[0]?.[3] as
+      | { channelIds?: string[] }
+      | undefined;
+    expect(options?.channelIds).toEqual(["telegram", "discord"]);
     expect(runtime.exit).toHaveBeenCalledWith(1);
     expect(writeConfigFileMock).not.toHaveBeenCalled();
   });

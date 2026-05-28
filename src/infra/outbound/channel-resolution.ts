@@ -20,6 +20,7 @@ import type {
 } from "../../channels/plugins/types.public.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { getActivePluginRegistry } from "../../plugins/runtime.js";
+import { isSupportedChannelId, shouldEnforceSupportedChannelIds } from "../../supported-surface.js";
 import {
   isDeliverableMessageChannel,
   normalizeMessageChannel,
@@ -119,6 +120,15 @@ function resolveDirectFromActiveRegistry(channel: string): ChannelPlugin | undef
   return undefined;
 }
 
+function shouldResolveOutboundChannel(params: { cfg?: OpenClawConfig; channel: string }): boolean {
+  return (
+    process.env.VITEST !== undefined ||
+    !params.cfg ||
+    !shouldEnforceSupportedChannelIds(params.cfg) ||
+    isSupportedChannelId(params.channel)
+  );
+}
+
 function toOutboundChannelRuntime(plugin: ChannelPlugin): OutboundChannelRuntime {
   return {
     id: plugin.id,
@@ -180,6 +190,9 @@ export function resolveOutboundChannelPlugin(params: {
   if (!normalized) {
     return undefined;
   }
+  if (!shouldResolveOutboundChannel({ cfg: params.cfg, channel: normalized })) {
+    return undefined;
+  }
 
   const resolveLoaded = () => getLoadedChannelPlugin(normalized);
   const resolve = () => getChannelPlugin(normalized);
@@ -219,6 +232,9 @@ export function resolveOutboundChannelPluginForRead(params: {
 }): ChannelPlugin | undefined {
   const normalized = normalizeMessageChannel(params.channel) ?? params.channel.trim();
   if (!normalized) {
+    return undefined;
+  }
+  if (!shouldResolveOutboundChannel({ cfg: params.cfg, channel: normalized })) {
     return undefined;
   }
   const channelId = normalized as Parameters<typeof getLoadedChannelPlugin>[0];

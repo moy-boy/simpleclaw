@@ -8,7 +8,6 @@ import {
 import { cleanupTempDirs, makeTempRepoRoot, writeJsonFile } from "../../test/helpers/temp-repo.js";
 
 const tempDirs: string[] = [];
-const excludeOptionalEnv = { OPENCLAW_INCLUDE_OPTIONAL_BUNDLED: "0" } as const;
 const copyBundledPluginMetadataWithEnv = copyBundledPluginMetadata as (params?: {
   repoRoot?: string;
   env?: NodeJS.ProcessEnv;
@@ -72,10 +71,13 @@ function expectBundledSkills(repoRoot: string, pluginId: string, skills: string[
   expect(readBundledManifest(repoRoot, pluginId).skills).toEqual(skills);
 }
 
-function createTlonSkillPlugin(repoRoot: string, skillPath = "node_modules/@tloncorp/tlon-skill") {
+function createTelegramSkillPlugin(
+  repoRoot: string,
+  skillPath = "node_modules/@tloncorp/tlon-skill",
+) {
   return createPlugin(repoRoot, {
-    id: "tlon",
-    packageName: "@openclaw/tlon",
+    id: "telegram",
+    packageName: "@openclaw/telegram",
     manifest: { skills: [skillPath] },
     packageOpenClaw: { extensions: ["./index.ts"] },
   });
@@ -98,8 +100,8 @@ describe("copyBundledPluginMetadata", () => {
   it("copies plugin manifests, package metadata, and local skill directories", () => {
     const repoRoot = makeRepoRoot("openclaw-bundled-plugin-meta-");
     const pluginDir = createPlugin(repoRoot, {
-      id: "acpx",
-      packageName: "@openclaw/acpx",
+      id: "telegram",
+      packageName: "@openclaw/telegram",
       manifest: { skills: ["./skills"] },
       packageOpenClaw: { extensions: ["./index.ts"] },
     });
@@ -113,16 +115,16 @@ describe("copyBundledPluginMetadata", () => {
     copyBundledPluginMetadata({ repoRoot });
 
     expect(
-      fs.existsSync(path.join(repoRoot, "dist", "extensions", "acpx", "openclaw.plugin.json")),
+      fs.existsSync(path.join(repoRoot, "dist", "extensions", "telegram", "openclaw.plugin.json")),
     ).toBe(true);
     expect(
       fs.readFileSync(
-        path.join(repoRoot, "dist", "extensions", "acpx", "skills", "acp-router", "SKILL.md"),
+        path.join(repoRoot, "dist", "extensions", "telegram", "skills", "acp-router", "SKILL.md"),
         "utf8",
       ),
     ).toContain("ACP Router");
-    expectBundledSkills(repoRoot, "acpx", ["./skills"]);
-    const packageJson = readBundledPackageJson(repoRoot, "acpx");
+    expectBundledSkills(repoRoot, "telegram", ["./skills"]);
+    const packageJson = readBundledPackageJson(repoRoot, "telegram");
     expect(packageJson.openclaw?.extensions).toEqual(["./index.js"]);
   });
 
@@ -192,7 +194,7 @@ describe("copyBundledPluginMetadata", () => {
 
   it("relocates node_modules-backed skill paths into bundled-skills and rewrites the manifest", () => {
     const repoRoot = makeRepoRoot("openclaw-bundled-plugin-node-modules-");
-    const pluginDir = createTlonSkillPlugin(repoRoot);
+    const pluginDir = createTelegramSkillPlugin(repoRoot);
     const storeSkillDir = path.join(
       repoRoot,
       "node_modules",
@@ -217,7 +219,7 @@ describe("copyBundledPluginMetadata", () => {
       process.platform === "win32" ? "junction" : "dir",
     );
     const staleNodeModulesSkillDir = path.join(
-      bundledPluginDir(repoRoot, "tlon"),
+      bundledPluginDir(repoRoot, "telegram"),
       "node_modules",
       "@tloncorp",
       "tlon-skill",
@@ -228,7 +230,7 @@ describe("copyBundledPluginMetadata", () => {
     copyBundledPluginMetadata({ repoRoot });
 
     const copiedSkillDir = path.join(
-      bundledPluginDir(repoRoot, "tlon"),
+      bundledPluginDir(repoRoot, "telegram"),
       "bundled-skills",
       "@tloncorp",
       "tlon-skill",
@@ -237,12 +239,12 @@ describe("copyBundledPluginMetadata", () => {
     expect(fs.lstatSync(copiedSkillDir).isSymbolicLink()).toBe(false);
     expect(fs.existsSync(path.join(copiedSkillDir, "node_modules"))).toBe(false);
     expect(fs.existsSync(staleNodeModulesSkillDir)).toBe(false);
-    expectBundledSkills(repoRoot, "tlon", ["./bundled-skills/@tloncorp/tlon-skill"]);
+    expectBundledSkills(repoRoot, "telegram", ["./bundled-skills/@tloncorp/tlon-skill"]);
   });
 
   it("falls back to repo-root hoisted node_modules skill paths", () => {
     const repoRoot = makeRepoRoot("openclaw-bundled-plugin-hoisted-skill-");
-    const pluginDir = createTlonSkillPlugin(repoRoot);
+    const pluginDir = createTelegramSkillPlugin(repoRoot);
     const hoistedSkillDir = path.join(repoRoot, "node_modules", "@tloncorp", "tlon-skill");
     fs.mkdirSync(hoistedSkillDir, { recursive: true });
     fs.writeFileSync(path.join(hoistedSkillDir, "SKILL.md"), "# Hoisted Tlon Skill\n", "utf8");
@@ -252,41 +254,48 @@ describe("copyBundledPluginMetadata", () => {
 
     expect(
       fs.readFileSync(
-        bundledSkillPath(repoRoot, "tlon", "bundled-skills", "@tloncorp", "tlon-skill", "SKILL.md"),
+        bundledSkillPath(
+          repoRoot,
+          "telegram",
+          "bundled-skills",
+          "@tloncorp",
+          "tlon-skill",
+          "SKILL.md",
+        ),
         "utf8",
       ),
     ).toContain("Hoisted Tlon Skill");
-    expectBundledSkills(repoRoot, "tlon", ["./bundled-skills/@tloncorp/tlon-skill"]);
+    expectBundledSkills(repoRoot, "telegram", ["./bundled-skills/@tloncorp/tlon-skill"]);
   });
 
   it("omits missing declared skill paths and removes stale generated outputs", () => {
     const repoRoot = makeRepoRoot("openclaw-bundled-plugin-missing-skill-");
-    createTlonSkillPlugin(repoRoot);
+    createTelegramSkillPlugin(repoRoot);
     const staleBundledSkillDir = path.join(
-      bundledPluginDir(repoRoot, "tlon"),
+      bundledPluginDir(repoRoot, "telegram"),
       "bundled-skills",
       "@tloncorp",
       "tlon-skill",
     );
     fs.mkdirSync(staleBundledSkillDir, { recursive: true });
     fs.writeFileSync(path.join(staleBundledSkillDir, "SKILL.md"), "# stale\n", "utf8");
-    const staleNodeModulesDir = path.join(bundledPluginDir(repoRoot, "tlon"), "node_modules");
+    const staleNodeModulesDir = path.join(bundledPluginDir(repoRoot, "telegram"), "node_modules");
     fs.mkdirSync(staleNodeModulesDir, { recursive: true });
 
     copyBundledPluginMetadata({ repoRoot });
 
-    expectBundledSkills(repoRoot, "tlon", []);
-    expect(fs.existsSync(path.join(repoRoot, "dist", "extensions", "tlon", "bundled-skills"))).toBe(
-      false,
-    );
+    expectBundledSkills(repoRoot, "telegram", []);
+    expect(
+      fs.existsSync(path.join(repoRoot, "dist", "extensions", "telegram", "bundled-skills")),
+    ).toBe(false);
     expect(fs.existsSync(staleNodeModulesDir)).toBe(true);
   });
 
   it("retries transient skill copy races from concurrent runtime postbuilds", () => {
     const repoRoot = makeRepoRoot("openclaw-bundled-plugin-retry-");
     const pluginDir = createPlugin(repoRoot, {
-      id: "diffs",
-      packageName: "@openclaw/diffs",
+      id: "discord",
+      packageName: "@openclaw/discord",
       manifest: { skills: ["./skills"] },
       packageOpenClaw: { extensions: ["./index.ts"] },
     });
@@ -313,7 +322,7 @@ describe("copyBundledPluginMetadata", () => {
     expect(attempts).toBe(2);
     expect(
       fs.readFileSync(
-        path.join(repoRoot, "dist", "extensions", "diffs", "skills", "diffs", "SKILL.md"),
+        path.join(repoRoot, "dist", "extensions", "discord", "skills", "diffs", "SKILL.md"),
         "utf8",
       ),
     ).toContain("Diffs");
@@ -406,25 +415,21 @@ describe("copyBundledPluginMetadata", () => {
 
   it.each([
     {
-      name: "skips metadata for optional bundled clusters only when explicitly disabled",
+      name: "removes unsupported optional plugin metadata from the simplified dist",
       pluginId: "acpx",
       packageName: "@openclaw/acpx-plugin",
       packageOpenClaw: { extensions: ["./index.ts"] },
-      env: excludeOptionalEnv,
-      expectedExists: false,
     },
     {
-      name: "removes externalized optional plugin metadata from the core dist",
+      name: "removes unsupported externalized channel metadata from the simplified dist",
       pluginId: "whatsapp",
       packageName: "@openclaw/whatsapp",
       packageOpenClaw: {
         extensions: ["./index.ts"],
         install: { npmSpec: "@openclaw/whatsapp" },
       },
-      env: {},
-      expectedExists: false,
     },
-  ] as const)("$name", ({ pluginId, packageName, packageOpenClaw, env, expectedExists }) => {
+  ] as const)("$name", ({ pluginId, packageName, packageOpenClaw }) => {
     const repoRoot = makeRepoRoot(`openclaw-bundled-plugin-${pluginId}-`);
     createPlugin(repoRoot, {
       id: pluginId,
@@ -432,9 +437,9 @@ describe("copyBundledPluginMetadata", () => {
       packageOpenClaw,
     });
 
-    copyBundledPluginMetadataWithEnv({ repoRoot, env });
+    copyBundledPluginMetadataWithEnv({ repoRoot, env: {} });
 
-    expect(fs.existsSync(path.join(repoRoot, "dist", "extensions", pluginId))).toBe(expectedExists);
+    expect(fs.existsSync(path.join(repoRoot, "dist", "extensions", pluginId))).toBe(false);
   });
 
   it("removes build-excluded bundled plugin metadata", () => {
@@ -456,7 +461,7 @@ describe("copyBundledPluginMetadata", () => {
     expect(fs.existsSync(staleDistDir)).toBe(false);
   });
 
-  it("preserves manifest-less runtime support package outputs and copies package metadata", () => {
+  it("removes manifest-less runtime support package outputs from the simplified dist", () => {
     const repoRoot = makeRepoRoot("openclaw-bundled-runtime-support-");
     const pluginDir = path.join(repoRoot, "extensions", "image-generation-core");
     fs.mkdirSync(pluginDir, { recursive: true });
@@ -479,30 +484,7 @@ describe("copyBundledPluginMetadata", () => {
     copyBundledPluginMetadata({ repoRoot });
 
     expect(fs.existsSync(path.join(repoRoot, "dist", "extensions", "image-generation-core"))).toBe(
-      true,
+      false,
     );
-    expect(
-      fs.existsSync(
-        path.join(repoRoot, "dist", "extensions", "image-generation-core", "runtime-api.js"),
-      ),
-    ).toBe(true);
-    expect(
-      fs.existsSync(
-        path.join(repoRoot, "dist", "extensions", "image-generation-core", "openclaw.plugin.json"),
-      ),
-    ).toBe(false);
-    expect(
-      JSON.parse(
-        fs.readFileSync(
-          path.join(repoRoot, "dist", "extensions", "image-generation-core", "package.json"),
-          "utf8",
-        ),
-      ),
-    ).toEqual({
-      name: "@openclaw/image-generation-core",
-      version: "0.0.1",
-      private: true,
-      type: "module",
-    });
   });
 });

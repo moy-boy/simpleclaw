@@ -104,8 +104,8 @@ export function registerStatusHealthSessionsCommands(program: Command) {
     .description("Show channel health and recent session recipients")
     .option("--json", "Output JSON instead of text", false)
     .option("--all", "Full diagnosis (read-only, pasteable)", false)
-    .option("--usage", "Show model provider usage/quota snapshots", false)
-    .option("--deep", "Probe channels (WhatsApp Web + Telegram + Discord + Slack + Signal)", false)
+    .option("--usage", "Show OpenAI subscription usage/quota snapshots", false)
+    .option("--deep", "Probe configured Telegram and Discord channels", false)
     .option("--timeout <ms>", "Probe timeout in milliseconds", "10000")
     .option("--verbose", "Verbose logging", false)
     .option("--debug", "Alias for --verbose", false)
@@ -116,11 +116,8 @@ export function registerStatusHealthSessionsCommands(program: Command) {
           ["openclaw status", "Show channel health + session summary."],
           ["openclaw status --all", "Full diagnosis (read-only)."],
           ["openclaw status --json", "Machine-readable output."],
-          ["openclaw status --usage", "Show model provider usage/quota snapshots."],
-          [
-            "openclaw status --deep",
-            "Run channel probes (WA + Telegram + Discord + Slack + Signal).",
-          ],
+          ["openclaw status --usage", "Show OpenAI subscription usage/quota snapshots."],
+          ["openclaw status --deep", "Run configured Telegram and Discord channel probes."],
           ["openclaw status --deep --timeout 5000", "Tighten probe timeout."],
         ])}`,
     )

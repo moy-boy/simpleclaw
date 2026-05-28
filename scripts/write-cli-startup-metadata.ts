@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { RootHelpRenderOptions } from "../src/cli/program/root-help.js";
 import type { OpenClawConfig } from "../src/config/config.js";
+import { listSupportedBundledPluginIds } from "./lib/supported-surface.mjs";
 
 function dedupe(values: string[]): string[] {
   const seen = new Set<string>();
@@ -26,19 +27,18 @@ const distDir = path.join(rootDir, "dist");
 const outputPath = path.join(distDir, "cli-startup-metadata.json");
 const extensionsDir = path.join(rootDir, "extensions");
 const ROOT_HELP_RENDER_TIMEOUT_MS = 120_000;
-const BROWSER_HELP_RENDER_TIMEOUT_MS = 120_000;
 const COMMAND_HELP_RENDER_TIMEOUT_MS = 120_000;
 const PRECOMPUTED_SUBCOMMAND_HELP_COMMANDS = ["doctor", "gateway", "models", "plugins"] as const;
-const CORE_CHANNEL_ORDER = [
-  "telegram",
-  "whatsapp",
-  "discord",
-  "irc",
-  "googlechat",
-  "slack",
-  "signal",
-  "imessage",
-] as const;
+const CORE_CHANNEL_ORDER = ["telegram", "discord"] as const;
+const SUPPORTED_CHANNEL_IDS = new Set<string>(CORE_CHANNEL_ORDER);
+const SUPPORTED_BUNDLED_PLUGIN_IDS = new Set<string>(listSupportedBundledPluginIds());
+const SUPPORTED_CHANNEL_ORDER = new Map<string, number>(
+  CORE_CHANNEL_ORDER.map((channelId, index) => [channelId, index]),
+);
+
+function shouldPrecomputeExtendedCliHelpMetadata(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.OPENCLAW_BUILD_FULL_CLI_HELP_METADATA === "1";
+}
 
 type ExtensionChannelEntry = {
   id: string;
@@ -87,25 +87,6 @@ function updateHashFromFiles(
   }
 }
 
-function resolveBrowserHelpSourceSignature(sourceRootDir: string = rootDir): string {
-  const hash = createHash("sha1");
-  const browserCliDir = path.join(sourceRootDir, "extensions/browser/src/cli");
-  const browserCliFiles = readdirSync(browserCliDir)
-    .filter((entry) => entry.endsWith(".ts"))
-    .map((entry) => path.join(browserCliDir, entry));
-  updateHashFromFiles(hash, browserCliFiles, sourceRootDir);
-  updateHashFromFiles(
-    hash,
-    [
-      path.join(sourceRootDir, "src/cli/program/help.ts"),
-      path.join(sourceRootDir, "src/cli/program/context.ts"),
-      path.join(sourceRootDir, "src/cli/banner.ts"),
-    ],
-    sourceRootDir,
-  );
-  return hash.digest("hex");
-}
-
 function resolveSecretsHelpSourceSignature(sourceRootDir: string = rootDir): string {
   const hash = createHash("sha1");
   updateHashFromFiles(
@@ -131,11 +112,6 @@ function resolveNodesHelpSourceSignature(sourceRootDir: string = rootDir): strin
   updateHashFromFiles(
     hash,
     [
-      path.join(sourceRootDir, "extensions/canvas/cli-metadata.ts"),
-      path.join(sourceRootDir, "extensions/canvas/index.ts"),
-      path.join(sourceRootDir, "extensions/canvas/src/a2ui-jsonl.ts"),
-      path.join(sourceRootDir, "extensions/canvas/src/cli-helpers.ts"),
-      path.join(sourceRootDir, "extensions/canvas/src/cli.ts"),
       path.join(sourceRootDir, "src/cli/program/help.ts"),
       path.join(sourceRootDir, "src/cli/program/context.ts"),
       path.join(sourceRootDir, "src/cli/banner.ts"),
@@ -179,6 +155,9 @@ export function readBundledChannelCatalog(
     if (!dirEntry.isDirectory()) {
       continue;
     }
+    if (!SUPPORTED_BUNDLED_PLUGIN_IDS.has(dirEntry.name)) {
+      continue;
+    }
     const packageJsonPath = path.join(extensionsDirOverride, dirEntry.name, "package.json");
     try {
       const raw = readFileSync(packageJsonPath, "utf8");
@@ -196,12 +175,19 @@ export function readBundledChannelCatalog(
       if (typeof id !== "string" || !id.trim()) {
         continue;
       }
+      const normalizedId = id.trim();
+      if (!SUPPORTED_CHANNEL_IDS.has(normalizedId)) {
+        continue;
+      }
       const orderRaw = parsed.openclaw?.channel?.order;
       const labelRaw = parsed.openclaw?.channel?.label;
       entries.push({
-        id: id.trim(),
-        order: typeof orderRaw === "number" ? orderRaw : 999,
-        label: typeof labelRaw === "string" ? labelRaw : id.trim(),
+        id: normalizedId,
+        order:
+          typeof orderRaw === "number"
+            ? orderRaw
+            : (SUPPORTED_CHANNEL_ORDER.get(normalizedId) ?? 999),
+        label: typeof labelRaw === "string" ? labelRaw : normalizedId,
       });
     } catch {
       // Ignore malformed or missing extension package manifests.
@@ -341,53 +327,6 @@ function renderSourceRootHelpText(
   return result.stdout ?? "";
 }
 
-function renderSourceBrowserHelpText(
-  renderContext: RootHelpRenderContext = createIsolatedRootHelpRenderContext(),
-): string {
-  const browserCliUrl = pathToFileURL(
-    path.join(rootDir, "extensions/browser/src/cli/browser-cli.ts"),
-  ).href;
-  const helpUrl = pathToFileURL(path.join(rootDir, "src/cli/program/help.ts")).href;
-  const contextUrl = pathToFileURL(path.join(rootDir, "src/cli/program/context.ts")).href;
-  const inlineModule = [
-    `const { Command } = await import("commander");`,
-    `const { registerBrowserCli } = await import(${JSON.stringify(browserCliUrl)});`,
-    `const { configureProgramHelp } = await import(${JSON.stringify(helpUrl)});`,
-    `const { createProgramContext } = await import(${JSON.stringify(contextUrl)});`,
-    `const program = new Command();`,
-    `configureProgramHelp(program, createProgramContext());`,
-    `registerBrowserCli(program, ["node", "openclaw", "browser", "--help"]);`,
-    `const browser = program.commands.find((cmd) => cmd.name() === "browser");`,
-    `if (!browser) throw new Error("Browser command was not registered.");`,
-    `browser.outputHelp();`,
-    "process.exit(0);",
-  ].join("\n");
-  const result = spawnSync(
-    process.execPath,
-    ["--import", "tsx", "--input-type=module", "--eval", inlineModule],
-    {
-      cwd: rootDir,
-      encoding: "utf8",
-      env: {
-        ...renderContext.env,
-        OPENCLAW_DISABLE_CLI_STARTUP_HELP_FAST_PATH: "1",
-      },
-      timeout: BROWSER_HELP_RENDER_TIMEOUT_MS,
-    },
-  );
-  if (result.error) {
-    throw result.error;
-  }
-  if (result.status !== 0) {
-    const stderr = result.stderr?.trim();
-    throw new Error(
-      "Failed to render source browser help" +
-        (stderr ? `: ${stderr}` : result.signal ? `: terminated by ${result.signal}` : ""),
-    );
-  }
-  return result.stdout ?? "";
-}
-
 function renderSourceCommandHelpText(
   command: "nodes" | "secrets" | PrecomputedSubcommandHelpCommand,
   renderContext: RootHelpRenderContext = createIsolatedRootHelpRenderContext(),
@@ -447,21 +386,28 @@ export async function writeCliStartupMetadata(options?: {
   sourceRootDir?: string;
   renderBundledRootHelpText?: typeof renderBundledRootHelpText;
   renderSourceRootHelpText?: typeof renderSourceRootHelpText;
-  renderSourceBrowserHelpText?: typeof renderSourceBrowserHelpText;
   renderSourceSecretsHelpText?: typeof renderSourceSecretsHelpText;
   renderSourceNodesHelpText?: typeof renderSourceNodesHelpText;
   renderSourceSubcommandHelpTextRecord?: typeof renderSourceSubcommandHelpTextRecord;
+  precomputeExtendedHelp?: boolean;
 }): Promise<void> {
   const resolvedDistDir = options?.distDir ?? distDir;
   const resolvedOutputPath = options?.outputPath ?? outputPath;
   const resolvedExtensionsDir = options?.extensionsDir ?? extensionsDir;
   const resolvedSourceRootDir = options?.sourceRootDir ?? rootDir;
+  const precomputeExtendedHelp =
+    options?.precomputeExtendedHelp ?? shouldPrecomputeExtendedCliHelpMetadata();
   const channelCatalog = readBundledChannelCatalog(resolvedExtensionsDir);
   const bundleIdentity = resolveRootHelpBundleIdentity(resolvedDistDir);
-  const browserHelpSourceSignature = resolveBrowserHelpSourceSignature(resolvedSourceRootDir);
-  const secretsHelpSourceSignature = resolveSecretsHelpSourceSignature(resolvedSourceRootDir);
-  const nodesHelpSourceSignature = resolveNodesHelpSourceSignature(resolvedSourceRootDir);
-  const subcommandHelpSourceSignature = resolveSubcommandHelpSourceSignature(resolvedSourceRootDir);
+  const secretsHelpSourceSignature = precomputeExtendedHelp
+    ? resolveSecretsHelpSourceSignature(resolvedSourceRootDir)
+    : null;
+  const nodesHelpSourceSignature = precomputeExtendedHelp
+    ? resolveNodesHelpSourceSignature(resolvedSourceRootDir)
+    : null;
+  const subcommandHelpSourceSignature = precomputeExtendedHelp
+    ? resolveSubcommandHelpSourceSignature(resolvedSourceRootDir)
+    : null;
   const bundledPluginsDir = path.join(resolvedDistDir, "extensions");
   const renderContext = createIsolatedRootHelpRenderContext(
     existsSync(bundledPluginsDir) ? bundledPluginsDir : resolvedExtensionsDir,
@@ -471,32 +417,33 @@ export async function writeCliStartupMetadata(options?: {
   try {
     const existing = JSON.parse(readFileSync(resolvedOutputPath, "utf8")) as {
       rootHelpBundleSignature?: unknown;
-      browserHelpSourceSignature?: unknown;
       secretsHelpSourceSignature?: unknown;
       nodesHelpSourceSignature?: unknown;
       subcommandHelpSourceSignature?: unknown;
       channelCatalogSignature?: unknown;
-      browserHelpText?: unknown;
       secretsHelpText?: unknown;
       nodesHelpText?: unknown;
+      rootHelpText?: unknown;
       subcommandHelpText?: unknown;
     };
-    if (
+    const rootMetadataMatches = Boolean(
       bundleIdentity &&
       existing.rootHelpBundleSignature === bundleIdentity.signature &&
-      existing.browserHelpSourceSignature === browserHelpSourceSignature &&
-      existing.secretsHelpSourceSignature === secretsHelpSourceSignature &&
-      existing.nodesHelpSourceSignature === nodesHelpSourceSignature &&
-      existing.subcommandHelpSourceSignature === subcommandHelpSourceSignature &&
       existing.channelCatalogSignature === channelCatalog.signature &&
-      typeof existing.browserHelpText === "string" &&
-      existing.browserHelpText.length > 0 &&
-      typeof existing.secretsHelpText === "string" &&
-      existing.secretsHelpText.length > 0 &&
-      typeof existing.nodesHelpText === "string" &&
-      existing.nodesHelpText.length > 0 &&
-      hasAllPrecomputedSubcommandHelpText(existing.subcommandHelpText)
-    ) {
+      typeof existing.rootHelpText === "string" &&
+      existing.rootHelpText.length > 0,
+    );
+    const extendedMetadataMatches =
+      !precomputeExtendedHelp ||
+      (existing.secretsHelpSourceSignature === secretsHelpSourceSignature &&
+        existing.nodesHelpSourceSignature === nodesHelpSourceSignature &&
+        existing.subcommandHelpSourceSignature === subcommandHelpSourceSignature &&
+        typeof existing.secretsHelpText === "string" &&
+        existing.secretsHelpText.length > 0 &&
+        typeof existing.nodesHelpText === "string" &&
+        existing.nodesHelpText.length > 0 &&
+        hasAllPrecomputedSubcommandHelpText(existing.subcommandHelpText));
+    if (rootMetadataMatches && extendedMetadataMatches) {
       return;
     }
   } catch {
@@ -512,18 +459,22 @@ export async function writeCliStartupMetadata(options?: {
   } catch {
     rootHelpText = (options?.renderSourceRootHelpText ?? renderSourceRootHelpText)(renderContext);
   }
-  const browserHelpText = (options?.renderSourceBrowserHelpText ?? renderSourceBrowserHelpText)(
-    renderContext,
-  );
-  const secretsHelpText = (options?.renderSourceSecretsHelpText ?? renderSourceSecretsHelpText)(
-    renderContext,
-  );
-  const nodesHelpText = (options?.renderSourceNodesHelpText ?? renderSourceNodesHelpText)(
-    renderContext,
-  );
-  const subcommandHelpText = (
-    options?.renderSourceSubcommandHelpTextRecord ?? renderSourceSubcommandHelpTextRecord
-  )(renderContext);
+  const extendedHelpMetadata = precomputeExtendedHelp
+    ? {
+        secretsHelpSourceSignature,
+        nodesHelpSourceSignature,
+        subcommandHelpSourceSignature,
+        secretsHelpText: (options?.renderSourceSecretsHelpText ?? renderSourceSecretsHelpText)(
+          renderContext,
+        ),
+        nodesHelpText: (options?.renderSourceNodesHelpText ?? renderSourceNodesHelpText)(
+          renderContext,
+        ),
+        subcommandHelpText: (
+          options?.renderSourceSubcommandHelpTextRecord ?? renderSourceSubcommandHelpTextRecord
+        )(renderContext),
+      }
+    : {};
 
   mkdirSync(resolvedDistDir, { recursive: true });
   writeFileSync(
@@ -534,15 +485,8 @@ export async function writeCliStartupMetadata(options?: {
         channelOptions,
         channelCatalogSignature: channelCatalog.signature,
         rootHelpBundleSignature: bundleIdentity?.signature ?? null,
-        browserHelpSourceSignature,
-        secretsHelpSourceSignature,
-        nodesHelpSourceSignature,
-        subcommandHelpSourceSignature,
-        browserHelpText,
-        secretsHelpText,
-        nodesHelpText,
-        subcommandHelpText,
         rootHelpText,
+        ...extendedHelpMetadata,
       },
       null,
       2,

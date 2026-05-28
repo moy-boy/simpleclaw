@@ -23,10 +23,9 @@ predicate rawConnectMember(string memberName) { memberName = ["connect", "create
 predicate relevantSourceFile(File file) {
   exists(string path |
     path = file.getRelativePath() and
-    path.regexpMatch("^(src|extensions)/.*\\.ts$") and
+    path.regexpMatch("^(src|extensions/(codex|discord|openai|telegram))/.*\\.ts$") and
     not path.regexpMatch(".*\\.(test|spec|test-utils|test-harness|e2e-harness)\\.ts$") and
-    not path.regexpMatch(".*/test-support/.*") and
-    not path.regexpMatch("^extensions/diffs/assets/.*")
+    not path.regexpMatch(".*/test-support/.*")
   )
 }
 
@@ -75,12 +74,6 @@ predicate allowedRawSocketClientCall(Expr call) {
   allowedOwnerScope(call, "src/infra/push-apns-http2.ts", "connectApnsHttp2Session")
   or
   allowedOwnerScope(call, "src/proxy-capture/proxy-server.ts", "startDebugProxyServer")
-  or
-  allowedOwnerScope(call, "extensions/irc/src/client.ts", "connectIrcClient")
-  or
-  allowedOwnerScope(call, "extensions/qa-lab/src/lab-server-capture.ts", "probeTcpReachability")
-  or
-  allowedOwnerScope(call, "extensions/qa-lab/src/lab-server-ui.ts", "proxyUpgradeRequest")
 }
 
 from Expr call

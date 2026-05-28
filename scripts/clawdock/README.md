@@ -154,7 +154,7 @@ The Docker setup uses three config files on the host. The container never stores
 | File                        | Purpose                                          | Examples                                                                                                |
 | --------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
 | `<project>/.env`            | **Docker infra** — image, ports, gateway token   | `OPENCLAW_GATEWAY_TOKEN`, `OPENCLAW_IMAGE`, `OPENCLAW_GATEWAY_PORT`, `OPENCLAW_AUTH_PROFILE_SECRET_DIR` |
-| `~/.openclaw/.env`          | **Secrets** — API keys and bot tokens            | `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `TELEGRAM_BOT_TOKEN`                                             |
+| `~/.openclaw/.env`          | **Secrets** — API keys and bot tokens            | `OPENAI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `DISCORD_TOKEN`                                                 |
 | `~/.openclaw/openclaw.json` | **Behavior config** — models, channels, policies | Model selection, WhatsApp allowlists, agent settings                                                    |
 
 **Do NOT** put API keys or bot tokens in `openclaw.json`. Use `~/.openclaw/.env` for all secrets.
@@ -212,8 +212,8 @@ The project `.env` feeds Docker Compose directly (gateway token, image name, por
 
 ```bash
 OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
 TELEGRAM_BOT_TOKEN=123456:ABCDEF...
+DISCORD_TOKEN=Bot ...
 ```
 
 ### Example `<project>/.env`

@@ -1,4 +1,3 @@
-import { telegramExtensionTestRoots } from "./vitest.extension-telegram-paths.mjs";
 import { loadPatternListFromEnv } from "./vitest.pattern-file.ts";
 import { createScopedVitestConfig } from "./vitest.scoped-config.ts";
 
@@ -12,8 +11,7 @@ export function createExtensionTelegramVitestConfig(
   env: Record<string, string | undefined> = process.env,
 ) {
   return createScopedVitestConfig(
-    loadIncludePatternsFromEnv(env) ??
-      telegramExtensionTestRoots.map((root) => `${root}/**/*.test.ts`),
+    loadIncludePatternsFromEnv(env) ?? ["extensions/telegram/**/*.test.ts"],
     {
       dir: "extensions",
       env,

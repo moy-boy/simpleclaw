@@ -25,13 +25,21 @@ vi.mock("../../commands/onboard-core-auth-flags.js", () => ({
       cliOption: "--mistral-api-key <key>",
       description: "Mistral API key",
       optionKey: "mistralApiKey",
+      authChoice: "mistral-api-key",
     },
     {
       cliOption: "--openai-api-key <key>",
       description: "OpenAI API key (core fallback)",
       optionKey: "openaiApiKey",
+      authChoice: "openai-api-key",
     },
-  ] as Array<{ cliOption: string; description: string; optionKey: string }>,
+    {
+      cliOption: "--openai-codex-token <key>",
+      description: "OpenAI subscription token",
+      optionKey: "openaiCodexToken",
+      authChoice: "openai-codex",
+    },
+  ] as Array<{ cliOption: string; description: string; optionKey: string; authChoice: string }>,
 }));
 
 vi.mock("../../plugins/provider-auth-choices.js", () => ({
@@ -40,6 +48,13 @@ vi.mock("../../plugins/provider-auth-choices.js", () => ({
       cliOption: "--openai-api-key <key>",
       description: "OpenAI API key",
       optionKey: "openaiApiKey",
+      authChoice: "openai-api-key",
+    },
+    {
+      cliOption: "--openai-codex-token <key>",
+      description: "OpenAI subscription token",
+      optionKey: "openaiCodexToken",
+      authChoice: "openai-codex",
     },
   ],
 }));
@@ -61,6 +76,13 @@ describe("registerOnboardCommand", () => {
     const program = new Command();
     registerOnboardCommand(program);
     await program.parseAsync(args, { from: "user" });
+  }
+
+  function listOnboardOptionLongNames(): Array<string | undefined> {
+    const program = new Command();
+    registerOnboardCommand(program);
+    const onboard = program.commands.find((command) => command.name() === "onboard");
+    return onboard?.options.map((option) => option.long) ?? [];
   }
 
   function setupWizardOptions(callIndex = 0): Record<string, unknown> {
@@ -116,14 +138,20 @@ describe("registerOnboardCommand", () => {
     expect(setupWizardOptions().skipBootstrap).toBe(true);
   });
 
-  it("parses --mistral-api-key and forwards mistralApiKey", async () => {
-    await runCli(["onboard", "--mistral-api-key", "sk-mistral-test"]);
-    expect(setupWizardOptions().mistralApiKey).toBe("sk-mistral-test"); // pragma: allowlist secret
+  it("does not register unsupported provider auth flags", () => {
+    const options = listOnboardOptionLongNames();
+
+    expect(options).not.toContain("--mistral-api-key");
+    expect(options).not.toContain("--openai-api-key");
+    expect(options).not.toContain("--custom-base-url");
+    expect(options).not.toContain("--custom-api-key");
+    expect(options).not.toContain("--token-provider");
+    expect(options).toContain("--openai-codex-token");
   });
 
   it("dedupes provider auth flags before registering command options", async () => {
-    await runCli(["onboard", "--openai-api-key", "sk-openai-test"]);
-    expect(setupWizardOptions().openaiApiKey).toBe("sk-openai-test"); // pragma: allowlist secret
+    await runCli(["onboard", "--openai-codex-token", "codex-token-test"]);
+    expect(setupWizardOptions().openaiCodexToken).toBe("codex-token-test"); // pragma: allowlist secret
   });
 
   it("forwards --gateway-token-ref-env", async () => {

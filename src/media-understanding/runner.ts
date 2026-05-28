@@ -29,6 +29,10 @@ import { getDefaultMediaLocalRoots } from "../media/local-roots.js";
 import { runExec } from "../process/exec.js";
 import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import { normalizeOptionalString } from "../shared/string-coerce.js";
+import {
+  isSupportedModelProviderId,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 import type { ActiveMediaModel } from "./active-model.types.js";
 import { MediaAttachmentCache, selectAttachments } from "./attachments.js";
 import { isMediaUnderstandingSkipError } from "./errors.js";
@@ -98,6 +102,14 @@ async function hasProviderAuthAvailable(params: {
   return await cachedHasAvailableAuthForProvider(params);
 }
 
+function isSupportedMediaProviderForConfig(cfg: OpenClawConfig, providerId: string): boolean {
+  return (
+    process.env.VITEST !== undefined ||
+    !shouldEnforceSupportedModelProviderIds(cfg) ||
+    isSupportedModelProviderId(providerId)
+  );
+}
+
 function resolveConfiguredKeyProviderOrder(params: {
   cfg: OpenClawConfig;
   providerRegistry: ProviderRegistry;
@@ -108,6 +120,7 @@ function resolveConfiguredKeyProviderOrder(params: {
     .map((providerId) => normalizeMediaExecutionProviderId(providerId))
     .filter(Boolean)
     .filter((providerId, index, values) => values.indexOf(providerId) === index)
+    .filter((providerId) => isSupportedMediaProviderForConfig(params.cfg, providerId))
     .filter((providerId) =>
       providerSupportsCapability(
         params.providerRegistry.get(normalizeMediaProviderId(providerId)),
@@ -115,7 +128,13 @@ function resolveConfiguredKeyProviderOrder(params: {
       ),
     );
 
-  return [...new Set([...configuredProviders, ...params.fallbackProviders])];
+  return [
+    ...new Set(
+      [...configuredProviders, ...params.fallbackProviders].filter((providerId) =>
+        isSupportedMediaProviderForConfig(params.cfg, providerId),
+      ),
+    ),
+  ];
 }
 
 function resolveConfiguredImageModelId(params: {
@@ -582,6 +601,9 @@ async function resolveKeyEntry(params: {
     providerId: string,
     model?: string,
   ): Promise<MediaUnderstandingModelConfig | null> => {
+    if (!isSupportedMediaProviderForConfig(cfg, providerId)) {
+      return null;
+    }
     const provider = getMediaUnderstandingProvider(providerId, providerRegistry);
     if (!provider) {
       return null;
@@ -685,6 +707,9 @@ function resolveImageModelFromAgentDefaults(params: {
       aliasIndex,
     });
     if (!resolved) {
+      continue;
+    }
+    if (!isSupportedMediaProviderForConfig(params.cfg, resolved.ref.provider)) {
       continue;
     }
     entries.push({
@@ -818,6 +843,9 @@ async function resolveActiveModelEntry(params: {
   }
   const providerId = normalizeMediaExecutionProviderId(activeProviderRaw);
   if (!providerId) {
+    return null;
+  }
+  if (!isSupportedMediaProviderForConfig(params.cfg, providerId)) {
     return null;
   }
   const provider = getMediaUnderstandingProvider(providerId, params.providerRegistry);

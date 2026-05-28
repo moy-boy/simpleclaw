@@ -6,7 +6,10 @@ import {
   listBundledPluginBuildEntries,
   listBundledPluginPackArtifacts,
 } from "../../scripts/lib/bundled-plugin-build-entries.mjs";
+import { SUPPORTED_BUNDLED_PLUGIN_IDS } from "../../scripts/lib/supported-surface.mjs";
 import { expectNoNodeFsScans } from "../../src/test-utils/fs-scan-assertions.js";
+
+const privateQaEnv = { ...process.env, OPENCLAW_BUILD_PRIVATE_QA: "1" };
 
 function expectNoPrefixMatches(values: string[], prefix: string) {
   expect(values.filter((value) => value.startsWith(prefix))).toEqual([]);
@@ -14,10 +17,6 @@ function expectNoPrefixMatches(values: string[], prefix: string) {
 
 function expectSomePrefixMatch(values: string[], prefix: string) {
   expect(values.filter((value) => value.startsWith(prefix))).not.toEqual([]);
-}
-
-function pickEntries(entries: Record<string, string>, keys: readonly string[]) {
-  return Object.fromEntries(keys.map((key) => [key, entries[key]]));
 }
 
 describe("bundled plugin build entries", () => {
@@ -44,29 +43,18 @@ describe("bundled plugin build entries", () => {
     }
   };
 
-  it("includes manifest-less runtime core support packages in dist build entries", () => {
+  it("keeps the default bundled build graph to the simplified supported surface", () => {
     const entries = listBundledPluginBuildEntries();
-    const expectedEntries = {
-      "extensions/image-generation-core/api": "extensions/image-generation-core/api.ts",
-      "extensions/image-generation-core/runtime-api":
-        "extensions/image-generation-core/runtime-api.ts",
-      "extensions/media-understanding-core/runtime-api":
-        "extensions/media-understanding-core/runtime-api.ts",
-      "extensions/speech-core/api": "extensions/speech-core/api.ts",
-      "extensions/speech-core/runtime-api": "extensions/speech-core/runtime-api.ts",
-    };
+    const keys = Object.keys(entries);
 
-    expect(pickEntries(entries, Object.keys(expectedEntries))).toStrictEqual(expectedEntries);
-  });
-
-  it("keeps the Matrix packaged runtime shim in bundled plugin build entries", () => {
-    const entries = listBundledPluginBuildEntries();
-    const expectedEntries = {
-      "extensions/matrix/plugin-entry.handlers.runtime":
-        "extensions/matrix/plugin-entry.handlers.runtime.ts",
-    };
-
-    expect(pickEntries(entries, Object.keys(expectedEntries))).toStrictEqual(expectedEntries);
+    expectSomePrefixMatch(keys, "extensions/telegram/");
+    expectSomePrefixMatch(keys, "extensions/discord/");
+    expectSomePrefixMatch(keys, "extensions/openai/");
+    expectSomePrefixMatch(keys, "extensions/codex/");
+    expectNoPrefixMatches(keys, "extensions/anthropic/");
+    expectNoPrefixMatches(keys, "extensions/google/");
+    expectNoPrefixMatches(keys, "extensions/slack/");
+    expectNoPrefixMatches(keys, "extensions/image-generation-core/");
   });
 
   it("keeps the Telegram ingress worker out of bundled plugin public-surface entries", () => {
@@ -96,73 +84,27 @@ describe("bundled plugin build entries", () => {
     expect(payload.artifacts).toBeGreaterThan(0);
   });
 
-  it("packs runtime core support packages without requiring plugin manifests", () => {
-    const artifacts = listBundledPluginPackArtifacts();
-
-    expect(artifacts).toContain("dist/extensions/image-generation-core/package.json");
-    expect(artifacts).toContain("dist/extensions/image-generation-core/runtime-api.js");
-    expect(artifacts).not.toContain("dist/extensions/image-generation-core/openclaw.plugin.json");
-    expect(artifacts).toContain("dist/extensions/media-understanding-core/runtime-api.js");
-    expect(artifacts).not.toContain(
-      "dist/extensions/media-understanding-core/openclaw.plugin.json",
-    );
-    expect(artifacts).toContain("dist/extensions/speech-core/runtime-api.js");
-    expect(artifacts).not.toContain("dist/extensions/speech-core/openclaw.plugin.json");
-  });
-
-  it("packs the Matrix packaged runtime shim", () => {
-    const artifacts = listBundledPluginPackArtifacts({ includeRootPackageExcludedDirs: true });
-
-    expect(artifacts).toContain("dist/extensions/matrix/plugin-entry.handlers.runtime.js");
-  });
-
   it("keeps private QA bundles out of required npm pack artifacts", () => {
-    const artifacts = listBundledPluginPackArtifacts();
+    const artifacts = listBundledPluginPackArtifacts({ env: privateQaEnv });
 
     expectNoPrefixMatches(artifacts, "dist/extensions/qa-channel/");
     expectNoPrefixMatches(artifacts, "dist/extensions/qa-lab/");
     expectNoPrefixMatches(artifacts, "dist/extensions/qa-matrix/");
   });
 
-  it("keeps explicitly downloadable plugins out of bundled package artifacts", () => {
+  it("keeps unsupported plugins out of the simplified build graph", () => {
     const entries = listBundledPluginBuildEntries();
     const artifacts = listBundledPluginPackArtifacts();
 
-    for (const pluginId of ["acpx", "googlechat", "line"]) {
-      expectSomePrefixMatch(Object.keys(entries), `extensions/${pluginId}/`);
-      expectNoPrefixMatches(artifacts, `dist/extensions/${pluginId}/`);
-    }
-    for (const pluginId of ["qqbot", "whatsapp"]) {
-      expectNoPrefixMatches(Object.keys(entries), `extensions/${pluginId}/`);
-      expectNoPrefixMatches(artifacts, `dist/extensions/${pluginId}/`);
-    }
-  });
-
-  it("keeps external-only providers out of bundled dist entries", () => {
-    const entries = listBundledPluginBuildEntries();
-    const artifacts = listBundledPluginPackArtifacts();
-
-    for (const pluginId of ["amazon-bedrock", "amazon-bedrock-mantle", "anthropic-vertex"]) {
-      expectNoPrefixMatches(Object.keys(entries), `extensions/${pluginId}/`);
-      expectNoPrefixMatches(artifacts, `dist/extensions/${pluginId}/`);
-    }
-  });
-
-  it("keeps externalized runtime-dependency plugins out of bundled dist entries", () => {
-    const entries = listBundledPluginBuildEntries();
-    const artifacts = listBundledPluginPackArtifacts();
-
-    for (const pluginId of ["openshell", "slack"]) {
-      expectNoPrefixMatches(Object.keys(entries), `extensions/${pluginId}/`);
-      expectNoPrefixMatches(artifacts, `dist/extensions/${pluginId}/`);
-    }
-  });
-
-  it("keeps source-only external plugins out of bundled dist entries", () => {
-    const entries = listBundledPluginBuildEntries();
-    const artifacts = listBundledPluginPackArtifacts();
-
-    for (const pluginId of ["meeting-notes"]) {
+    for (const pluginId of [
+      "acpx",
+      "anthropic",
+      "google",
+      "image-generation-core",
+      "matrix",
+      "slack",
+      "whatsapp",
+    ]) {
       expectNoPrefixMatches(Object.keys(entries), `extensions/${pluginId}/`);
       expectNoPrefixMatches(artifacts, `dist/extensions/${pluginId}/`);
     }
@@ -188,6 +130,9 @@ describe("bundled plugin build entries", () => {
     expect(offenders).toStrictEqual([]);
 
     for (const pluginId of [...secretBackedPluginIds].toSorted()) {
+      if (!SUPPORTED_BUNDLED_PLUGIN_IDS.has(pluginId)) {
+        continue;
+      }
       if (excludedPackageDirs.has(pluginId)) {
         continue;
       }

@@ -6,6 +6,10 @@ import {
   hasConfiguredCommandOwners,
 } from "../commands/doctor-command-owner.js";
 import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+} from "../commands/supported-surface.js";
+import {
   getRuntimeConfig,
   readConfigFileSnapshotForWrite,
   replaceConfigFile,
@@ -23,13 +27,16 @@ import { getTerminalTableWidth, renderTable } from "../terminal/table.js";
 import { theme } from "../terminal/theme.js";
 import { formatCliCommand } from "./command-format.js";
 
-/** Parse channel, allowing extension channels not in core registry. */
+/** Parse a supported pairing channel. */
 function parseChannel(raw: unknown, channels: PairingChannel[]): PairingChannel {
   const value = normalizeLowercaseStringOrEmpty(normalizeStringifiedOptionalString(raw) ?? "");
   if (!value) {
     throw new Error(
       `Missing channel. Use ${formatCliCommand("openclaw pairing list --channel <channel>")}.`,
     );
+  }
+  if (!isSupportedChannelId(value)) {
+    throw new Error(formatUnsupportedChannelMessage(value));
   }
 
   const normalized = normalizeChannelId(value);
@@ -85,7 +92,7 @@ async function maybeBootstrapCommandOwnerFromPairing(params: {
 }
 
 export function registerPairingCli(program: Command) {
-  const channels = listPairingChannels();
+  const channels = listPairingChannels().filter(isSupportedChannelId);
   const pairing = program
     .command("pairing")
     .description("Secure DM pairing (approve inbound requests)")

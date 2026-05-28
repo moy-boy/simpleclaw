@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { listSupportedBundledPluginRoots } from "./lib/supported-surface.mjs";
 
 const WINDOW_LINES = 80;
 const READ_HELPER_RE = /\b(?:readRemoteMediaBuffer|fetchRemoteMedia)\s*\(/;
 const SAVE_BUFFER_RE = /(?:\.|\b)saveMediaBuffer\s*\(/;
 
 function listTrackedExtensionSources() {
-  return execFileSync("git", ["ls-files", "extensions/**/*.ts"], {
+  const supportedExtensionPathspecs = listSupportedBundledPluginRoots().map(
+    (root) => `${root}/**/*.ts`,
+  );
+  return execFileSync("git", ["ls-files", ...supportedExtensionPathspecs], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   })

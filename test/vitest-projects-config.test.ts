@@ -25,6 +25,7 @@ import {
   resolveSharedVitestWorkerConfig,
   sharedVitestConfig,
 } from "./vitest/vitest.shared.config.ts";
+import { supportedExtensionVitestProjectConfigs } from "./vitest/vitest.supported-extension-projects.mjs";
 import { fullSuiteVitestShards } from "./vitest/vitest.test-shards.mjs";
 import { unitUiIncludePatterns } from "./vitest/vitest.ui-paths.mjs";
 import { createUiVitestConfig } from "./vitest/vitest.ui.config.ts";
@@ -60,26 +61,14 @@ describe("projects vitest config", () => {
     expect(requireTestConfig(baseConfig).projects).toEqual([...rootVitestProjects]);
   });
 
-  it("keeps root watch projects aligned with dedicated extension shard lanes", () => {
+  it("keeps root watch projects aligned with supported extension shard lanes", () => {
     const extensionShard = fullSuiteVitestShards.find(
       (shard) => shard.config === "test/vitest/vitest.full-extensions.config.ts",
     );
 
-    expect(extensionShard?.projects).toEqual(
-      expect.arrayContaining([
-        "test/vitest/vitest.extension-browser.config.ts",
-        "test/vitest/vitest.extension-qa.config.ts",
-        "test/vitest/vitest.extension-media.config.ts",
-        "test/vitest/vitest.extension-misc.config.ts",
-      ]),
-    );
+    expect(extensionShard?.projects).toEqual(supportedExtensionVitestProjectConfigs);
     expect(rootVitestProjects).toEqual(
-      expect.arrayContaining([
-        "test/vitest/vitest.extension-browser.config.ts",
-        "test/vitest/vitest.extension-qa.config.ts",
-        "test/vitest/vitest.extension-media.config.ts",
-        "test/vitest/vitest.extension-misc.config.ts",
-      ]),
+      expect.arrayContaining(supportedExtensionVitestProjectConfigs),
     );
   });
 

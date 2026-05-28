@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import {
   listAgentIds,
+  resolveAgentExplicitModelPrimary,
+  resolveAgentModelFallbacksOverride,
   resolveDefaultAgentId,
   resolveAgentWorkspaceDir,
 } from "../../agents/agent-scope.js";
@@ -37,6 +39,10 @@ import {
   shouldApplyStartupContext,
 } from "../../auto-reply/reply/startup-context.js";
 import { agentCommandFromIngress } from "../../commands/agent.js";
+import {
+  resolveAgentModelFallbackValues,
+  resolveAgentModelPrimaryValue,
+} from "../../config/model-input.js";
 import {
   evaluateSessionFreshness,
   mergeSessionEntry,
@@ -89,6 +95,15 @@ import {
   normalizeOptionalLowercaseString,
   normalizeOptionalString,
 } from "../../shared/string-coerce.js";
+import { formatUnsupportedResolvedModelRefMessage } from "../../supported-model-policy.js";
+import {
+  formatUnsupportedChannelMessage,
+  formatUnsupportedModelProviderMessage,
+  isSupportedChannelId,
+  isSupportedModelProviderId,
+  shouldEnforceSupportedChannelIds,
+  shouldEnforceSupportedModelProviderIds,
+} from "../../supported-surface.js";
 import { createRunningTaskRun, finalizeTaskRunByRunId } from "../../tasks/detached-task-runtime.js";
 import type { TaskStatus } from "../../tasks/task-registry.types.js";
 import {
@@ -201,6 +216,85 @@ function resolveCanUseInternalRuntimeHandoff(
   client: GatewayRequestHandlerOptions["client"],
 ): boolean {
   return client?.connect?.client?.mode === GATEWAY_CLIENT_MODES.BACKEND;
+}
+
+function isUnsupportedAgentDeliveryChannel(cfg: OpenClawConfig, channel: string): boolean {
+  return (
+    shouldEnforceSupportedChannelIds(cfg) &&
+    isDeliverableMessageChannel(channel) &&
+    !isSupportedChannelId(channel)
+  );
+}
+
+function resolveUnsupportedGatewayAgentOverrideMessage(params: {
+  cfg: OpenClawConfig;
+  providerOverride?: string;
+  modelOverride?: string;
+}): string | undefined {
+  if (!shouldEnforceSupportedModelProviderIds(params.cfg)) {
+    return undefined;
+  }
+  const provider = normalizeOptionalString(params.providerOverride);
+  if (provider && !isSupportedModelProviderId(provider)) {
+    return formatUnsupportedModelProviderMessage(provider);
+  }
+  const model = normalizeOptionalString(params.modelOverride);
+  const modelMessage = formatUnsupportedResolvedModelRefMessage({
+    cfg: params.cfg,
+    raw: model,
+    defaultProvider: provider,
+  });
+  if (modelMessage) {
+    return modelMessage;
+  }
+  return undefined;
+}
+
+function resolveUnsupportedGatewayAgentModelPolicyMessage(params: {
+  cfg: OpenClawConfig;
+  agentId: string;
+  providerOverride?: string;
+  modelOverride?: string;
+  activeModelProvider: string;
+}): string | undefined {
+  if (!shouldEnforceSupportedModelProviderIds(params.cfg)) {
+    return undefined;
+  }
+  if (!isSupportedModelProviderId(params.activeModelProvider)) {
+    return formatUnsupportedModelProviderMessage(params.activeModelProvider);
+  }
+  const overrideMessage = resolveUnsupportedGatewayAgentOverrideMessage({
+    cfg: params.cfg,
+    providerOverride: params.providerOverride,
+    modelOverride: params.modelOverride,
+  });
+  if (overrideMessage) {
+    return overrideMessage;
+  }
+
+  const configuredDefault = resolveAgentModelPrimaryValue(params.cfg.agents?.defaults?.model);
+  const configuredFallbacks = resolveAgentModelFallbackValues(params.cfg.agents?.defaults?.model);
+  const agentPrimary = resolveAgentExplicitModelPrimary(params.cfg, params.agentId);
+  const agentFallbacks = resolveAgentModelFallbacksOverride(params.cfg, params.agentId);
+  const modelRefs = [
+    agentPrimary ?? configuredDefault,
+    ...(agentFallbacks ?? configuredFallbacks),
+  ].flatMap((value) => {
+    const normalized = normalizeOptionalString(value);
+    return normalized ? [normalized] : [];
+  });
+
+  for (const modelRef of modelRefs) {
+    const modelMessage = formatUnsupportedResolvedModelRefMessage({
+      cfg: params.cfg,
+      raw: modelRef,
+      defaultProvider: params.activeModelProvider,
+    });
+    if (modelMessage) {
+      return modelMessage;
+    }
+  }
+  return undefined;
 }
 
 async function runSessionResetFromAgent(params: {
@@ -816,6 +910,15 @@ export const agentHandlers: GatewayRequestHandlers = {
     const providerOverride = allowModelOverride ? request.provider : undefined;
     const modelOverride = allowModelOverride ? request.model : undefined;
     const cfg = context.getRuntimeConfig();
+    const modelOverridePolicyMessage = resolveUnsupportedGatewayAgentOverrideMessage({
+      cfg,
+      providerOverride,
+      modelOverride,
+    });
+    if (modelOverridePolicyMessage) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, modelOverridePolicyMessage));
+      return;
+    }
     const idem = request.idempotencyKey;
     const runId = idem;
     const execApprovalFollowupApprovalId = parseExecApprovalFollowupApprovalId(idem);
@@ -1080,6 +1183,14 @@ export const agentHandlers: GatewayRequestHandlers = {
               ErrorCodes.INVALID_REQUEST,
               `invalid agent params: unknown channel: ${normalized}`,
             ),
+          );
+          return;
+        }
+        if (normalized && isUnsupportedAgentDeliveryChannel(cfg, normalized)) {
+          respond(
+            false,
+            undefined,
+            errorShape(ErrorCodes.INVALID_REQUEST, formatUnsupportedChannelMessage(normalized)),
           );
           return;
         }
@@ -1634,6 +1745,15 @@ export const agentHandlers: GatewayRequestHandlers = {
         }
       }
 
+      if (isUnsupportedAgentDeliveryChannel(cfgForAgent ?? cfg, resolvedChannel)) {
+        respond(
+          false,
+          undefined,
+          errorShape(ErrorCodes.INVALID_REQUEST, formatUnsupportedChannelMessage(resolvedChannel)),
+        );
+        return;
+      }
+
       if (!resolvedTo && isDeliverableMessageChannel(resolvedChannel)) {
         const cfgResolved = cfgForAgent ?? cfg;
         const fallback = resolveAgentOutboundTarget({
@@ -1735,15 +1855,28 @@ export const agentHandlers: GatewayRequestHandlers = {
         cfg: cfgForAgent ?? cfg,
         overrideSeconds: typeof request.timeout === "number" ? request.timeout : undefined,
       });
+      const activeModelConfig = cfgForAgent ?? cfg;
+      const activeAgentId = resolvedSessionKey
+        ? resolveAgentIdFromSessionKey(resolvedSessionKey)
+        : (agentId ?? resolveDefaultAgentId(activeModelConfig));
+      const activeSessionModelRef = resolveSessionModelRef(
+        activeModelConfig,
+        sessionEntry,
+        activeAgentId,
+      );
       const activeModelProvider =
-        providerOverride ??
-        resolveSessionModelRef(
-          cfgForAgent ?? cfg,
-          sessionEntry,
-          resolvedSessionKey
-            ? resolveAgentIdFromSessionKey(resolvedSessionKey)
-            : (agentId ?? resolveDefaultAgentId(cfgForAgent ?? cfg)),
-        ).provider;
+        normalizeOptionalString(providerOverride) ?? activeSessionModelRef.provider;
+      const modelPolicyMessage = resolveUnsupportedGatewayAgentModelPolicyMessage({
+        cfg: activeModelConfig,
+        agentId: activeAgentId,
+        providerOverride,
+        modelOverride,
+        activeModelProvider,
+      });
+      if (modelPolicyMessage) {
+        respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, modelPolicyMessage));
+        return;
+      }
       const activeAuthProvider = resolveProviderIdForAuth(activeModelProvider, {
         config: cfgForAgent ?? cfg,
       });

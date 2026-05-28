@@ -8,6 +8,10 @@ import type {
   OnboardOptions,
   ResetScope,
 } from "../commands/onboard-types.js";
+import {
+  applySupportedPluginDefaults,
+  listSupportedChannelIds,
+} from "../commands/supported-surface.js";
 import { createConfigIO, replaceConfigFile, resolveGatewayPort } from "../config/config.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { normalizeSecretInputString } from "../config/types.secrets.js";
@@ -560,6 +564,7 @@ export async function runSetupWizard(
     if (opts.skipBootstrap) {
       nextConfig = applySkipBootstrapConfig(nextConfig);
     }
+    nextConfig = applySupportedPluginDefaults(nextConfig);
     nextConfig = onboardHelpers.applyWizardMetadata(nextConfig, { command: "onboard", mode });
     nextConfig = await writeWizardConfigFile(nextConfig);
     logConfigUpdated(runtime);
@@ -580,7 +585,9 @@ export async function runSetupWizard(
 
   const { applyLocalSetupWorkspaceConfig, applySkipBootstrapConfig } =
     await import("../commands/onboard-config.js");
-  let nextConfig: OpenClawConfig = applyLocalSetupWorkspaceConfig(baseConfig, workspaceDir);
+  let nextConfig: OpenClawConfig = applySupportedPluginDefaults(
+    applyLocalSetupWorkspaceConfig(baseConfig, workspaceDir),
+  );
   if (opts.skipBootstrap) {
     nextConfig = applySkipBootstrapConfig(nextConfig);
   }
@@ -744,6 +751,7 @@ export async function runSetupWizard(
       skipConfirm: flow === "quickstart",
       quickstartDefaults: flow === "quickstart",
       secretInputMode: opts.secretInputMode,
+      channelIds: listSupportedChannelIds(),
     });
   }
 

@@ -6,8 +6,8 @@ import { createEmptyPluginRegistry } from "../plugins/registry-empty.js";
 import { resetPluginRuntimeStateForTest, setActivePluginRegistry } from "../plugins/runtime.js";
 import { applySessionsPatchToStore } from "./sessions-patch.js";
 
-const SUBAGENT_MODEL = "synthetic/hf:moonshotai/Kimi-K2.5";
-const KIMI_SUBAGENT_KEY = "agent:kimi:subagent:child";
+const SUBAGENT_MODEL = "openai-codex/gpt-5.5";
+const CODEX_SUBAGENT_KEY = "agent:codex:subagent:child";
 const MAIN_SESSION_KEY = "agent:main:main";
 const EMPTY_CFG = {} as OpenClawConfig;
 
@@ -54,14 +54,14 @@ async function applySubagentModelPatch(cfg: OpenClawConfig) {
   return expectPatchOk(
     await runPatch({
       cfg,
-      storeKey: KIMI_SUBAGENT_KEY,
+      storeKey: CODEX_SUBAGENT_KEY,
       patch: {
-        key: KIMI_SUBAGENT_KEY,
+        key: CODEX_SUBAGENT_KEY,
         model: SUBAGENT_MODEL,
       },
       loadGatewayModelCatalog: async () => [
-        { provider: "anthropic", id: "claude-sonnet-4-6", name: "sonnet" },
-        { provider: "synthetic", id: "hf:moonshotai/Kimi-K2.5", name: "kimi" },
+        { provider: "openai", id: "gpt-5.4", name: "gpt-5.4" },
+        { provider: "openai-codex", id: "gpt-5.5", name: "gpt-5.5" },
       ],
     }),
   );
@@ -75,17 +75,17 @@ function makeKimiSubagentCfg(params: {
   return {
     agents: {
       defaults: {
-        model: { primary: "anthropic/claude-sonnet-4-6" },
+        model: { primary: "openai/gpt-5.4" },
         subagents: params.defaultsSubagentModel
           ? { model: params.defaultsSubagentModel }
           : undefined,
         models: {
-          "anthropic/claude-sonnet-4-6": { alias: "default" },
+          "openai/gpt-5.4": { alias: "default" },
         },
       },
       list: [
         {
-          id: "kimi",
+          id: "codex",
           model: params.agentPrimaryModel ? { primary: params.agentPrimaryModel } : undefined,
           subagents: params.agentSubagentModel ? { model: params.agentSubagentModel } : undefined,
         },
@@ -94,13 +94,13 @@ function makeKimiSubagentCfg(params: {
   } as OpenClawConfig;
 }
 
-function createAllowlistedAnthropicModelCfg(): OpenClawConfig {
+function createAllowlistedCodexModelCfg(): OpenClawConfig {
   return {
     agents: {
       defaults: {
         model: { primary: "openai/gpt-5.4" },
         models: {
-          "anthropic/claude-sonnet-4-6": { alias: "sonnet" },
+          "openai-codex/gpt-5.5": { alias: "codex" },
         },
       },
     },
@@ -278,30 +278,37 @@ describe("gateway sessions patch", () => {
       "agent:main:main": {
         sessionId: "sess",
         updatedAt: 1,
-        providerOverride: "anthropic",
-        modelOverride: "claude-opus-4-6",
-        authProfileOverride: "anthropic:default",
+        providerOverride: "openai",
+        modelOverride: "gpt-5.4",
+        authProfileOverride: "openai:default",
         authProfileOverrideSource: "user",
         authProfileOverrideCompactionCount: 3,
       } as SessionEntry,
     };
     const entry = expectPatchOk(
       await runPatch({
+        cfg: {
+          agents: {
+            defaults: {
+              model: { primary: "openai/gpt-5.4" },
+            },
+          },
+        } as OpenClawConfig,
         store,
-        patch: { key: MAIN_SESSION_KEY, model: "anthropic/claude-sonnet-4-6" },
+        patch: { key: MAIN_SESSION_KEY, model: "openai/gpt-5.5" },
         loadGatewayModelCatalog: async () => [
-          { provider: "anthropic", id: "claude-sonnet-4-6", name: "claude-sonnet-4-6" },
+          { provider: "openai", id: "gpt-5.5", name: "gpt-5.5" },
         ],
       }),
     );
-    expect(entry.providerOverride).toBe("anthropic");
-    expect(entry.modelOverride).toBe("claude-sonnet-4-6");
-    expect(entry.authProfileOverride).toBe("anthropic:default");
+    expect(entry.providerOverride).toBe("openai");
+    expect(entry.modelOverride).toBe("gpt-5.5");
+    expect(entry.authProfileOverride).toBe("openai:default");
     expect(entry.authProfileOverrideSource).toBe("user");
     expect(entry.authProfileOverrideCompactionCount).toBe(3);
   });
 
-  test("preserves auth overrides for provider-auth aliases when model patch changes", async () => {
+  test("rejects unsupported provider-auth alias model patches", async () => {
     const store: Record<string, SessionEntry> = {
       "agent:main:main": {
         sessionId: "sess-alias",
@@ -313,20 +320,14 @@ describe("gateway sessions patch", () => {
         authProfileOverrideCompactionCount: 2,
       } as SessionEntry,
     };
-    const entry = expectPatchOk(
-      await runPatch({
-        store,
-        patch: { key: MAIN_SESSION_KEY, model: "byteplus-plan/ark-code-latest" },
-        loadGatewayModelCatalog: async () => [
-          { provider: "byteplus-plan", id: "ark-code-latest", name: "ark-code-latest" },
-        ],
-      }),
-    );
-    expect(entry.providerOverride).toBe("byteplus-plan");
-    expect(entry.modelOverride).toBe("ark-code-latest");
-    expect(entry.authProfileOverride).toBe("byteplus:work");
-    expect(entry.authProfileOverrideSource).toBe("user");
-    expect(entry.authProfileOverrideCompactionCount).toBe(2);
+    const result = await runPatch({
+      store,
+      patch: { key: MAIN_SESSION_KEY, model: "byteplus-plan/ark-code-latest" },
+      loadGatewayModelCatalog: async () => [
+        { provider: "byteplus-plan", id: "ark-code-latest", name: "ark-code-latest" },
+      ],
+    });
+    expectPatchError(result, 'Unsupported model "byteplus-plan/ark-code-latest".');
   });
 
   test("preserves unprefixed auth overrides when existing provider matches model patch", async () => {
@@ -334,8 +335,8 @@ describe("gateway sessions patch", () => {
       "agent:main:main": {
         sessionId: "sess-unprefixed-same-provider",
         updatedAt: 1,
-        providerOverride: "anthropic",
-        modelOverride: "claude-opus-4-6",
+        providerOverride: "openai",
+        modelOverride: "gpt-5.4",
         authProfileOverride: "work",
         authProfileOverrideSource: "user",
         authProfileOverrideCompactionCount: 4,
@@ -343,15 +344,22 @@ describe("gateway sessions patch", () => {
     };
     const entry = expectPatchOk(
       await runPatch({
+        cfg: {
+          agents: {
+            defaults: {
+              model: { primary: "openai/gpt-5.4" },
+            },
+          },
+        } as OpenClawConfig,
         store,
-        patch: { key: MAIN_SESSION_KEY, model: "anthropic/claude-sonnet-4-6" },
+        patch: { key: MAIN_SESSION_KEY, model: "openai/gpt-5.5" },
         loadGatewayModelCatalog: async () => [
-          { provider: "anthropic", id: "claude-sonnet-4-6", name: "sonnet" },
+          { provider: "openai", id: "gpt-5.5", name: "gpt-5.5" },
         ],
       }),
     );
-    expect(entry.providerOverride).toBe("anthropic");
-    expect(entry.modelOverride).toBe("claude-sonnet-4-6");
+    expect(entry.providerOverride).toBe("openai");
+    expect(entry.modelOverride).toBe("gpt-5.5");
     expect(entry.authProfileOverride).toBe("work");
     expect(entry.authProfileOverrideSource).toBe("user");
     expect(entry.authProfileOverrideCompactionCount).toBe(4);
@@ -372,19 +380,19 @@ describe("gateway sessions patch", () => {
         cfg: {
           agents: {
             defaults: {
-              model: { primary: "anthropic/claude-opus-4-6" },
+              model: { primary: "openai/gpt-5.4" },
             },
           },
         } as OpenClawConfig,
         store,
-        patch: { key: MAIN_SESSION_KEY, model: "anthropic/claude-sonnet-4-6" },
+        patch: { key: MAIN_SESSION_KEY, model: "openai/gpt-5.5" },
         loadGatewayModelCatalog: async () => [
-          { provider: "anthropic", id: "claude-sonnet-4-6", name: "sonnet" },
+          { provider: "openai", id: "gpt-5.5", name: "gpt-5.5" },
         ],
       }),
     );
-    expect(entry.providerOverride).toBe("anthropic");
-    expect(entry.modelOverride).toBe("claude-sonnet-4-6");
+    expect(entry.providerOverride).toBe("openai");
+    expect(entry.modelOverride).toBe("gpt-5.5");
     expect(entry.authProfileOverride).toBe("work");
     expect(entry.authProfileOverrideSource).toBe("user");
     expect(entry.authProfileOverrideCompactionCount).toBe(4);
@@ -395,8 +403,8 @@ describe("gateway sessions patch", () => {
       "agent:main:main": {
         sessionId: "sess-unprefixed-provider-change",
         updatedAt: 1,
-        providerOverride: "anthropic",
-        modelOverride: "claude-opus-4-6",
+        providerOverride: "openai",
+        modelOverride: "gpt-5.4",
         authProfileOverride: "work",
         authProfileOverrideSource: "user",
         authProfileOverrideCompactionCount: 4,
@@ -405,14 +413,14 @@ describe("gateway sessions patch", () => {
     const entry = expectPatchOk(
       await runPatch({
         store,
-        patch: { key: MAIN_SESSION_KEY, model: "openai/gpt-5.4" },
+        patch: { key: MAIN_SESSION_KEY, model: "openai-codex/gpt-5.5" },
         loadGatewayModelCatalog: async () => [
-          { provider: "openai", id: "gpt-5.4", name: "gpt-5.4" },
+          { provider: "openai-codex", id: "gpt-5.5", name: "gpt-5.5" },
         ],
       }),
     );
-    expect(entry.providerOverride).toBe("openai");
-    expect(entry.modelOverride).toBe("gpt-5.4");
+    expect(entry.providerOverride).toBe("openai-codex");
+    expect(entry.modelOverride).toBe("gpt-5.5");
     expect(entry.authProfileOverride).toBeUndefined();
     expect(entry.authProfileOverrideSource).toBeUndefined();
     expect(entry.authProfileOverrideCompactionCount).toBeUndefined();
@@ -423,9 +431,9 @@ describe("gateway sessions patch", () => {
       "agent:main:main": {
         sessionId: "sess-provider-change",
         updatedAt: 1,
-        providerOverride: "anthropic",
-        modelOverride: "claude-opus-4-6",
-        authProfileOverride: "anthropic:default",
+        providerOverride: "openai",
+        modelOverride: "gpt-5.4",
+        authProfileOverride: "openai:default",
         authProfileOverrideSource: "user",
         authProfileOverrideCompactionCount: 3,
       } as SessionEntry,
@@ -433,14 +441,14 @@ describe("gateway sessions patch", () => {
     const entry = expectPatchOk(
       await runPatch({
         store,
-        patch: { key: MAIN_SESSION_KEY, model: "openai/gpt-5.4" },
+        patch: { key: MAIN_SESSION_KEY, model: "openai-codex/gpt-5.5" },
         loadGatewayModelCatalog: async () => [
-          { provider: "openai", id: "gpt-5.4", name: "gpt-5.4" },
+          { provider: "openai-codex", id: "gpt-5.5", name: "gpt-5.5" },
         ],
       }),
     );
-    expect(entry.providerOverride).toBe("openai");
-    expect(entry.modelOverride).toBe("gpt-5.4");
+    expect(entry.providerOverride).toBe("openai-codex");
+    expect(entry.modelOverride).toBe("gpt-5.5");
     expect(entry.authProfileOverride).toBeUndefined();
     expect(entry.authProfileOverrideSource).toBeUndefined();
     expect(entry.authProfileOverrideCompactionCount).toBeUndefined();
@@ -458,17 +466,17 @@ describe("gateway sessions patch", () => {
     const entry = expectPatchOk(
       await runPatch({
         store,
-        cfg: createAllowlistedAnthropicModelCfg(),
-        patch: { key: MAIN_SESSION_KEY, model: "anthropic/claude-sonnet-4-6" },
+        cfg: createAllowlistedCodexModelCfg(),
+        patch: { key: MAIN_SESSION_KEY, model: "openai-codex/gpt-5.5" },
         loadGatewayModelCatalog: async () => [
           { provider: "openai", id: "gpt-5.4", name: "gpt-5.4" },
-          { provider: "anthropic", id: "claude-sonnet-4-6", name: "claude-sonnet-4-6" },
+          { provider: "openai-codex", id: "gpt-5.5", name: "gpt-5.5" },
         ],
       }),
     );
 
-    expect(entry.providerOverride).toBe("anthropic");
-    expect(entry.modelOverride).toBe("claude-sonnet-4-6");
+    expect(entry.providerOverride).toBe("openai-codex");
+    expect(entry.modelOverride).toBe("gpt-5.5");
     expect(entry.liveModelSwitchPending).toBe(true);
   });
 
@@ -477,14 +485,14 @@ describe("gateway sessions patch", () => {
       [MAIN_SESSION_KEY]: {
         sessionId: "sess-live-reset",
         updatedAt: 1,
-        providerOverride: "anthropic",
-        modelOverride: "claude-sonnet-4-6",
+        providerOverride: "openai-codex",
+        modelOverride: "gpt-5.5",
       } as SessionEntry,
     };
     const entry = expectPatchOk(
       await runPatch({
         store,
-        cfg: createAllowlistedAnthropicModelCfg(),
+        cfg: createAllowlistedCodexModelCfg(),
         patch: { key: MAIN_SESSION_KEY, model: null },
       }),
     );
@@ -498,27 +506,24 @@ describe("gateway sessions patch", () => {
     {
       name: "accepts explicit allowlisted provider/model refs from sessions.patch",
       catalog: [
-        { provider: "anthropic", id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
-        { provider: "anthropic", id: "claude-sonnet-4-6", name: "Claude Sonnet 4.5" },
+        { provider: "openai-codex", id: "gpt-5.5", name: "GPT-5.5" },
+        { provider: "openai-codex", id: "gpt-5.5", name: "GPT-5.5 preview" },
       ],
     },
     {
       name: "accepts explicit allowlisted refs absent from bundled catalog",
-      catalog: [
-        { provider: "anthropic", id: "claude-sonnet-4-6", name: "Claude Sonnet 4.5" },
-        { provider: "openai", id: "gpt-5.4", name: "GPT-5.2" },
-      ],
+      catalog: [{ provider: "openai", id: "gpt-5.4", name: "GPT-5.2" }],
     },
   ])("$name", async ({ catalog }) => {
     const entry = expectPatchOk(
       await runPatch({
-        cfg: createAllowlistedAnthropicModelCfg(),
-        patch: { key: MAIN_SESSION_KEY, model: "anthropic/claude-sonnet-4-6" },
+        cfg: createAllowlistedCodexModelCfg(),
+        patch: { key: MAIN_SESSION_KEY, model: "openai-codex/gpt-5.5" },
         loadGatewayModelCatalog: async () => catalog,
       }),
     );
-    expect(entry.providerOverride).toBe("anthropic");
-    expect(entry.modelOverride).toBe("claude-sonnet-4-6");
+    expect(entry.providerOverride).toBe("openai-codex");
+    expect(entry.modelOverride).toBe("gpt-5.5");
   });
 
   test("sets spawnDepth for subagent sessions", async () => {
@@ -775,7 +780,7 @@ describe("gateway sessions patch", () => {
 
   test("allows target agent own model for subagent session even when missing from global allowlist", async () => {
     const cfg = makeKimiSubagentCfg({
-      agentPrimaryModel: "synthetic/hf:moonshotai/Kimi-K2.5",
+      agentPrimaryModel: SUBAGENT_MODEL,
     });
 
     const entry = await applySubagentModelPatch(cfg);
@@ -786,13 +791,13 @@ describe("gateway sessions patch", () => {
 
   test("allows target agent subagents.model for subagent session even when missing from global allowlist", async () => {
     const cfg = makeKimiSubagentCfg({
-      agentPrimaryModel: "anthropic/claude-sonnet-4-6",
+      agentPrimaryModel: "openai/gpt-5.4",
       agentSubagentModel: SUBAGENT_MODEL,
     });
 
     const entry = await applySubagentModelPatch(cfg);
-    expect(entry.providerOverride).toBe("synthetic");
-    expect(entry.modelOverride).toBe("hf:moonshotai/Kimi-K2.5");
+    expect(entry.providerOverride).toBe("openai-codex");
+    expect(entry.modelOverride).toBe("gpt-5.5");
   });
 
   test("allows global defaults.subagents.model for subagent session even when missing from global allowlist", async () => {
@@ -801,7 +806,7 @@ describe("gateway sessions patch", () => {
     });
 
     const entry = await applySubagentModelPatch(cfg);
-    expect(entry.providerOverride).toBe("synthetic");
-    expect(entry.modelOverride).toBe("hf:moonshotai/Kimi-K2.5");
+    expect(entry.providerOverride).toBe("openai-codex");
+    expect(entry.modelOverride).toBe("gpt-5.5");
   });
 });

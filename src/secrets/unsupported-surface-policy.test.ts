@@ -15,8 +15,6 @@ describe("unsupported SecretRef surface policy metadata", () => {
         "auth-profiles.oauth.*",
         "channels.discord.threadBindings.webhookToken",
         "channels.discord.accounts.*.threadBindings.webhookToken",
-        "channels.whatsapp.creds.json",
-        "channels.whatsapp.accounts.*.creds.json",
       ].toSorted(),
     );
   });
@@ -46,16 +44,6 @@ describe("unsupported SecretRef surface policy metadata", () => {
             },
           },
         },
-        whatsapp: {
-          creds: { json: { source: "env", provider: "default", id: "WHATSAPP_JSON" } },
-          accounts: {
-            ops: {
-              creds: {
-                json: { source: "env", provider: "default", id: "WHATSAPP_JSON_OPS" },
-              },
-            },
-          },
-        },
       },
     });
 
@@ -67,8 +55,6 @@ describe("unsupported SecretRef surface policy metadata", () => {
         "hooks.mappings.0.sessionKey",
         "channels.discord.threadBindings.webhookToken",
         "channels.discord.accounts.ops.threadBindings.webhookToken",
-        "channels.whatsapp.creds.json",
-        "channels.whatsapp.accounts.ops.creds.json",
       ].toSorted(),
     );
   });

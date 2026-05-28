@@ -10,7 +10,7 @@ const DOCKER_E2E_PACKAGE_HELPER_PATH = "scripts/lib/docker-e2e-package.sh";
 const DOCKER_E2E_IMAGE_HELPER_PATH = "scripts/lib/docker-e2e-image.sh";
 const DOCKER_E2E_SCENARIOS_PATH = "scripts/lib/docker-e2e-scenarios.mjs";
 const INSTALL_E2E_RUNNER_PATH = "scripts/docker/install-sh-e2e/run.sh";
-const LIVE_CLI_BACKEND_DOCKER_PATH = "scripts/test-live-cli-backend-docker.sh";
+const LIVE_ACP_BIND_DOCKER_PATH = "scripts/test-live-acp-bind-docker.sh";
 const LIVE_BUILD_DOCKER_PATH = "scripts/test-live-build-docker.sh";
 const OPENAI_WEB_SEARCH_MINIMAL_E2E_PATH = "scripts/e2e/openai-web-search-minimal-docker.sh";
 const OPENAI_WEB_SEARCH_MINIMAL_SCENARIO_PATH =
@@ -88,7 +88,7 @@ describe("docker build helper", () => {
     const helper = readFileSync(HELPER_PATH, "utf8");
     const e2eImageHelper = readFileSync(DOCKER_E2E_IMAGE_HELPER_PATH, "utf8");
     const liveBuild = readFileSync(LIVE_BUILD_DOCKER_PATH, "utf8");
-    const liveCliBackend = readFileSync(LIVE_CLI_BACKEND_DOCKER_PATH, "utf8");
+    const liveAcpBind = readFileSync(LIVE_ACP_BIND_DOCKER_PATH, "utf8");
 
     expect(helper).toContain("docker_build_on_missing_enabled()");
     expect(helper).toContain("OPENCLAW_DOCKER_BUILD_ON_MISSING");
@@ -98,12 +98,11 @@ describe("docker build helper", () => {
     expect(liveBuild).toContain("docker image inspect");
     expect(liveBuild).toContain("docker pull");
     expect(liveBuild).toContain("Live-test image not available; building");
-    expect(liveCliBackend).toContain(
+    expect(liveAcpBind).toContain(
       'OPENCLAW_LIVE_DOCKER_REPO_ROOT="$ROOT_DIR" "$TRUSTED_HARNESS_DIR/scripts/test-live-build-docker.sh"',
     );
-    expect(liveCliBackend).toContain("codex-cli is no longer a bundled CLI backend");
-    expect(liveCliBackend).not.toContain("==> Direct Codex CLI probe ok");
-    expect(liveCliBackend).not.toContain(
+    expect(liveAcpBind).not.toContain("==> Direct Codex CLI probe ok");
+    expect(liveAcpBind).not.toContain(
       'echo "==> Reuse live-test image: $LIVE_IMAGE_NAME (OPENCLAW_SKIP_DOCKER_BUILD=1)"',
     );
   });
@@ -156,9 +155,7 @@ describe("docker build helper", () => {
     expect(scenarios).toContain(
       '"OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=openai OPENCLAW_INSTALL_E2E_IMAGE=openclaw-install-e2e-openai:local OPENCLAW_INSTALL_E2E_AGENT_TOOL_SMOKE=0 OPENCLAW_INSTALL_E2E_OPENAI_MODEL=openai/gpt-5.4-mini OPENCLAW_INSTALL_E2E_AGENT_TURN_TIMEOUT_SECONDS=120 OPENCLAW_INSTALL_E2E_OPENAI_PROVIDER_TIMEOUT_SECONDS=120 pnpm test:install:e2e"',
     );
-    expect(scenarios).toContain(
-      '"OPENCLAW_INSTALL_TAG=beta OPENCLAW_E2E_MODELS=anthropic OPENCLAW_INSTALL_E2E_IMAGE=openclaw-install-e2e-anthropic:local pnpm test:install:e2e"',
-    );
+    expect(scenarios).not.toContain("OPENCLAW_E2E_MODELS=anthropic");
     expect(scenarios).toContain(
       '"OPENCLAW_OPENWEBUI_MODEL=openai/gpt-5.4-mini OPENWEBUI_SMOKE_MODE=models OPENCLAW_OPENWEBUI_PROVIDER_TIMEOUT_SECONDS=300 OPENCLAW_SKIP_DOCKER_BUILD=1 pnpm test:docker:openwebui"',
     );
@@ -180,7 +177,7 @@ describe("docker build helper", () => {
     expect(runner).toContain("run_agent_turn_bg");
     expect(runner).toContain("wait_agent_turn_batch");
     expect(runner).toContain("agent_turn_outputs_include_billing_drift");
-    expect(runner).toContain("SKIP: Anthropic billing drift during installer agent tool smoke");
+    expect(runner).toContain("SKIP: provider billing drift during installer agent tool smoke");
     expect(runner).not.toContain('run_agent_turn_bg "read proof"');
     expect(runner).toContain('run_agent_turn_bg "image write"');
     expect(runner).toContain('run_agent_turn_logged_or_skip_profile "read proof copy"');
@@ -416,7 +413,9 @@ describe("docker build helper", () => {
     expect(runner).not.toContain("-- --reporter=verbose");
     expect(runner).toContain("expected focused Vitest summary for exactly 3 passed tests");
     expect(dockerfile).toContain("OPENCLAW_DISABLE_BUNDLED_PLUGIN_POSTINSTALL=1");
-    expect(dockerfile).toContain("pnpm install --frozen-lockfile --ignore-scripts --filter openclaw");
+    expect(dockerfile).toContain(
+      "pnpm install --frozen-lockfile --ignore-scripts --filter openclaw",
+    );
   });
 
   it("covers plugin install/update sources in the Docker plugin sweep", () => {

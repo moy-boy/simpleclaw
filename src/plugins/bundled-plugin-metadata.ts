@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { tryReadJsonSync } from "../infra/json-files.js";
+import { isSupportedPluginId } from "../supported-surface.js";
 import { collectBundledChannelConfigs } from "./bundled-channel-config-metadata.js";
 import {
   collectBundledPluginPublicSurfaceArtifacts,
@@ -79,6 +80,7 @@ function collectBundledPluginMetadata(
   resolvedScanDir: string | undefined,
   includeChannelConfigs: boolean,
   includeSyntheticChannelConfigs: boolean,
+  filterUnsupportedPluginDirs: boolean,
 ): readonly BundledPluginMetadata[] {
   if (!resolvedScanDir || !fs.existsSync(resolvedScanDir)) {
     return [];
@@ -90,6 +92,9 @@ function collectBundledPluginMetadata(
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .toSorted((left, right) => left.localeCompare(right))) {
+    if (filterUnsupportedPluginDirs && !isSupportedPluginId(dirName)) {
+      continue;
+    }
     const pluginDir = path.join(resolvedScanDir, dirName);
     const manifestResult = loadPluginManifest(pluginDir, false);
     if (!manifestResult.ok) {
@@ -167,6 +172,27 @@ function collectBundledPluginMetadata(
   return entries;
 }
 
+function shouldFilterUnsupportedBundledPluginDirs(params: {
+  rootDir: string;
+  scanDir: string | undefined;
+}): boolean {
+  if (!params.scanDir) {
+    return false;
+  }
+  const relativeScanDir = path.relative(params.rootDir, params.scanDir).replaceAll("\\", "/");
+  if (
+    relativeScanDir !== "extensions" &&
+    relativeScanDir !== "dist/extensions" &&
+    relativeScanDir !== "dist-runtime/extensions"
+  ) {
+    return false;
+  }
+  return (
+    fs.existsSync(path.join(params.rootDir, "pnpm-workspace.yaml")) &&
+    fs.existsSync(path.join(params.rootDir, "scripts", "lib", "supported-surface.mjs"))
+  );
+}
+
 export function listBundledPluginMetadata(params?: {
   rootDir?: string;
   scanDir?: string;
@@ -184,6 +210,7 @@ export function listBundledPluginMetadata(params?: {
       resolvedScanDir,
       includeChannelConfigs,
       includeSyntheticChannelConfigs,
+      shouldFilterUnsupportedBundledPluginDirs({ rootDir, scanDir: resolvedScanDir }),
     ),
   );
   return metadata;

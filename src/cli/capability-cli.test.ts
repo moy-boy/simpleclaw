@@ -663,10 +663,10 @@ describe("capability cli", () => {
   });
 
   it("opts explicit local provider/model probes into bundled static catalog fallback", async () => {
-    await runModelRunWithModel("mistral/mistral-medium-3-5", "local");
+    await runModelRunWithModel("openai/gpt-5.4", "local");
 
     const params = firstPreparedModelParams();
-    expect(params?.modelRef).toBe("mistral/mistral-medium-3-5");
+    expect(params?.modelRef).toBe("openai/gpt-5.4");
     expect(params?.allowBundledStaticCatalogFallback).toBe(true);
     expect(params?.skipPiDiscovery).toBe(true);
   });
@@ -898,24 +898,6 @@ describe("capability cli", () => {
   });
 
   it("rejects local Codex provider probes before simple-completion dispatch", async () => {
-    mocks.prepareSimpleCompletionModelForAgent.mockResolvedValueOnce({
-      selection: {
-        provider: "codex",
-        modelId: "gpt-5.4",
-        agentDir: "/tmp/agent",
-      },
-      model: {
-        provider: "codex",
-        id: "gpt-5.4",
-        api: "openai-codex-responses",
-      },
-      auth: {
-        apiKey: "codex-app-server",
-        source: "codex-app-server",
-        mode: "token",
-      },
-    } as never);
-
     await expect(
       runRegisteredCli({
         register: registerCapabilityCli as (program: Command) => void,
@@ -932,7 +914,7 @@ describe("capability cli", () => {
       }),
     ).rejects.toThrow("exit 1");
 
-    expectRuntimeErrorContains("Codex app-server agent runtime");
+    expectRuntimeErrorContains('Unsupported model "codex/gpt-5.4".');
     expect(mocks.completeWithPreparedSimpleCompletionModel).not.toHaveBeenCalled();
     expect(mocks.runtime.writeJson).not.toHaveBeenCalled();
   });
@@ -1039,7 +1021,7 @@ describe("capability cli", () => {
         "hello",
         "--gateway",
         "--model",
-        "anthropic/claude-haiku-4-5",
+        "openai/gpt-5.4",
         "--json",
       ],
     });
@@ -1049,8 +1031,8 @@ describe("capability cli", () => {
     expect(gatewayCall?.method).toBe("agent");
     expect(gatewayCall?.mode).toBe("backend");
     expect(gatewayCall?.scopes).toEqual(["operator.admin"]);
-    expect(gatewayCall?.params?.provider).toBe("anthropic");
-    expect(gatewayCall?.params?.model).toBe("claude-haiku-4-5");
+    expect(gatewayCall?.params?.provider).toBe("openai");
+    expect(gatewayCall?.params?.model).toBe("gpt-5.4");
     expect(gatewayCall?.params?.modelRun).toBe(true);
     expect(gatewayCall?.params?.promptMode).toBe("none");
   });
@@ -1059,46 +1041,46 @@ describe("capability cli", () => {
     "canonicalizes case-only catalog model refs before %s dispatch",
     async (transport) => {
       mocks.loadModelCatalog.mockResolvedValueOnce([
-        { id: "claude-opus-4-7", provider: "anthropic", name: "Claude Opus 4.7" },
+        { id: "gpt-5.4", provider: "openai", name: "GPT 5.4" },
       ] as never);
 
-      await runModelRunWithModel("Anthropic/CLAUDE-OPUS-4-7", transport);
+      await runModelRunWithModel("OpenAI/GPT-5.4", transport);
 
       const catalogCalls = mocks.loadModelCatalog.mock.calls as unknown as Array<
         [{ readOnly?: unknown }]
       >;
       const catalogParams = catalogCalls[0]?.[0];
       expect(catalogParams?.readOnly).toBe(true);
-      expectModelRunDispatch(transport, "anthropic/claude-opus-4-7");
+      expectModelRunDispatch(transport, "openai/gpt-5.4");
     },
   );
 
   it("canonicalizes case-only catalog refs and preserves auth profiles before local dispatch", async () => {
     mocks.loadModelCatalog.mockResolvedValueOnce([
-      { id: "claude-opus-4-7", provider: "anthropic", name: "Claude Opus 4.7" },
+      { id: "gpt-5.4", provider: "openai", name: "GPT 5.4" },
     ] as never);
 
-    await runModelRunWithModel("Anthropic/CLAUDE-OPUS-4-7@work", "local");
+    await runModelRunWithModel("OpenAI/GPT-5.4@work", "local");
 
-    expectModelRunDispatch("local", "anthropic/claude-opus-4-7@work");
+    expectModelRunDispatch("local", "openai/gpt-5.4@work");
   });
 
   it("leaves auth profile refs unchanged before gateway dispatch", async () => {
     mocks.loadModelCatalog.mockResolvedValueOnce([
-      { id: "claude-opus-4-7", provider: "anthropic", name: "Claude Opus 4.7" },
+      { id: "gpt-5.4", provider: "openai", name: "GPT 5.4" },
     ] as never);
 
-    await runModelRunWithModel("Anthropic/CLAUDE-OPUS-4-7@work", "gateway");
+    await runModelRunWithModel("OpenAI/GPT-5.4@work", "gateway");
 
-    expectModelRunDispatch("gateway", "Anthropic/CLAUDE-OPUS-4-7@work");
+    expectModelRunDispatch("gateway", "OpenAI/GPT-5.4@work");
   });
 
   it("preserves custom mixed-case profile refs before local dispatch when the catalog has no match", async () => {
     mocks.loadModelCatalog.mockResolvedValueOnce([] as never);
 
-    await runModelRunWithModel("custom/MyModel@work", "local");
+    await runModelRunWithModel("openai/MyModel@work", "local");
 
-    expectModelRunDispatch("local", "custom/MyModel@work");
+    expectModelRunDispatch("local", "openai/MyModel@work");
   });
 
   it("passes thinking overrides to gateway model probes", async () => {
@@ -1259,7 +1241,7 @@ describe("capability cli", () => {
         "--file",
         "photo.jpg",
         "--model",
-        "ollama/qwen2.5vl:7b",
+        "openai/gpt-5.4",
         "--prompt",
         "Count visible buttons",
         "--timeout-ms",
@@ -1270,12 +1252,12 @@ describe("capability cli", () => {
 
     const describeCall = firstImageDescribeWithModelCall();
     expect(path.basename(describeCall?.filePath ?? "")).toBe("photo.jpg");
-    expect(describeCall?.provider).toBe("ollama");
-    expect(describeCall?.model).toBe("qwen2.5vl:7b");
+    expect(describeCall?.provider).toBe("openai");
+    expect(describeCall?.model).toBe("gpt-5.4");
     expect(describeCall?.prompt).toBe("Count visible buttons");
     expect(describeCall?.timeoutMs).toBe(120000);
     expect(mocks.describeImageFile).not.toHaveBeenCalled();
-    expect(firstJsonOutput()?.provider).toBe("ollama");
+    expect(firstJsonOutput()?.provider).toBe("openai");
     expect(firstJsonOutput()?.model).toBe("gpt-4.1-mini");
   });
 
@@ -1289,7 +1271,7 @@ describe("capability cli", () => {
         "--file",
         "https://example.com/photo.png",
         "--model",
-        "ollama/qwen2.5vl:7b",
+        "openai/gpt-5.4",
         "--json",
       ],
     });
@@ -1312,15 +1294,15 @@ describe("capability cli", () => {
         "--file",
         "https://httpbin.org/image/png",
         "--model",
-        "minimax-cn/MiniMax-VL-01",
+        "openai/gpt-5.4",
         "--json",
       ],
     });
 
     const describeCall = firstImageDescribeWithModelCall();
     expect(describeCall?.filePath).toBe("https://httpbin.org/image/png");
-    expect(describeCall?.provider).toBe("minimax-cn");
-    expect(describeCall?.model).toBe("MiniMax-VL-01");
+    expect(describeCall?.provider).toBe("openai");
+    expect(describeCall?.model).toBe("gpt-5.4");
     expect(mocks.describeImageFile).not.toHaveBeenCalled();
   });
 
@@ -1793,7 +1775,7 @@ describe("capability cli", () => {
         "--prompt",
         "friendly lobster",
         "--model",
-        "minimax/MiniMax-Hailuo-2.3",
+        "openai/sora-2",
         "--size",
         "1280x768",
         "--aspect-ratio",
@@ -1812,7 +1794,7 @@ describe("capability cli", () => {
 
     const videoCall = firstVideoGenerationCall();
     expect(videoCall?.prompt).toBe("friendly lobster");
-    expect(videoCall?.modelOverride).toBe("minimax/MiniMax-Hailuo-2.3");
+    expect(videoCall?.modelOverride).toBe("openai/sora-2");
     expect(videoCall?.size).toBe("1280x768");
     expect(videoCall?.aspectRatio).toBe("16:9");
     expect(videoCall?.resolution).toBe("768P");

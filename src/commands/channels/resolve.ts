@@ -22,6 +22,11 @@ import {
   normalizeOptionalLowercaseString,
 } from "../../shared/string-coerce.js";
 import { resolveInstallableChannelPlugin } from "../channel-setup/channel-plugin-resolution.js";
+import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+} from "../supported-surface.js";
 
 export type ChannelsResolveOptions = {
   channel?: string;
@@ -138,6 +143,13 @@ export async function channelsResolveCommand(opts: ChannelsResolveOptions, runti
   }
 
   const explicitChannel = opts.channel?.trim();
+  if (
+    shouldEnforceSupportedChannelIds(cfg) &&
+    explicitChannel &&
+    !isSupportedChannelId(explicitChannel)
+  ) {
+    throw new Error(formatUnsupportedChannelMessage(explicitChannel));
+  }
   const resolvedExplicit = explicitChannel
     ? await resolveInstallableChannelPlugin({
         cfg,

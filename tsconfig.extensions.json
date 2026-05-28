@@ -5,7 +5,14 @@
     "noUnusedParameters": true,
     "tsBuildInfoFile": ".artifacts/tsgo-cache/extensions.tsbuildinfo"
   },
-  "include": ["src/**/*.d.ts", "ui/src/**/*.d.ts", "extensions/**/*"],
+  "include": [
+    "src/**/*.d.ts",
+    "ui/src/**/*.d.ts",
+    "extensions/codex/**/*",
+    "extensions/discord/**/*",
+    "extensions/openai/**/*",
+    "extensions/telegram/**/*"
+  ],
   "exclude": [
     "node_modules",
     "dist",
@@ -15,7 +22,10 @@
     "**/*test-helpers.ts",
     "**/*test-harness.ts",
     "**/*test-support.ts",
-    "extensions/**/src/test-support/**",
+    "extensions/codex/src/test-support/**",
+    "extensions/discord/src/test-support/**",
+    "extensions/openai/src/test-support/**",
+    "extensions/telegram/src/test-support/**",
     "test/**"
   ]
 }

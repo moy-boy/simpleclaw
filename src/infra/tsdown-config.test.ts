@@ -108,11 +108,17 @@ describe("tsdown config", () => {
       "web-fetch/runtime",
       "plugin-sdk/compat",
       "plugin-sdk/index",
-      bundledEntry("active-memory"),
+      bundledEntry("openai"),
+      bundledEntry("telegram"),
+      bundledEntry("discord"),
+      bundledEntry("codex"),
       "bundled/boot-md/handler",
     ]) {
       expect(keys).toContain(entry);
     }
+    expect(keys).not.toContain(bundledEntry("active-memory"));
+    expect(keys).not.toContain(bundledEntry("anthropic"));
+    expect(keys).not.toContain(bundledEntry("slack"));
   });
 
   it("keeps root-package-excluded external plugins out of the root dist graph", () => {

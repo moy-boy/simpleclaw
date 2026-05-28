@@ -4,8 +4,8 @@
  * Verifies that the root plugin-sdk runtime surface is present in the compiled
  * dist output.
  *
- * Run after `pnpm build` to catch missing root exports or leaked repo-only type
- * aliases before release.
+ * Run after `pnpm build:ci-artifacts` to catch missing root exports or leaked
+ * repo-only type aliases before release.
  */
 
 import { readFileSync, existsSync } from "node:fs";
@@ -16,7 +16,7 @@ import { pluginSdkSubpaths } from "./lib/plugin-sdk-entries.mjs";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const distFile = resolve(scriptDir, "..", "dist", "plugin-sdk", "index.js");
 if (!existsSync(distFile)) {
-  console.error("ERROR: dist/plugin-sdk/index.js not found. Run `pnpm build` first.");
+  console.error("ERROR: dist/plugin-sdk/index.js not found. Run `pnpm build:ci-artifacts` first.");
   process.exit(1);
 }
 

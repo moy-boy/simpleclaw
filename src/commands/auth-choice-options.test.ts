@@ -111,7 +111,7 @@ describe("buildAuthChoiceOptions", () => {
     resolveLegacyAuthChoiceAliasesForCli.mockReturnValue([]);
   });
 
-  it("includes core and provider-specific auth choices", () => {
+  it("keeps setup auth choices scoped to OpenAI subscription login", () => {
     resolveManifestProviderAuthChoices.mockReturnValue([
       {
         pluginId: "chutes",
@@ -130,6 +130,24 @@ describe("buildAuthChoiceOptions", () => {
         choiceLabel: "GitHub Copilot",
         groupId: "copilot",
         groupLabel: "Copilot",
+      },
+      {
+        pluginId: "openai",
+        providerId: "openai-codex",
+        methodId: "oauth",
+        choiceId: "openai-codex",
+        choiceLabel: "ChatGPT/Codex Browser Login",
+        groupId: "openai",
+        groupLabel: "OpenAI",
+      },
+      {
+        pluginId: "openai",
+        providerId: "openai-codex",
+        methodId: "device-code",
+        choiceId: "openai-codex-device-code",
+        choiceLabel: "ChatGPT/Codex Device Pairing",
+        groupId: "openai",
+        groupLabel: "OpenAI",
       },
       {
         pluginId: "openai",
@@ -265,26 +283,10 @@ describe("buildAuthChoiceOptions", () => {
     ]);
     const options = getOptions();
 
-    const optionValues = options.map((option) => option.value);
-    for (const expectedValue of [
-      "github-copilot",
-      "zai-api-key",
-      "xiaomi-api-key",
-      "minimax-global-api",
-      "moonshot-api-key",
-      "together-api-key",
-      "chutes",
-      "xai-api-key",
-      "mistral-api-key",
-      "volcengine-api-key",
-      "byteplus-api-key",
-      "vllm",
-      "opencode-go",
-      "ollama",
-      "sglang",
-    ]) {
-      expect(optionValues).toContain(expectedValue);
-    }
+    expect(options.map((option) => option.value)).toEqual([
+      "openai-codex",
+      "openai-codex-device-code",
+    ]);
   });
 
   it("builds cli help choices from the same runtime catalog", () => {
@@ -302,6 +304,20 @@ describe("buildAuthChoiceOptions", () => {
         methodId: "api-key",
         choiceId: "litellm-api-key",
         choiceLabel: "LiteLLM API key",
+      },
+      {
+        pluginId: "openai",
+        providerId: "openai-codex",
+        methodId: "oauth",
+        choiceId: "openai-codex",
+        choiceLabel: "ChatGPT/Codex Browser Login",
+      },
+      {
+        pluginId: "openai",
+        providerId: "openai-codex",
+        methodId: "device-code",
+        choiceId: "openai-codex-device-code",
+        choiceLabel: "ChatGPT/Codex Device Pairing",
       },
       {
         pluginId: "openai",
@@ -326,16 +342,18 @@ describe("buildAuthChoiceOptions", () => {
       includeSkip: true,
     }).split("|");
 
-    expect(cliChoices).toContain("openai-api-key");
-    expect(cliChoices).toContain("chutes");
-    expect(cliChoices).toContain("litellm-api-key");
-    expect(cliChoices).toContain("custom-api-key");
+    expect(cliChoices).toContain("openai-codex");
+    expect(cliChoices).toContain("openai-codex-device-code");
     expect(cliChoices).toContain("skip");
-    expect(options.map((option) => option.value)).toContain("ollama");
-    expect(cliChoices).toContain("ollama");
+    expect(cliChoices).not.toContain("openai-api-key");
+    expect(cliChoices).not.toContain("chutes");
+    expect(cliChoices).not.toContain("litellm-api-key");
+    expect(cliChoices).not.toContain("custom-api-key");
+    expect(options.map((option) => option.value)).not.toContain("ollama");
+    expect(cliChoices).not.toContain("ollama");
   });
 
-  it("can include legacy aliases in cli help choices", () => {
+  it("filters unsupported legacy aliases out of cli help choices", () => {
     resolveLegacyAuthChoiceAliasesForCli.mockReturnValue(["claude-cli", "codex-cli"]);
 
     const cliChoices = formatAuthChoiceChoicesForCli({
@@ -343,8 +361,7 @@ describe("buildAuthChoiceOptions", () => {
       includeSkip: true,
     }).split("|");
 
-    expect(cliChoices).toContain("claude-cli");
-    expect(cliChoices).toContain("codex-cli");
+    expect(cliChoices).toEqual(["skip"]);
   });
 
   it("keeps static cli help choices off the plugin-backed catalog", () => {
@@ -376,11 +393,11 @@ describe("buildAuthChoiceOptions", () => {
     expect(cliChoices).not.toContain("openai-api-key");
     expect(cliChoices).not.toContain("chutes");
     expect(cliChoices).not.toContain("litellm-api-key");
-    expect(cliChoices).toContain("custom-api-key");
+    expect(cliChoices).not.toContain("custom-api-key");
     expect(cliChoices).toContain("skip");
   });
 
-  it("shows plugin and wizard providers in grouped selection", () => {
+  it("shows only supported providers in grouped selection", () => {
     resolveManifestProviderAuthChoices.mockReturnValue([
       {
         pluginId: "chutes",
@@ -400,6 +417,15 @@ describe("buildAuthChoiceOptions", () => {
         groupId: "litellm",
         groupLabel: "LiteLLM",
       },
+      {
+        pluginId: "openai",
+        providerId: "openai-codex",
+        methodId: "oauth",
+        choiceId: "openai-codex",
+        choiceLabel: "ChatGPT/Codex Browser Login",
+        groupId: "openai",
+        groupLabel: "OpenAI",
+      },
     ]);
     resolveProviderWizardOptions.mockReturnValue([
       {
@@ -414,13 +440,10 @@ describe("buildAuthChoiceOptions", () => {
       store: EMPTY_STORE,
       includeSkip: false,
     });
-    const chutesGroup = requireChoiceGroup(groups, "chutes");
-    const litellmGroup = requireChoiceGroup(groups, "litellm");
-    const ollamaGroup = requireChoiceGroup(groups, "ollama");
+    const openAIGroup = requireChoiceGroup(groups, "openai");
 
-    expect(chutesGroup.options.map((option) => option.value)).toContain("chutes");
-    expect(litellmGroup.options.map((option) => option.value)).toContain("litellm-api-key");
-    expect(ollamaGroup.options.map((option) => option.value)).toContain("ollama");
+    expect(groups.map((group) => group.value)).toEqual(["openai"]);
+    expect(openAIGroup.options.map((option) => option.value)).toEqual(["openai-codex"]);
   });
 
   it("orders common auth provider groups before the alphabetical remainder", () => {
@@ -454,10 +477,10 @@ describe("buildAuthChoiceOptions", () => {
       },
       {
         pluginId: "openai",
-        providerId: "openai",
-        methodId: "api-key",
-        choiceId: "openai-api-key",
-        choiceLabel: "OpenAI API key",
+        providerId: "openai-codex",
+        methodId: "oauth",
+        choiceId: "openai-codex",
+        choiceLabel: "ChatGPT/Codex Browser Login",
         groupId: "openai",
         groupLabel: "OpenAI",
       },
@@ -486,18 +509,10 @@ describe("buildAuthChoiceOptions", () => {
       includeSkip: false,
     });
 
-    expect(groups.map((group) => group.label)).toEqual([
-      "OpenAI",
-      "Anthropic",
-      "xAI (Grok)",
-      "Google",
-      "BytePlus",
-      "Custom Provider",
-      "LiteLLM",
-    ]);
+    expect(groups.map((group) => group.label)).toEqual(["OpenAI"]);
   });
 
-  it("prefers Anthropic Claude CLI over API key in grouped selection", () => {
+  it("hides unsupported provider auth methods from grouped selection", () => {
     resolveManifestProviderAuthChoices.mockReturnValue([
       {
         pluginId: "anthropic",
@@ -523,12 +538,7 @@ describe("buildAuthChoiceOptions", () => {
       store: EMPTY_STORE,
       includeSkip: false,
     });
-    const anthropicGroup = requireChoiceGroup(groups, "anthropic");
-
-    expect(anthropicGroup.options.map((option) => option.value)).toEqual([
-      "anthropic-cli",
-      "apiKey",
-    ]);
+    expect(groups.map((group) => group.value)).not.toContain("anthropic");
   });
 
   it("groups OpenAI auth methods under one provider entry", () => {
@@ -582,12 +592,11 @@ describe("buildAuthChoiceOptions", () => {
     expect(openAIGroup.options.map((option) => option.value)).toEqual([
       "openai-codex",
       "openai-codex-device-code",
-      "openai-api-key",
     ]);
     expect(openAIGroup.options[0]?.onboardingFeatured).toBe(true);
   });
 
-  it("groups OpenCode Zen and Go under one OpenCode entry", () => {
+  it("hides unsupported runtime entries from grouped selection", () => {
     resolveManifestProviderAuthChoices.mockReturnValue([
       {
         pluginId: "opencode",
@@ -612,11 +621,7 @@ describe("buildAuthChoiceOptions", () => {
       store: EMPTY_STORE,
       includeSkip: false,
     });
-    const openCodeGroup = requireChoiceGroup(groups, "opencode");
-
-    const openCodeValues = openCodeGroup.options.map((option) => option.value);
-    expect(openCodeValues).toContain("opencode-zen");
-    expect(openCodeValues).toContain("opencode-go");
+    expect(groups.map((group) => group.value)).not.toContain("opencode");
   });
 
   it("hides media-generation-only providers from the interactive auth picker", () => {
@@ -643,10 +648,10 @@ describe("buildAuthChoiceOptions", () => {
       },
       {
         pluginId: "openai",
-        providerId: "openai",
-        methodId: "api-key",
-        choiceId: "openai-api-key",
-        choiceLabel: "OpenAI API key",
+        providerId: "openai-codex",
+        methodId: "oauth",
+        choiceId: "openai-codex",
+        choiceLabel: "ChatGPT/Codex Browser Login",
         groupId: "openai",
         groupLabel: "OpenAI",
       },
@@ -677,8 +682,8 @@ describe("buildAuthChoiceOptions", () => {
     const options = getOptions();
     const optionValues = options.map((option) => option.value);
 
-    expect(optionValues).toContain("openai-api-key");
-    expect(optionValues).toContain("ollama");
+    expect(optionValues).toEqual(["openai-codex"]);
+    expect(optionValues).not.toContain("ollama");
     expect(optionValues).not.toContain("fal-api-key");
     expect(optionValues).not.toContain("openrouter-api-key");
     expect(optionValues).not.toContain("local-image-runtime");

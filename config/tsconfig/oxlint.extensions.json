@@ -4,7 +4,10 @@
     "../../src/**/*",
     "../../ui/src/**/*",
     "../../packages/**/*.ts",
-    "../../extensions/**/*"
+    "../../extensions/codex/**/*",
+    "../../extensions/discord/**/*",
+    "../../extensions/openai/**/*",
+    "../../extensions/telegram/**/*"
   ],
   "exclude": ["../../node_modules", "../../dist", "../../dist-runtime"]
 }

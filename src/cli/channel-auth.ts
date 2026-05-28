@@ -5,6 +5,11 @@ import {
   normalizeChannelId,
 } from "../channels/plugins/index.js";
 import { resolveInstallableChannelPlugin } from "../commands/channel-setup/channel-plugin-resolution.js";
+import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+} from "../commands/supported-surface.js";
 import { getRuntimeConfig, readConfigFileSnapshot, type OpenClawConfig } from "../config/config.js";
 import { applyPluginAutoEnable } from "../config/plugin-auto-enable.js";
 import { callGateway } from "../gateway/call.js";
@@ -101,6 +106,13 @@ async function resolveChannelPluginForMode(
   const explicitChannel = opts.channel?.trim();
   const channelInput = explicitChannel || resolveConfiguredAuthChannelInput(cfg, mode);
   const normalizedChannelId = normalizeChannelId(channelInput);
+  if (
+    shouldEnforceSupportedChannelIds(cfg) &&
+    channelInput &&
+    !isSupportedChannelId(normalizedChannelId ?? channelInput)
+  ) {
+    throw new Error(formatUnsupportedChannelMessage(channelInput));
+  }
 
   const resolved = await resolveInstallableChannelPlugin({
     cfg,

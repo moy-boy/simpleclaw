@@ -22,11 +22,7 @@ export const DEFAULT_PROFILE = "all";
 export const DEFAULT_RESOURCE_LIMITS = {
   docker: DEFAULT_PARALLELISM,
   live: 9,
-  "live:claude": 4,
   "live:codex": 4,
-  "live:droid": 4,
-  "live:gemini": 4,
-  "live:opencode": 4,
   "live:openai": 1,
   npm: 10,
   service: 7,
@@ -39,7 +35,7 @@ export function parseLaneSelection(raw) {
     return [];
   }
   const laneAliases = new Map([
-    ["install-e2e", ["install-e2e-openai", "install-e2e-anthropic"]],
+    ["install-e2e", ["install-e2e-openai"]],
     [
       "bundled-plugin-install-uninstall",
       Array.from(
@@ -74,11 +70,8 @@ function sanitizeLaneNameSuffix(value) {
 
 const UPGRADE_SURVIVOR_SCENARIOS = [
   "base",
-  "feishu-channel",
   "bootstrap-persona",
-  "channel-post-core-restore",
   "plugin-deps-cleanup",
-  "configured-plugin-installs",
   "stale-source-plugin-shadow",
   "tilde-log-path",
   "versioned-runtime-deps",
@@ -330,26 +323,11 @@ function laneCredentialRequirements(poolLane) {
   if (poolLane.name === "install-e2e-openai") {
     credentials.push("openai");
   }
-  if (poolLane.name === "install-e2e-anthropic") {
-    credentials.push("anthropic");
-  }
   if (resources.includes("live:openai")) {
     credentials.push("openai");
   }
   if (resources.includes("live:codex")) {
     credentials.push("codex");
-  }
-  if (resources.includes("live:claude")) {
-    credentials.push("anthropic");
-  }
-  if (resources.includes("live:droid")) {
-    credentials.push("factory");
-  }
-  if (resources.includes("live:gemini")) {
-    credentials.push("gemini");
-  }
-  if (resources.includes("live:opencode")) {
-    credentials.push("opencode");
   }
   return credentials;
 }

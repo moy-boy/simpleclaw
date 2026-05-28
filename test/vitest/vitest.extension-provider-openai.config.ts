@@ -1,5 +1,4 @@
 import path from "node:path";
-import { providerOpenAiExtensionTestRoots } from "./vitest.extension-provider-paths.mjs";
 import { loadPatternListFromEnv } from "./vitest.pattern-file.ts";
 import { createScopedVitestConfig } from "./vitest.scoped-config.ts";
 import { repoRoot } from "./vitest.shared.config.ts";
@@ -14,8 +13,7 @@ export function createExtensionProviderOpenAiVitestConfig(
   env: Record<string, string | undefined> = process.env,
 ) {
   const config = createScopedVitestConfig(
-    loadIncludePatternsFromEnv(env) ??
-      providerOpenAiExtensionTestRoots.map((root) => `${root}/**/*.test.ts`),
+    loadIncludePatternsFromEnv(env) ?? ["extensions/openai/**/*.test.ts"],
     {
       dir: "extensions",
       env,

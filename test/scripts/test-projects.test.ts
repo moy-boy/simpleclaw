@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import fg from "fast-glob";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { listSupportedBundledPluginRoots } from "../../scripts/lib/supported-surface.mjs";
 import {
   DEFAULT_TEST_PROJECTS_VITEST_NO_OUTPUT_TIMEOUT_MS,
   applyDefaultMultiSpecVitestCachePaths,
@@ -24,6 +25,7 @@ import { toRepoPath } from "../../src/test-utils/repo-files.js";
 import { fullSuiteVitestShards } from "../vitest/vitest.test-shards.mjs";
 
 const normalizeRepoPath = toRepoPath;
+const supportedExtensionTestPrefixes = listSupportedBundledPluginRoots().map((root) => `${root}/`);
 
 type VitestTestConfig = {
   dir?: string;
@@ -121,6 +123,8 @@ function listNormalFullSuiteTestFiles(): string[] {
         !file.includes(".live.test.") &&
         !file.includes(".e2e.test.") &&
         !file.startsWith("test/fixtures/") &&
+        (!file.startsWith("extensions/") ||
+          supportedExtensionTestPrefixes.some((prefix) => file.startsWith(prefix))) &&
         !e2eNamedIntegrationTests.has(file),
     )
     .toSorted((left, right) => left.localeCompare(right));
@@ -184,7 +188,6 @@ describe("scripts/test-projects changed-target routing", () => {
         "src/auto-reply/reply/followup-runner.test.ts",
         "src/auto-reply/reply/groups.test.ts",
         "extensions/discord/src/monitor/message-handler.process.test.ts",
-        "extensions/slack/src/monitor.tool-result.test.ts",
       ],
     });
   });
@@ -199,7 +202,6 @@ describe("scripts/test-projects changed-target routing", () => {
         "src/auto-reply/reply/followup-runner.test.ts",
         "src/auto-reply/reply/groups.test.ts",
         "extensions/discord/src/monitor/message-handler.process.test.ts",
-        "extensions/slack/src/monitor.tool-result.test.ts",
       ],
     });
   });
@@ -215,7 +217,6 @@ describe("scripts/test-projects changed-target routing", () => {
         "src/auto-reply/reply/followup-runner.test.ts",
         "src/auto-reply/reply/groups.test.ts",
         "extensions/discord/src/monitor/message-handler.process.test.ts",
-        "extensions/slack/src/monitor.tool-result.test.ts",
       ],
     });
   });
@@ -230,7 +231,6 @@ describe("scripts/test-projects changed-target routing", () => {
         "src/auto-reply/reply/followup-runner.test.ts",
         "src/auto-reply/reply/groups.test.ts",
         "extensions/discord/src/monitor/message-handler.process.test.ts",
-        "extensions/slack/src/monitor.tool-result.test.ts",
       ],
     });
   });
@@ -309,32 +309,18 @@ describe("scripts/test-projects changed-target routing", () => {
     ]);
   });
 
-  it("routes misc extensions to the misc extension shard", () => {
+  it("ignores unsupported extension targets", () => {
     const plans = buildVitestRunPlans(["extensions/thread-ownership"], process.cwd());
 
-    expect(plans).toEqual([
-      {
-        config: "test/vitest/vitest.extension-misc.config.ts",
-        forwardedArgs: [],
-        includePatterns: ["extensions/thread-ownership/**/*.test.ts"],
-        watchMode: false,
-      },
-    ]);
+    expect(plans).toEqual([]);
   });
 
-  it("routes browser extension changes to the browser extension lane", () => {
+  it("ignores unsupported extension changes", () => {
     const plans = buildVitestRunPlans(["--changed", "origin/main"], process.cwd(), () => [
       "extensions/browser/src/browser/cdp.helpers.ts",
     ]);
 
-    expect(plans).toEqual([
-      {
-        config: "test/vitest/vitest.extension-browser.config.ts",
-        forwardedArgs: [],
-        includePatterns: ["extensions/browser/src/browser/cdp.helpers.test.ts"],
-        watchMode: false,
-      },
-    ]);
+    expect(plans).toEqual([]);
   });
 
   it("keeps shared test helpers cheap by default when no precise target exists", () => {
@@ -371,7 +357,6 @@ describe("scripts/test-projects changed-target routing", () => {
       mode: "targets",
       targets: [
         "extensions/discord/src/directory-contract.test.ts",
-        "extensions/slack/src/directory-contract.test.ts",
         "extensions/telegram/src/directory-contract.test.ts",
       ],
     });
@@ -483,34 +468,20 @@ describe("scripts/test-projects changed-target routing", () => {
     ]);
   });
 
-  it("routes LM Studio changes to the provider extension lane", () => {
+  it("ignores unsupported provider extension changes", () => {
     const plans = buildVitestRunPlans(["--changed", "origin/main"], process.cwd(), () => [
       "extensions/lmstudio/src/runtime.ts",
     ]);
 
-    expect(plans).toEqual([
-      {
-        config: "test/vitest/vitest.extension-providers.config.ts",
-        forwardedArgs: [],
-        includePatterns: ["extensions/lmstudio/src/runtime.test.ts"],
-        watchMode: false,
-      },
-    ]);
+    expect(plans).toEqual([]);
   });
 
-  it("routes QA extension changes to the QA extension lane", () => {
+  it("ignores unsupported QA extension changes", () => {
     const plans = buildVitestRunPlans(["--changed", "origin/main"], process.cwd(), () => [
       "extensions/qa-lab/src/scenario-catalog.test.ts",
     ]);
 
-    expect(plans).toEqual([
-      {
-        config: "test/vitest/vitest.extension-qa.config.ts",
-        forwardedArgs: [],
-        includePatterns: ["extensions/qa-lab/src/scenario-catalog.test.ts"],
-        watchMode: false,
-      },
-    ]);
+    expect(plans).toEqual([]);
   });
 
   it("routes the top-level extensions target to every extension shard", () => {
@@ -675,7 +646,6 @@ describe("scripts/test-projects changed-target routing", () => {
         "src/auto-reply/reply/followup-runner.test.ts",
         "src/auto-reply/reply/groups.test.ts",
         "extensions/discord/src/monitor/message-handler.process.test.ts",
-        "extensions/slack/src/monitor.tool-result.test.ts",
         "src/auto-reply/reply/effective-reply-route.test.ts",
       ],
     });
@@ -698,24 +668,24 @@ describe("scripts/test-projects changed-target routing", () => {
     });
   });
 
-  it("routes Google Meet CLI edits to the lightweight CLI tests", () => {
+  it("ignores unsupported Google Meet CLI edits", () => {
     expect(resolveChangedTestTargetPlan(["extensions/google-meet/src/cli.ts"])).toEqual({
       mode: "targets",
-      targets: ["extensions/google-meet/src/cli.test.ts"],
+      targets: [],
     });
   });
 
-  it("routes Google Meet OAuth edits to the lightweight OAuth tests", () => {
+  it("ignores unsupported Google Meet OAuth edits", () => {
     expect(resolveChangedTestTargetPlan(["extensions/google-meet/src/oauth.ts"])).toEqual({
       mode: "targets",
-      targets: ["extensions/google-meet/src/oauth.test.ts"],
+      targets: [],
     });
   });
 
-  it("routes Google Meet entry edits to the plugin entry tests", () => {
+  it("ignores unsupported Google Meet entry edits", () => {
     expect(resolveChangedTestTargetPlan(["extensions/google-meet/index.ts"])).toEqual({
       mode: "targets",
-      targets: ["extensions/google-meet/index.test.ts"],
+      targets: [],
     });
   });
 
@@ -1102,15 +1072,15 @@ describe("scripts/test-projects full-suite sharding", () => {
       "test/vitest/vitest.gateway.config.ts",
       "test/vitest/vitest.gateway-server.config.ts",
       "test/vitest/vitest.commands.config.ts",
-      "test/vitest/vitest.extension-memory.config.ts",
-      "test/vitest/vitest.extension-msteams.config.ts",
+      "test/vitest/vitest.extension-provider-openai.config.ts",
+      "test/vitest/vitest.extension-telegram.config.ts",
     ].map((config) => ({ config }));
 
     expect(orderFullSuiteSpecsForParallelRun(specs).map((spec) => spec.config)).toEqual([
       "test/vitest/vitest.gateway-server.config.ts",
-      "test/vitest/vitest.extension-msteams.config.ts",
+      "test/vitest/vitest.extension-telegram.config.ts",
       "test/vitest/vitest.gateway.config.ts",
-      "test/vitest/vitest.extension-memory.config.ts",
+      "test/vitest/vitest.extension-provider-openai.config.ts",
       "test/vitest/vitest.commands.config.ts",
     ]);
   });
@@ -1364,31 +1334,7 @@ describe("scripts/test-projects full-suite sharding", () => {
       "test/vitest/vitest.auto-reply-core.config.ts",
       "test/vitest/vitest.auto-reply-top-level.config.ts",
       "test/vitest/vitest.auto-reply-reply.config.ts",
-      "test/vitest/vitest.extension-acpx.config.ts",
-      "test/vitest/vitest.extension-diffs.config.ts",
-      "test/vitest/vitest.extension-discord.config.ts",
-      "test/vitest/vitest.extension-feishu.config.ts",
-      "test/vitest/vitest.extension-imessage.config.ts",
-      "test/vitest/vitest.extension-irc.config.ts",
-      "test/vitest/vitest.extension-line.config.ts",
-      "test/vitest/vitest.extension-mattermost.config.ts",
-      "test/vitest/vitest.extension-matrix.config.ts",
-      "test/vitest/vitest.extension-memory.config.ts",
-      "test/vitest/vitest.extension-messaging.config.ts",
-      "test/vitest/vitest.extension-msteams.config.ts",
-      "test/vitest/vitest.extension-provider-openai.config.ts",
-      "test/vitest/vitest.extension-providers.config.ts",
-      "test/vitest/vitest.extension-signal.config.ts",
-      "test/vitest/vitest.extension-slack.config.ts",
-      "test/vitest/vitest.extension-telegram.config.ts",
-      "test/vitest/vitest.extension-voice-call.config.ts",
-      "test/vitest/vitest.extension-whatsapp.config.ts",
-      "test/vitest/vitest.extension-zalo.config.ts",
-      "test/vitest/vitest.extension-browser.config.ts",
-      "test/vitest/vitest.extension-qa.config.ts",
-      "test/vitest/vitest.extension-media.config.ts",
-      "test/vitest/vitest.extensions.config.ts",
-      "test/vitest/vitest.extension-misc.config.ts",
+      ...listFullExtensionVitestProjectConfigs(),
     ]);
 
     const gatewayPlans = plans.filter((plan) => plan.config === gatewayServerConfig);
@@ -1421,7 +1367,7 @@ describe("scripts/test-projects full-suite sharding", () => {
       const configs = buildFullSuiteVitestRunPlans([], process.cwd()).map((plan) => plan.config);
 
       expect(configs).not.toContain("test/vitest/vitest.extensions.config.ts");
-      expect(configs).not.toContain("test/vitest/vitest.extension-providers.config.ts");
+      expect(configs).not.toContain("test/vitest/vitest.extension-provider-openai.config.ts");
       expect(configs).toContain("test/vitest/vitest.auto-reply-reply.config.ts");
     } finally {
       if (previousLeafShards === undefined) {
@@ -1478,7 +1424,7 @@ describe("scripts/test-projects parallel cache paths", () => {
     const specs = applyParallelVitestCachePaths(
       [
         { config: "test/vitest/vitest.gateway.config.ts", env: {}, pnpmArgs: [] },
-        { config: "test/vitest/vitest.extension-matrix.config.ts", env: {}, pnpmArgs: [] },
+        { config: "test/vitest/vitest.extension-telegram.config.ts", env: {}, pnpmArgs: [] },
       ],
       { cwd: "/repo", env: {} },
     );
@@ -1497,7 +1443,7 @@ describe("scripts/test-projects parallel cache paths", () => {
           "/repo",
           "node_modules",
           ".experimental-vitest-cache",
-          "1-test-vitest-vitest.extension-matrix.config.ts",
+          "1-test-vitest-vitest.extension-telegram.config.ts",
         ),
       },
     ]);
@@ -1518,7 +1464,7 @@ describe("scripts/test-projects Vitest stall watchdog", () => {
     const [spec] = applyDefaultVitestNoOutputTimeout(
       [
         {
-          config: "test/vitest/vitest.extension-feishu.config.ts",
+          config: "test/vitest/vitest.extension-telegram.config.ts",
           env: { PATH: "/usr/bin" },
           includeFilePath: null,
           includePatterns: null,
@@ -1538,7 +1484,7 @@ describe("scripts/test-projects Vitest stall watchdog", () => {
     const specs = applyDefaultVitestNoOutputTimeout(
       [
         {
-          config: "test/vitest/vitest.extension-feishu.config.ts",
+          config: "test/vitest/vitest.extension-telegram.config.ts",
           env: { PATH: "/usr/bin" },
           includeFilePath: null,
           includePatterns: null,
@@ -1546,7 +1492,7 @@ describe("scripts/test-projects Vitest stall watchdog", () => {
           watchMode: true,
         },
         {
-          config: "test/vitest/vitest.extension-memory.config.ts",
+          config: "test/vitest/vitest.extension-provider-openai.config.ts",
           env: { OPENCLAW_VITEST_NO_OUTPUT_TIMEOUT_MS: "0", PATH: "/usr/bin" },
           includeFilePath: null,
           includePatterns: null,
@@ -1584,7 +1530,7 @@ describe("scripts/test-projects Vitest cache isolation", () => {
           watchMode: false,
         },
         {
-          config: "test/vitest/vitest.extension-memory.config.ts",
+          config: "test/vitest/vitest.extension-provider-openai.config.ts",
           env: {},
           includeFilePath: null,
           includePatterns: null,
@@ -1606,7 +1552,7 @@ describe("scripts/test-projects Vitest cache isolation", () => {
         "/repo",
         "node_modules",
         ".experimental-vitest-cache",
-        "1-test-vitest-vitest.extension-memory.config.ts",
+        "1-test-vitest-vitest.extension-provider-openai.config.ts",
       ),
     ]);
   });

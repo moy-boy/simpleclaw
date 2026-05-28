@@ -11,6 +11,11 @@ import { formatCliCommand } from "../../cli/command-format.js";
 import { type RuntimeEnv, writeRuntimeJson } from "../../runtime.js";
 import { normalizeStringEntries } from "../../shared/string-normalization.js";
 import { shortenHomePath } from "../../utils.js";
+import {
+  formatUnsupportedModelProviderMessage,
+  isSupportedModelProviderId,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 import { loadModelsConfig } from "./load-config.js";
 import { resolveKnownAgentId } from "./shared.js";
 
@@ -44,6 +49,9 @@ async function resolveAuthOrderContext(
   }
   const provider = normalizeProviderId(rawProvider);
   const cfg = await loadModelsConfig({ commandName: "models auth-order", runtime });
+  if (shouldEnforceSupportedModelProviderIds(cfg) && !isSupportedModelProviderId(provider)) {
+    throw new Error(formatUnsupportedModelProviderMessage(provider));
+  }
   const { agentId, agentDir } = resolveTargetAgent(cfg, opts.agent);
   return { cfg, agentId, agentDir, provider };
 }

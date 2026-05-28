@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import { normalizeChannelId as normalizeBundledChannelId } from "../../channels/registry.js";
+import { getRuntimeConfig } from "../../config/config.js";
 import { getResolvedLoggerSettings } from "../../logging.js";
 import { resolveLogFile } from "../../logging/log-tail.js";
 import { parseLogLine } from "../../logging/parse-log-line.js";
@@ -7,6 +8,11 @@ import { listManifestChannelContributionIds } from "../../plugins/manifest-contr
 import { defaultRuntime, type RuntimeEnv, writeRuntimeJson } from "../../runtime.js";
 import { normalizeLowercaseStringOrEmpty } from "../../shared/string-coerce.js";
 import { theme } from "../../terminal/theme.js";
+import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+} from "../supported-surface.js";
 
 export type ChannelsLogsOptions = {
   channel?: string;
@@ -96,6 +102,18 @@ export async function channelsLogsCommand(
   opts: ChannelsLogsOptions,
   runtime: RuntimeEnv = defaultRuntime,
 ) {
+  const cfg = getRuntimeConfig();
+  const rawChannel = normalizeLowercaseStringOrEmpty(opts.channel);
+  if (
+    shouldEnforceSupportedChannelIds(cfg) &&
+    rawChannel &&
+    rawChannel !== "all" &&
+    !isSupportedChannelId(rawChannel)
+  ) {
+    runtime.error(formatUnsupportedChannelMessage(rawChannel));
+    runtime.exit(1);
+    return;
+  }
   const channel = parseChannelFilter(opts.channel);
   const limitRaw = typeof opts.lines === "string" ? Number(opts.lines) : opts.lines;
   const limit =

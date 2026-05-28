@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { shouldIncludeBundledPluginId } from "./supported-surface.mjs";
 
 function toPosixPath(value) {
   return String(value ?? "").replaceAll("\\", "/");
@@ -41,6 +42,9 @@ function listTrackedExtensionPackageDirs(rootDir, fsImpl) {
       if (!match?.[1]) {
         return [];
       }
+      if (!shouldIncludeBundledPluginId(match[1])) {
+        return [];
+      }
       const packageDir = path.join(rootDir, "extensions", match[1]);
       return [
         {
@@ -66,7 +70,7 @@ function listExtensionPackageDirs(rootDir, fsImpl) {
   }
   return fsImpl
     .readdirSync(extensionsRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
+    .filter((entry) => entry.isDirectory() && shouldIncludeBundledPluginId(entry.name))
     .map((entry) => ({
       dirName: entry.name,
       hasPackageJson: undefined,
@@ -83,7 +87,12 @@ function listDistExtensionPackageDirs(rootDir, fsImpl) {
   }
   return fsImpl
     .readdirSync(extensionsRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && entry.name !== "node_modules")
+    .filter(
+      (entry) =>
+        entry.isDirectory() &&
+        entry.name !== "node_modules" &&
+        shouldIncludeBundledPluginId(entry.name),
+    )
     .map((entry) => ({
       dirName: entry.name,
       packageDir: path.join(extensionsRoot, entry.name),

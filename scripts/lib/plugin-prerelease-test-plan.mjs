@@ -35,7 +35,7 @@ const pluginPrereleaseDockerLanes = Object.freeze([
     ],
   },
   {
-    lane: "npm-onboard-slack-channel-agent",
+    lane: "npm-onboard-telegram-channel-agent",
     surfaces: ["package-artifact", "gateway-bootstrap", "status-diagnostics"],
   },
   {

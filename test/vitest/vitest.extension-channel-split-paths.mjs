@@ -6,26 +6,6 @@ export const splitChannelExtensionShardSpecs = [
     kind: "extensionDiscord",
     config: "test/vitest/vitest.extension-discord.config.ts",
   },
-  {
-    id: "slack",
-    kind: "extensionSlack",
-    config: "test/vitest/vitest.extension-slack.config.ts",
-  },
-  {
-    id: "signal",
-    kind: "extensionSignal",
-    config: "test/vitest/vitest.extension-signal.config.ts",
-  },
-  {
-    id: "imessage",
-    kind: "extensionImessage",
-    config: "test/vitest/vitest.extension-imessage.config.ts",
-  },
-  {
-    id: "line",
-    kind: "extensionLine",
-    config: "test/vitest/vitest.extension-line.config.ts",
-  },
 ];
 
 export const splitChannelExtensionTestRoots = splitChannelExtensionShardSpecs.map((spec) =>

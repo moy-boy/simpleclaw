@@ -196,31 +196,27 @@ describe("pairing cli", () => {
     expect(listChannelPairingRequests).toHaveBeenCalledWith("telegram", process.env, "yy");
   });
 
-  it("normalizes channel aliases", async () => {
-    listChannelPairingRequests.mockResolvedValueOnce([]);
-
-    await runPairing(["pairing", "list", "imsg"]);
-
-    expect(normalizeChannelId).toHaveBeenCalledWith("imsg");
-    expect(listChannelPairingRequests).toHaveBeenCalledWith("imessage");
+  it("rejects unsupported channel aliases", async () => {
+    await expect(runPairing(["pairing", "list", "imsg"])).rejects.toThrow(
+      'Unsupported channel "imsg". This setup supports Telegram and Discord only.',
+    );
+    expect(listChannelPairingRequests).not.toHaveBeenCalled();
   });
 
-  it("accepts extension channels outside the registry", async () => {
-    listChannelPairingRequests.mockResolvedValueOnce([]);
-
-    await runPairing(["pairing", "list", "zalo"]);
-
-    expect(normalizeChannelId).toHaveBeenCalledWith("zalo");
-    expect(listChannelPairingRequests).toHaveBeenCalledWith("zalo");
+  it("rejects extension channels outside the simplified channel set", async () => {
+    await expect(runPairing(["pairing", "list", "zalo"])).rejects.toThrow(
+      'Unsupported channel "zalo". This setup supports Telegram and Discord only.',
+    );
+    expect(listChannelPairingRequests).not.toHaveBeenCalled();
   });
 
   it("defaults list to the sole available channel", async () => {
-    listPairingChannels.mockReturnValueOnce(["slack"]);
+    listPairingChannels.mockReturnValueOnce(["telegram"]);
     listChannelPairingRequests.mockResolvedValueOnce([]);
 
     await runPairing(["pairing", "list"]);
 
-    expect(listChannelPairingRequests).toHaveBeenCalledWith("slack");
+    expect(listChannelPairingRequests).toHaveBeenCalledWith("telegram");
   });
 
   it("accepts channel as positional for approve (npm-run compatible)", async () => {
@@ -293,13 +289,13 @@ describe("pairing cli", () => {
   });
 
   it("defaults approve to the sole available channel when only code is provided", async () => {
-    listPairingChannels.mockReturnValueOnce(["slack"]);
+    listPairingChannels.mockReturnValueOnce(["telegram"]);
     mockApprovedPairing();
 
     await runPairing(["pairing", "approve", "ABCDEFGH"]);
 
     expect(approveChannelPairingCode).toHaveBeenCalledWith({
-      channel: "slack",
+      channel: "telegram",
       code: "ABCDEFGH",
     });
   });

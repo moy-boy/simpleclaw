@@ -12,12 +12,6 @@ function writeFixtureFile(rootDir: string, relativePath: string, contents: strin
 
 function writeStartupMetadataSourceSignatureFixture(rootDir: string): void {
   const fixtures = new Map<string, string>([
-    ["extensions/browser/src/cli/browser-cli.ts", "export const browserHelp = 'browser';\n"],
-    ["extensions/canvas/cli-metadata.ts", "export const canvasMetadata = 'canvas';\n"],
-    ["extensions/canvas/index.ts", "export const canvasEntry = 'canvas';\n"],
-    ["extensions/canvas/src/a2ui-jsonl.ts", "export const a2uiJsonl = 'canvas';\n"],
-    ["extensions/canvas/src/cli-helpers.ts", "export const canvasHelpers = 'canvas';\n"],
-    ["extensions/canvas/src/cli.ts", "export const canvasCliHelp = 'canvas';\n"],
     ["src/cli/banner.ts", "export const banner = 'openclaw';\n"],
     [
       "src/cli/daemon-cli/register-service-commands.ts",
@@ -49,7 +43,7 @@ function writeStartupMetadataSourceSignatureFixture(rootDir: string): void {
 describe("write-cli-startup-metadata", () => {
   const { createTempDir } = createScriptTestHarness();
 
-  it("writes startup metadata with populated root help text when dist falls back to source rendering", async () => {
+  it("writes runtime-focused startup metadata when dist falls back to source rendering", async () => {
     const tempRoot = createTempDir("openclaw-startup-metadata-");
     const distDir = path.join(tempRoot, "dist");
     const extensionsDir = path.join(tempRoot, "extensions");
@@ -79,46 +73,38 @@ describe("write-cli-startup-metadata", () => {
         throw new Error("dist root help unavailable");
       },
       renderSourceRootHelpText: () => "Usage: openclaw\n",
-      renderSourceBrowserHelpText: () => "Usage: openclaw browser\n",
-      renderSourceSecretsHelpText: () => "Usage: openclaw secrets\n",
-      renderSourceNodesHelpText: () => "Usage: openclaw nodes\n",
-      renderSourceSubcommandHelpTextRecord: () => ({
-        doctor: "Usage: openclaw doctor\n",
-        gateway: "Usage: openclaw gateway\n",
-        models: "Usage: openclaw models\n",
-        plugins: "Usage: openclaw plugins\n",
-      }),
+      renderSourceSecretsHelpText: () => {
+        throw new Error("secrets help should not be precomputed by default");
+      },
+      renderSourceNodesHelpText: () => {
+        throw new Error("nodes help should not be precomputed by default");
+      },
+      renderSourceSubcommandHelpTextRecord: () => {
+        throw new Error("subcommand help should not be precomputed by default");
+      },
     });
 
     const written = JSON.parse(readFileSync(outputPath, "utf8")) as {
-      browserHelpText: string;
       channelOptions: string[];
-      nodesHelpText: string;
+      nodesHelpText?: string;
       rootHelpText: string;
-      secretsHelpText: string;
-      subcommandHelpText: {
+      secretsHelpText?: string;
+      subcommandHelpText?: {
         doctor: string;
         gateway: string;
         models: string;
         plugins: string;
       };
     };
-    expect(written.channelOptions).toContain("matrix");
-    expect(written.browserHelpText).toContain("Usage:");
-    expect(written.browserHelpText).toContain("openclaw browser");
-    expect(written.secretsHelpText).toContain("Usage:");
-    expect(written.secretsHelpText).toContain("openclaw secrets");
-    expect(written.nodesHelpText).toContain("Usage:");
-    expect(written.nodesHelpText).toContain("openclaw nodes");
+    expect(written.channelOptions).toEqual(["telegram", "discord"]);
+    expect(written.secretsHelpText).toBeUndefined();
+    expect(written.nodesHelpText).toBeUndefined();
+    expect(written.subcommandHelpText).toBeUndefined();
     expect(written.rootHelpText).toContain("Usage:");
     expect(written.rootHelpText).toContain("openclaw");
-    expect(written.subcommandHelpText.doctor).toContain("openclaw doctor");
-    expect(written.subcommandHelpText.gateway).toContain("openclaw gateway");
-    expect(written.subcommandHelpText.models).toContain("openclaw models");
-    expect(written.subcommandHelpText.plugins).toContain("openclaw plugins");
   });
 
-  it("regenerates nodes help when bundled canvas CLI help sources change", async () => {
+  it("regenerates nodes help when nodes CLI help sources change", async () => {
     const tempRoot = createTempDir("openclaw-startup-metadata-signature-");
     const distDir = path.join(tempRoot, "dist");
     const extensionsDir = path.join(tempRoot, "extensions");
@@ -126,6 +112,7 @@ describe("write-cli-startup-metadata", () => {
     let nodesRenderCount = 0;
 
     writeStartupMetadataSourceSignatureFixture(tempRoot);
+    mkdirSync(extensionsDir, { recursive: true });
     writeFixtureFile(distDir, "root-help-fixture.js", "export function outputRootHelp() {}\n");
 
     const writeMetadata = async (): Promise<void> => {
@@ -134,8 +121,8 @@ describe("write-cli-startup-metadata", () => {
         outputPath,
         extensionsDir,
         sourceRootDir: tempRoot,
+        precomputeExtendedHelp: true,
         renderBundledRootHelpText: async () => "Usage: openclaw\n",
-        renderSourceBrowserHelpText: () => "Usage: openclaw browser\n",
         renderSourceSecretsHelpText: () => "Usage: openclaw secrets\n",
         renderSourceNodesHelpText: () => {
           nodesRenderCount += 1;
@@ -156,8 +143,8 @@ describe("write-cli-startup-metadata", () => {
 
     writeFixtureFile(
       tempRoot,
-      "extensions/canvas/src/cli.ts",
-      "export const canvasCliHelp = 'canvas changed help';\n",
+      "src/cli/nodes-cli/register.ts",
+      "export const nodesHelp = 'nodes changed help';\n",
     );
 
     await writeMetadata();

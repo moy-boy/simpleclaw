@@ -11,18 +11,12 @@ const mocks = vi.hoisted(() => ({
   modelsAuthAddCommand: vi.fn().mockResolvedValue(undefined),
   modelsAuthListCommand: vi.fn().mockResolvedValue(undefined),
   modelsAuthLoginCommand: vi.fn().mockResolvedValue(undefined),
-  modelsAuthPasteApiKeyCommand: vi.fn().mockResolvedValue(undefined),
-  modelsAuthPasteTokenCommand: vi.fn().mockResolvedValue(undefined),
-  modelsAuthSetupTokenCommand: vi.fn().mockResolvedValue(undefined),
 }));
 
 const {
   modelsAuthAddCommand,
   modelsAuthListCommand,
   modelsAuthLoginCommand,
-  modelsAuthPasteApiKeyCommand,
-  modelsAuthPasteTokenCommand,
-  modelsAuthSetupTokenCommand,
   modelsSetCommand,
   modelsSetImageCommand,
   modelsStatusCommand,
@@ -37,9 +31,6 @@ vi.mock("../commands/models/list.status-command.js", () => ({
 vi.mock("../commands/models/auth.js", () => ({
   modelsAuthAddCommand: mocks.modelsAuthAddCommand,
   modelsAuthLoginCommand: mocks.modelsAuthLoginCommand,
-  modelsAuthPasteApiKeyCommand: mocks.modelsAuthPasteApiKeyCommand,
-  modelsAuthPasteTokenCommand: mocks.modelsAuthPasteTokenCommand,
-  modelsAuthSetupTokenCommand: mocks.modelsAuthSetupTokenCommand,
 }));
 vi.mock("../commands/models/auth-list.js", () => ({
   modelsAuthListCommand: mocks.modelsAuthListCommand,
@@ -66,9 +57,6 @@ vi.mock("../commands/models/image-fallbacks.js", () => ({
   modelsImageFallbacksListCommand: mocks.noopAsync,
   modelsImageFallbacksRemoveCommand: mocks.noopAsync,
 }));
-vi.mock("../commands/models/scan.js", () => ({
-  modelsScanCommand: mocks.noopAsync,
-}));
 vi.mock("../commands/models/set.js", () => ({
   modelsSetCommand: mocks.modelsSetCommand,
 }));
@@ -81,9 +69,6 @@ describe("models cli", () => {
     modelsAuthAddCommand.mockClear();
     modelsAuthListCommand.mockClear();
     modelsAuthLoginCommand.mockClear();
-    modelsAuthPasteApiKeyCommand.mockClear();
-    modelsAuthPasteTokenCommand.mockClear();
-    modelsAuthSetupTokenCommand.mockClear();
     modelsSetCommand.mockClear();
     modelsSetImageCommand.mockClear();
     modelsStatusCommand.mockClear();
@@ -125,24 +110,20 @@ describe("models cli", () => {
     }
   }
 
-  it("registers github-copilot login command", async () => {
+  it("does not expose removed compatibility model auth commands", () => {
     const program = createProgram();
     const models = requireCommand(program, "models");
     const auth = requireCommand(models, "auth");
-    expect(requireCommand(auth, "login-github-copilot").name()).toBe("login-github-copilot");
 
-    await program.parseAsync(
-      ["models", "auth", "--agent", "poe", "login-github-copilot", "--yes"],
-      { from: "user" },
-    );
-
-    expect(modelsAuthLoginCommand).toHaveBeenCalledTimes(1);
-    expectCommandOptions(modelsAuthLoginCommand, {
-      provider: "github-copilot",
-      method: "device",
-      yes: true,
-      agent: "poe",
-    });
+    for (const commandName of [
+      "login-github-copilot",
+      "paste-api-key",
+      "paste-token",
+      "setup-token",
+    ]) {
+      expect(auth.commands.some((command) => command.name() === commandName)).toBe(false);
+    }
+    expect(models.commands.some((command) => command.name() === "scan")).toBe(false);
   });
 
   it.each([
@@ -171,30 +152,6 @@ describe("models cli", () => {
       args: ["models", "auth", "--agent", "poe", "login", "--provider", "openai-codex"],
       command: modelsAuthLoginCommand,
       expected: { agent: "poe", provider: "openai-codex" },
-    },
-    {
-      label: "setup-token",
-      args: ["models", "auth", "--agent", "poe", "setup-token", "--provider", "anthropic"],
-      command: modelsAuthSetupTokenCommand,
-      expected: { agent: "poe", provider: "anthropic" },
-    },
-    {
-      label: "paste-token",
-      args: ["models", "auth", "--agent", "poe", "paste-token", "--provider", "anthropic"],
-      command: modelsAuthPasteTokenCommand,
-      expected: { agent: "poe", provider: "anthropic" },
-    },
-    {
-      label: "paste-api-key",
-      args: ["models", "auth", "--agent", "poe", "paste-api-key", "--provider", "openai-codex"],
-      command: modelsAuthPasteApiKeyCommand,
-      expected: { agent: "poe", provider: "openai-codex" },
-    },
-    {
-      label: "login-github-copilot",
-      args: ["models", "auth", "--agent", "poe", "login-github-copilot", "--yes"],
-      command: modelsAuthLoginCommand,
-      expected: { agent: "poe", provider: "github-copilot", method: "device", yes: true },
     },
   ])("passes parent --agent to models auth $label", async ({ args, command, expected }) => {
     await runModelsCommand(args);

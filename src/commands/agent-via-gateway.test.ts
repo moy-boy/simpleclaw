@@ -232,6 +232,69 @@ describe("agentCliCommand", () => {
     });
   });
 
+  it("rejects unsupported delivery channels when simplified plugin allowlist is active", async () => {
+    await withTempStore(
+      async () => {
+        await expect(
+          agentCliCommand({ message: "hi", to: "@ops", channel: "slack" }, runtime),
+        ).rejects.toThrow('Unsupported channel "slack"');
+
+        expect(callGateway).not.toHaveBeenCalled();
+        expect(agentCommand).not.toHaveBeenCalled();
+      },
+      {
+        plugins: {
+          allow: ["telegram", "discord", "openai", "codex"],
+          bundledDiscovery: "allowlist",
+        },
+      },
+    );
+  });
+
+  it("rejects unsupported model overrides when simplified plugin allowlist is active", async () => {
+    await withTempStore(
+      async () => {
+        await expect(
+          agentCliCommand(
+            { message: "hi", to: "@ops", model: "anthropic/claude-opus-4-6" },
+            runtime,
+          ),
+        ).rejects.toThrow('Unsupported model "anthropic/claude-opus-4-6"');
+
+        expect(callGateway).not.toHaveBeenCalled();
+        expect(agentCommand).not.toHaveBeenCalled();
+      },
+      {
+        plugins: {
+          allow: ["telegram", "discord", "openai", "codex"],
+          bundledDiscovery: "allowlist",
+        },
+      },
+    );
+  });
+
+  it("rejects unsupported configured agent defaults", async () => {
+    await withTempStore(
+      async () => {
+        await expect(agentCliCommand({ message: "hi", to: "@ops" }, runtime)).rejects.toThrow(
+          'Unsupported model "anthropic/claude-opus-4-6"',
+        );
+
+        expect(callGateway).not.toHaveBeenCalled();
+        expect(agentCommand).not.toHaveBeenCalled();
+      },
+      {
+        agents: {
+          defaults: {
+            model: {
+              primary: "anthropic/claude-opus-4-6",
+            },
+          },
+        },
+      },
+    );
+  });
+
   it("uses an explicit session key as the gateway session selector", async () => {
     await withTempStore(async () => {
       mockGatewaySuccessReply();
@@ -825,7 +888,7 @@ describe("agentCliCommand", () => {
       });
 
       const run = agentCliCommand(
-        { message: "hi", to: "+1555", model: "ollama/qwen3.5:9b" },
+        { message: "hi", to: "+1555", model: "openai/gpt-5.4" },
         runtime,
         {
           process: signals.processLike,
@@ -901,7 +964,7 @@ describe("agentCliCommand", () => {
       });
 
       const run = agentCliCommand(
-        { message: "hi", to: "+1555", model: "ollama/qwen3.5:9b" },
+        { message: "hi", to: "+1555", model: "openai/gpt-5.4" },
         runtime,
         {
           process: signals.processLike,
@@ -1123,7 +1186,7 @@ describe("agentCliCommand", () => {
     await withTempStore(async () => {
       mockGatewaySuccessReply();
 
-      await agentCliCommand({ message: "hi", to: "+1555", model: "ollama/qwen3.5:9b" }, runtime);
+      await agentCliCommand({ message: "hi", to: "+1555", model: "openai/gpt-5.4" }, runtime);
 
       expect(callGateway).toHaveBeenCalledTimes(1);
       const request = requireRecord(requireFirstCallArg(callGateway, "gateway"), "gateway request");
@@ -1131,7 +1194,7 @@ describe("agentCliCommand", () => {
       expect(request.mode).toBe("backend");
       expect(request.scopes).toEqual(["operator.admin"]);
       const params = requireRecord(request.params, "gateway request params");
-      expect(params.model).toBe("ollama/qwen3.5:9b");
+      expect(params.model).toBe("openai/gpt-5.4");
     });
   });
 

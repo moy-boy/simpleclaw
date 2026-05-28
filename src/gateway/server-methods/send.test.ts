@@ -254,7 +254,7 @@ function expectDeliverySessionMirror(params: { agentId: string; sessionKey: stri
 }
 
 function mockDeliverySuccess(messageId: string) {
-  mocks.deliverOutboundPayloads.mockResolvedValue([{ messageId, channel: "slack" }]);
+  mocks.deliverOutboundPayloads.mockResolvedValue([{ messageId, channel: "discord" }]);
 }
 
 describe("gateway send mirroring", () => {
@@ -277,14 +277,14 @@ describe("gateway send mirroring", () => {
     mocks.resolveOutboundSessionRoute.mockImplementation(
       async ({ agentId, channel }: { agentId?: string; channel?: string }) => ({
         sessionKey:
-          channel === "slack"
-            ? `agent:${agentId ?? "main"}:slack:channel:resolved`
+          channel === "discord"
+            ? `agent:${agentId ?? "main"}:discord:channel:resolved`
             : `agent:${agentId ?? "main"}:${channel ?? "main"}:resolved`,
       }),
     );
     mocks.resolveMessageChannelSelection.mockResolvedValue({
-      channel: "slack",
-      configured: ["slack"],
+      channel: "discord",
+      configured: ["discord"],
     });
     mocks.dispatchChannelMessageAction.mockResolvedValue({
       details: { action: "handled" },
@@ -305,7 +305,7 @@ describe("gateway send mirroring", () => {
 
     const firstRequest = sendHandlers["message.action"]({
       params: {
-        channel: "slack",
+        channel: "discord",
         action: "poll",
         params: { question: "Q?" },
         idempotencyKey: "idem-action-concurrent",
@@ -319,7 +319,7 @@ describe("gateway send mirroring", () => {
 
     const secondRequest = sendHandlers["message.action"]({
       params: {
-        channel: "slack",
+        channel: "discord",
         action: "poll",
         params: { question: "Q?" },
         idempotencyKey: "idem-action-concurrent",
@@ -344,13 +344,13 @@ describe("gateway send mirroring", () => {
     expect(firstCall?.[0]).toBe(true);
     expect(firstCall?.[1]).toEqual({ action: "handled" });
     expect(firstCall?.[2]).toBeUndefined();
-    expect(firstCall?.[3]?.channel).toBe("slack");
+    expect(firstCall?.[3]?.channel).toBe("discord");
     expect(firstCall?.[3]?.cached).toBeUndefined();
     const secondCall = firstRespondCall(secondRespond);
     expect(secondCall?.[0]).toBe(true);
     expect(secondCall?.[1]).toEqual({ action: "handled" });
     expect(secondCall?.[2]).toBeUndefined();
-    expect(secondCall?.[3]?.channel).toBe("slack");
+    expect(secondCall?.[3]?.channel).toBe("discord");
     expect(secondCall?.[3]?.cached).toBe(true);
   });
 
@@ -365,7 +365,7 @@ describe("gateway send mirroring", () => {
       params: {
         to: "channel:C1",
         message: "hi",
-        channel: "slack",
+        channel: "discord",
         idempotencyKey: "idem-send-concurrent",
       } as never,
       respond: firstRespond,
@@ -379,7 +379,7 @@ describe("gateway send mirroring", () => {
       params: {
         to: "channel:C1",
         message: "hi",
-        channel: "slack",
+        channel: "discord",
         idempotencyKey: "idem-send-concurrent",
       } as never,
       respond: secondRespond,
@@ -393,7 +393,7 @@ describe("gateway send mirroring", () => {
       expect(mocks.deliverOutboundPayloads).toHaveBeenCalledTimes(1);
     });
 
-    deliveryDeferred.resolve([{ messageId: "m-concurrent", channel: "slack" }]);
+    deliveryDeferred.resolve([{ messageId: "m-concurrent", channel: "discord" }]);
     await Promise.all([firstRequest, secondRequest]);
 
     expect(mocks.deliverOutboundPayloads).toHaveBeenCalledTimes(1);
@@ -404,14 +404,14 @@ describe("gateway send mirroring", () => {
     expect(firstCall?.[1]?.messageId).toBe("m-concurrent");
     expect(firstCall?.[1]?.runId).toBe("idem-send-concurrent");
     expect(firstCall?.[2]).toBeUndefined();
-    expect(firstCall?.[3]?.channel).toBe("slack");
+    expect(firstCall?.[3]?.channel).toBe("discord");
     expect(firstCall?.[3]?.cached).toBeUndefined();
     const secondCall = firstRespondCall(secondRespond);
     expect(secondCall?.[0]).toBe(true);
     expect(secondCall?.[1]?.messageId).toBe("m-concurrent");
     expect(secondCall?.[1]?.runId).toBe("idem-send-concurrent");
     expect(secondCall?.[2]).toBeUndefined();
-    expect(secondCall?.[3]?.channel).toBe("slack");
+    expect(secondCall?.[3]?.channel).toBe("discord");
     expect(secondCall?.[3]?.cached).toBe(true);
   });
 
@@ -427,7 +427,7 @@ describe("gateway send mirroring", () => {
         to: "channel:C1",
         question: "Q?",
         options: ["A", "B"],
-        channel: "slack",
+        channel: "discord",
         idempotencyKey: "idem-poll-concurrent",
       } as never,
       respond: firstRespond,
@@ -442,7 +442,7 @@ describe("gateway send mirroring", () => {
         to: "channel:C1",
         question: "Q?",
         options: ["A", "B"],
-        channel: "slack",
+        channel: "discord",
         idempotencyKey: "idem-poll-concurrent",
       } as never,
       respond: secondRespond,
@@ -467,7 +467,7 @@ describe("gateway send mirroring", () => {
     expect(firstCall?.[1]?.pollId).toBe("poll-1");
     expect(firstCall?.[1]?.runId).toBe("idem-poll-concurrent");
     expect(firstCall?.[2]).toBeUndefined();
-    expect(firstCall?.[3]?.channel).toBe("slack");
+    expect(firstCall?.[3]?.channel).toBe("discord");
     expect(firstCall?.[3]?.cached).toBeUndefined();
     const secondCall = firstRespondCall(secondRespond);
     expect(secondCall?.[0]).toBe(true);
@@ -475,7 +475,7 @@ describe("gateway send mirroring", () => {
     expect(secondCall?.[1]?.pollId).toBe("poll-1");
     expect(secondCall?.[1]?.runId).toBe("idem-poll-concurrent");
     expect(secondCall?.[2]).toBeUndefined();
-    expect(secondCall?.[3]?.channel).toBe("slack");
+    expect(secondCall?.[3]?.channel).toBe("discord");
     expect(secondCall?.[3]?.cached).toBe(true);
   });
 
@@ -485,7 +485,7 @@ describe("gateway send mirroring", () => {
     const { respond } = await runSend({
       to: "channel:C1",
       mediaUrl: "https://example.com/a.png",
-      channel: "slack",
+      channel: "discord",
       idempotencyKey: "idem-media-only",
     });
 
@@ -496,22 +496,22 @@ describe("gateway send mirroring", () => {
     expect(response?.[0]).toBe(true);
     expect(response?.[1]?.messageId).toBe("m-media");
     expect(response?.[2]).toBeUndefined();
-    expect(response?.[3]?.channel).toBe("slack");
+    expect(response?.[3]?.channel).toBe("discord");
   });
 
   it("passes outbound session context for gateway media sends", async () => {
-    mockDeliverySuccess("m-whatsapp-media");
+    mockDeliverySuccess("m-telegram-media");
 
     await runSend({
       to: "+15551234567",
       message: "caption",
       mediaUrl: "file:///tmp/workspace/photo.png",
-      channel: "whatsapp",
+      channel: "telegram",
       agentId: "work",
-      idempotencyKey: "idem-whatsapp-media",
+      idempotencyKey: "idem-telegram-media",
     });
 
-    expect(deliveryCall()?.channel).toBe("whatsapp");
+    expect(deliveryCall()?.channel).toBe("telegram");
     expect(deliveryCall()?.payloads).toEqual([
       {
         text: "caption",
@@ -520,7 +520,7 @@ describe("gateway send mirroring", () => {
       },
     ]);
     expect(deliveryCall()?.session?.agentId).toBe("work");
-    expect(deliveryCall()?.session?.key).toBe("agent:work:whatsapp:resolved");
+    expect(deliveryCall()?.session?.key).toBe("agent:work:telegram:resolved");
   });
 
   it("maps gateway asVoice sends onto outbound audioAsVoice payloads", async () => {
@@ -531,7 +531,7 @@ describe("gateway send mirroring", () => {
       message: "voice note",
       mediaUrl: "file:///tmp/openclaw-voice.ogg",
       asVoice: true,
-      channel: "slack",
+      channel: "discord",
       idempotencyKey: "idem-voice",
     });
 
@@ -542,7 +542,7 @@ describe("gateway send mirroring", () => {
     expect(response?.[0]).toBe(true);
     expect(response?.[1]?.messageId).toBe("m-voice");
     expect(response?.[2]).toBeUndefined();
-    expect(response?.[3]?.channel).toBe("slack");
+    expect(response?.[3]?.channel).toBe("discord");
   });
 
   it("forwards gateway client scopes into outbound delivery", async () => {
@@ -552,13 +552,13 @@ describe("gateway send mirroring", () => {
       {
         to: "channel:C1",
         message: "hi",
-        channel: "slack",
+        channel: "discord",
         idempotencyKey: "idem-scope",
       },
       { connect: { scopes: ["operator.write"] } },
     );
 
-    expect(deliveryCall()?.channel).toBe("slack");
+    expect(deliveryCall()?.channel).toBe("discord");
     expect(deliveryCall()?.gatewayClientScopes).toEqual(["operator.write"]);
   });
 
@@ -569,13 +569,13 @@ describe("gateway send mirroring", () => {
       {
         to: "channel:C1",
         message: "hi",
-        channel: "slack",
+        channel: "discord",
         idempotencyKey: "idem-empty-scope",
       },
       { connect: { scopes: [] } },
     );
 
-    expect(deliveryCall()?.channel).toBe("slack");
+    expect(deliveryCall()?.channel).toBe("discord");
     expect(deliveryCall()?.gatewayClientScopes).toEqual([]);
   });
 
@@ -583,7 +583,7 @@ describe("gateway send mirroring", () => {
     const { respond } = await runSend({
       to: "channel:C1",
       message: "   ",
-      channel: "slack",
+      channel: "discord",
       idempotencyKey: "idem-empty",
     });
 
@@ -625,11 +625,11 @@ describe("gateway send mirroring", () => {
     expect(response?.[0]).toBe(true);
     expect(response?.[1]?.messageId).toBe("m-single-send");
     expect(response?.[2]).toBeUndefined();
-    expect(response?.[3]?.channel).toBe("slack");
+    expect(response?.[3]?.channel).toBe("discord");
   });
 
   it("auto-picks the single configured channel from the auto-enabled config snapshot for send", async () => {
-    const autoEnabledConfig = { channels: { slack: {} }, plugins: { allow: ["slack"] } };
+    const autoEnabledConfig = { channels: { discord: {} }, plugins: { allow: ["discord"] } };
     mocks.applyPluginAutoEnable.mockReturnValue({
       config: autoEnabledConfig,
       changes: [],
@@ -654,12 +654,12 @@ describe("gateway send mirroring", () => {
     expect(response?.[0]).toBe(true);
     expect(response?.[1]?.messageId).toBe("m-single-send-auto");
     expect(response?.[2]).toBeUndefined();
-    expect(response?.[3]?.channel).toBe("slack");
+    expect(response?.[3]?.channel).toBe("discord");
   });
 
   it("returns invalid request when send channel selection is ambiguous", async () => {
     mocks.resolveMessageChannelSelection.mockRejectedValueOnce(
-      new Error("Channel is required when multiple channels are configured: telegram, slack"),
+      new Error("Channel is required when multiple channels are configured: telegram, discord"),
     );
 
     const { respond } = await runSend({
@@ -681,7 +681,7 @@ describe("gateway send mirroring", () => {
         to: "channel:C1",
         question: "Q?",
         options: ["A", "B"],
-        channel: "slack",
+        channel: "discord",
         idempotencyKey: "idem-poll-scope",
       },
       { connect: { scopes: ["operator.admin"] } },
@@ -701,7 +701,7 @@ describe("gateway send mirroring", () => {
         to: "channel:C1",
         question: "Q?",
         options: ["A", "B"],
-        channel: "slack",
+        channel: "discord",
         idempotencyKey: "idem-poll-empty-scope",
       },
       { connect: { scopes: [] } },
@@ -728,7 +728,7 @@ describe("gateway send mirroring", () => {
       to: "channel:C1",
       question: "Q?",
       options: ["A", "B"],
-      channel: "slack",
+      channel: "discord",
       idempotencyKey: "idem-poll-rich",
     });
 
@@ -737,14 +737,14 @@ describe("gateway send mirroring", () => {
     expect(response?.[1]).toEqual({
       runId: "idem-poll-rich",
       messageId: "poll-rich",
-      channel: "slack",
+      channel: "discord",
       channelId: "C123",
       conversationId: "conv-1",
       toJid: "jid-1",
       pollId: "poll-meta-1",
     });
     expect(response?.[2]).toBeUndefined();
-    expect(response?.[3]?.channel).toBe("slack");
+    expect(response?.[3]?.channel).toBe("discord");
   });
 
   it("auto-picks the single configured channel for poll", async () => {
@@ -762,12 +762,12 @@ describe("gateway send mirroring", () => {
       throw new Error("Expected poll missing-channel response payload");
     }
     expect(response[2]).toBeUndefined();
-    expect(response[3]).toEqual({ channel: "slack" });
+    expect(response[3]).toEqual({ channel: "discord" });
   });
 
   it("returns invalid request when poll channel selection is ambiguous", async () => {
     mocks.resolveMessageChannelSelection.mockRejectedValueOnce(
-      new Error("Channel is required when multiple channels are configured: telegram, slack"),
+      new Error("Channel is required when multiple channels are configured: telegram, discord"),
     );
 
     const { respond } = await runPoll({
@@ -789,7 +789,7 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hi",
-      channel: "slack",
+      channel: "discord",
       idempotencyKey: "idem-1",
       sessionKey: "agent:main:main",
     });
@@ -804,7 +804,7 @@ describe("gateway send mirroring", () => {
       to: "channel:C1",
       message: "caption",
       mediaUrl: "https://example.com/files/report.pdf?sig=1",
-      channel: "slack",
+      channel: "discord",
       idempotencyKey: "idem-2",
       sessionKey: "agent:main:main",
     });
@@ -823,7 +823,7 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "Here\nMEDIA:https://example.com/image.png",
-      channel: "slack",
+      channel: "discord",
       idempotencyKey: "idem-3",
       sessionKey: "agent:main:main",
     });
@@ -839,12 +839,12 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hi",
-      channel: "slack",
+      channel: "discord",
       idempotencyKey: "idem-lower",
-      sessionKey: "agent:main:slack:channel:C123",
+      sessionKey: "agent:main:discord:channel:C123",
     });
 
-    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:slack:channel:c123");
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:discord:channel:c123");
   });
 
   it("derives a target session key when none is provided", async () => {
@@ -853,11 +853,11 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hello",
-      channel: "slack",
+      channel: "discord",
       idempotencyKey: "idem-4",
     });
 
-    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:slack:channel:resolved");
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:discord:channel:resolved");
     expect(deliveryCall()?.mirror?.agentId).toBe("main");
   });
 
@@ -867,14 +867,14 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hello",
-      channel: "slack",
+      channel: "discord",
       agentId: "work",
       idempotencyKey: "idem-agent-explicit",
     });
 
     expect(deliveryCall()?.session?.agentId).toBe("work");
-    expect(deliveryCall()?.session?.key).toBe("agent:work:slack:channel:resolved");
-    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:work:slack:channel:resolved");
+    expect(deliveryCall()?.session?.key).toBe("agent:work:discord:channel:resolved");
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:work:discord:channel:resolved");
     expect(deliveryCall()?.mirror?.agentId).toBe("work");
   });
 
@@ -884,51 +884,51 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hello",
-      channel: "slack",
-      sessionKey: "agent:work:slack:channel:c1",
+      channel: "discord",
+      sessionKey: "agent:work:discord:channel:c1",
       idempotencyKey: "idem-session-agent",
     });
 
     expectDeliverySessionMirror({
       agentId: "work",
-      sessionKey: "agent:work:slack:channel:c1",
+      sessionKey: "agent:work:discord:channel:c1",
     });
   });
 
   it("still resolves outbound routing metadata when a sessionKey is provided", async () => {
-    mockDeliverySuccess("m-matrix-session-route");
+    mockDeliverySuccess("m-telegram-session-route");
     mocks.resolveOutboundSessionRoute.mockResolvedValueOnce({
-      sessionKey: "agent:main:matrix:channel:!dm:example.org",
-      baseSessionKey: "agent:main:matrix:channel:!dm:example.org",
+      sessionKey: "agent:main:telegram:channel:!dm:example.org",
+      baseSessionKey: "agent:main:telegram:channel:!dm:example.org",
       peer: { kind: "channel", id: "!dm:example.org" },
       chatType: "direct",
-      from: "matrix:@alice:example.org",
+      from: "telegram:@alice:example.org",
       to: "room:!dm:example.org",
     });
 
     await runSend({
       to: "@alice:example.org",
       message: "hello",
-      channel: "matrix",
-      sessionKey: "agent:main:matrix:channel:!dm:example.org",
-      idempotencyKey: "idem-matrix-session-route",
+      channel: "telegram",
+      sessionKey: "agent:main:telegram:channel:!dm:example.org",
+      idempotencyKey: "idem-telegram-session-route",
     });
 
-    expect(outboundRouteCall()?.channel).toBe("matrix");
+    expect(outboundRouteCall()?.channel).toBe("telegram");
     expect(outboundRouteCall()?.target).toBe("resolved");
     expect(outboundRouteCall()?.currentSessionKey).toBe(
-      "agent:main:matrix:channel:!dm:example.org",
+      "agent:main:telegram:channel:!dm:example.org",
     );
     expect(ensureSessionEntryCall()?.route?.sessionKey).toBe(
-      "agent:main:matrix:channel:!dm:example.org",
+      "agent:main:telegram:channel:!dm:example.org",
     );
     expect(ensureSessionEntryCall()?.route?.baseSessionKey).toBe(
-      "agent:main:matrix:channel:!dm:example.org",
+      "agent:main:telegram:channel:!dm:example.org",
     );
     expect(ensureSessionEntryCall()?.route?.to).toBe("room:!dm:example.org");
     expectDeliverySessionMirror({
       agentId: "main",
-      sessionKey: "agent:main:matrix:channel:!dm:example.org",
+      sessionKey: "agent:main:telegram:channel:!dm:example.org",
     });
   });
 
@@ -939,15 +939,15 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hello",
-      channel: "slack",
-      sessionKey: "agent:work:slack:channel:c1",
+      channel: "discord",
+      sessionKey: "agent:work:discord:channel:c1",
       idempotencyKey: "idem-session-fallback",
     });
 
     expect(mocks.ensureOutboundSessionEntry).not.toHaveBeenCalled();
     expect(deliveryCall()?.session?.agentId).toBe("work");
-    expect(deliveryCall()?.session?.key).toBe("agent:work:slack:channel:c1");
-    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:work:slack:channel:c1");
+    expect(deliveryCall()?.session?.key).toBe("agent:work:discord:channel:c1");
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:work:discord:channel:c1");
     expect(deliveryCall()?.mirror?.agentId).toBe("work");
   });
 
@@ -957,15 +957,15 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hello",
-      channel: "slack",
+      channel: "discord",
       agentId: "work",
-      sessionKey: "agent:main:slack:channel:c1",
+      sessionKey: "agent:main:discord:channel:c1",
       idempotencyKey: "idem-agent-precedence",
     });
 
     expect(deliveryCall()?.session?.agentId).toBe("work");
-    expect(deliveryCall()?.session?.key).toBe("agent:main:slack:channel:c1");
-    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:slack:channel:c1");
+    expect(deliveryCall()?.session?.key).toBe("agent:main:discord:channel:c1");
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:discord:channel:c1");
     expect(deliveryCall()?.mirror?.agentId).toBe("work");
   });
 
@@ -975,15 +975,15 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hello",
-      channel: "slack",
+      channel: "discord",
       agentId: "   ",
-      sessionKey: "agent:work:slack:channel:c1",
+      sessionKey: "agent:work:discord:channel:c1",
       idempotencyKey: "idem-agent-blank",
     });
 
     expectDeliverySessionMirror({
       agentId: "work",
-      sessionKey: "agent:work:slack:channel:c1",
+      sessionKey: "agent:work:discord:channel:c1",
     });
   });
 
@@ -993,7 +993,7 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "hi",
-      channel: "slack",
+      channel: "discord",
       threadId: "1710000000.9999",
       idempotencyKey: "idem-thread",
     });
@@ -1007,7 +1007,7 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "<b>report</b>",
-      channel: "slack",
+      channel: "discord",
       forceDocument: true,
       silent: true,
       parseMode: "HTML",
@@ -1020,14 +1020,14 @@ describe("gateway send mirroring", () => {
     expect(options?.formatting).toEqual({ parseMode: "HTML" });
   });
 
-  it("updates mirror session keys and delivery thread ids when Slack routing derives a thread", async () => {
+  it("keeps provided Discord session keys when routing derives a thread", async () => {
     mockDeliverySuccess("m-thread-derived");
     mocks.resolveOutboundSessionRoute.mockResolvedValueOnce({
-      sessionKey: "agent:main:slack:channel:c1:thread:1710000000.9999",
-      baseSessionKey: "agent:main:slack:channel:c1",
+      sessionKey: "agent:main:discord:channel:c1:thread:1710000000.9999",
+      baseSessionKey: "agent:main:discord:channel:c1",
       peer: { kind: "channel", id: "c1" },
       chatType: "channel",
-      from: "slack:channel:C1",
+      from: "discord:channel:C1",
       to: "channel:C1",
       threadId: "1710000000.9999",
     });
@@ -1035,30 +1035,26 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "threaded",
-      channel: "slack",
-      sessionKey: "agent:main:slack:channel:c1",
+      channel: "discord",
+      sessionKey: "agent:main:discord:channel:c1",
       idempotencyKey: "idem-thread-derived",
     });
 
-    expect(ensureSessionEntryCall()?.route?.sessionKey).toBe(
-      "agent:main:slack:channel:c1:thread:1710000000.9999",
-    );
-    expect(ensureSessionEntryCall()?.route?.baseSessionKey).toBe("agent:main:slack:channel:c1");
+    expect(ensureSessionEntryCall()?.route?.sessionKey).toBe("agent:main:discord:channel:c1");
+    expect(ensureSessionEntryCall()?.route?.baseSessionKey).toBe("agent:main:discord:channel:c1");
     expect(ensureSessionEntryCall()?.route?.threadId).toBe("1710000000.9999");
     expect(deliveryCall()?.threadId).toBe("1710000000.9999");
-    expect(deliveryCall()?.mirror?.sessionKey).toBe(
-      "agent:main:slack:channel:c1:thread:1710000000.9999",
-    );
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:discord:channel:c1");
   });
 
-  it("preserves the provided session when Slack derives a thread for a different base session", async () => {
+  it("preserves the provided session when Discord derives a thread for a different base session", async () => {
     mockDeliverySuccess("m-thread-mismatch");
     mocks.resolveOutboundSessionRoute.mockResolvedValueOnce({
-      sessionKey: "agent:main:slack:channel:c2:thread:1710000000.9999",
-      baseSessionKey: "agent:main:slack:channel:c2",
+      sessionKey: "agent:main:discord:channel:c2:thread:1710000000.9999",
+      baseSessionKey: "agent:main:discord:channel:c2",
       peer: { kind: "channel", id: "c2" },
       chatType: "channel",
-      from: "slack:channel:C2",
+      from: "discord:channel:C2",
       to: "channel:C2",
       threadId: "1710000000.9999",
     });
@@ -1066,25 +1062,25 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C2",
       message: "threaded",
-      channel: "slack",
-      sessionKey: "agent:main:slack:channel:c1",
+      channel: "discord",
+      sessionKey: "agent:main:discord:channel:c1",
       threadId: "1710000000.9999",
       idempotencyKey: "idem-thread-mismatch",
     });
 
     expect(deliveryCall()?.threadId).toBe("1710000000.9999");
-    expect(deliveryCall()?.session?.key).toBe("agent:main:slack:channel:c1");
-    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:slack:channel:c1");
+    expect(deliveryCall()?.session?.key).toBe("agent:main:discord:channel:c1");
+    expect(deliveryCall()?.mirror?.sessionKey).toBe("agent:main:discord:channel:c1");
   });
 
-  it("preserves derived thread delivery for existing thread-scoped Slack session keys", async () => {
+  it("preserves derived thread delivery for existing thread-scoped Discord session keys", async () => {
     mockDeliverySuccess("m-thread-session");
     mocks.resolveOutboundSessionRoute.mockResolvedValueOnce({
-      sessionKey: "agent:main:slack:channel:c1:thread:1710000000.9999",
-      baseSessionKey: "agent:main:slack:channel:c1",
+      sessionKey: "agent:main:discord:channel:c1:thread:1710000000.9999",
+      baseSessionKey: "agent:main:discord:channel:c1",
       peer: { kind: "channel", id: "c1" },
       chatType: "channel",
-      from: "slack:channel:C1",
+      from: "discord:channel:C1",
       to: "channel:C1",
       threadId: "1710000000.9999",
     });
@@ -1092,16 +1088,18 @@ describe("gateway send mirroring", () => {
     await runSend({
       to: "channel:C1",
       message: "threaded",
-      channel: "slack",
-      sessionKey: "agent:main:slack:channel:c1:thread:1710000000.9999",
+      channel: "discord",
+      sessionKey: "agent:main:discord:channel:c1:thread:1710000000.9999",
       idempotencyKey: "idem-thread-session",
     });
 
     expect(deliveryCall()?.threadId).toBe("1710000000.9999");
-    expect(deliveryCall()?.session?.key).toBe("agent:main:slack:channel:c1:thread:1710000000.9999");
+    expect(deliveryCall()?.session?.key).toBe(
+      "agent:main:discord:channel:c1:thread:1710000000.9999",
+    );
   });
 
-  it("preserves numeric derived thread ids for non-Slack channels", async () => {
+  it("preserves numeric derived thread ids for non-Discord channels", async () => {
     mockDeliverySuccess("m-topic-derived");
     mocks.resolveOutboundSessionRoute.mockResolvedValueOnce({
       sessionKey: "agent:main:telegram:group:-100123:thread:77",
@@ -1132,7 +1130,7 @@ describe("gateway send mirroring", () => {
     const { respond } = await runSend({
       to: "channel:C1",
       message: "hi",
-      channel: "slack",
+      channel: "discord",
       idempotencyKey: "idem-target-fail",
     });
 
@@ -1141,13 +1139,13 @@ describe("gateway send mirroring", () => {
     expect(response?.[0]).toBe(false);
     expect(response?.[1]).toBeUndefined();
     expect(response?.[2]?.message).toContain("target not found");
-    expect(response?.[3]?.channel).toBe("slack");
+    expect(response?.[3]?.channel).toBe("discord");
   });
 
   it("recovers cold plugin resolution for threaded sends", async () => {
     mocks.resolveOutboundTarget.mockReturnValue({ ok: true, to: "123" });
     mocks.deliverOutboundPayloads.mockResolvedValue([
-      { messageId: "m-threaded", channel: "slack" },
+      { messageId: "m-threaded", channel: "discord" },
     ]);
     const outboundPlugin = { outbound: { sendPoll: mocks.sendPoll } };
     mocks.getChannelPlugin
@@ -1158,57 +1156,57 @@ describe("gateway send mirroring", () => {
     const { respond } = await runSend({
       to: "123",
       message: "threaded completion",
-      channel: "slack",
+      channel: "discord",
       threadId: "1710000000.9999",
       idempotencyKey: "idem-cold-thread",
     });
 
-    expect(deliveryCall()?.channel).toBe("slack");
+    expect(deliveryCall()?.channel).toBe("discord");
     expect(deliveryCall()?.to).toBe("123");
     expect(deliveryCall()?.threadId).toBe("1710000000.9999");
     const response = firstRespondCall(respond);
     expect(response?.[0]).toBe(true);
     expect(response?.[1]?.messageId).toBe("m-threaded");
     expect(response?.[2]).toBeUndefined();
-    expect(response?.[3]?.channel).toBe("slack");
+    expect(response?.[3]?.channel).toBe("discord");
   });
 
   it("forwards replyToId on gateway sends", async () => {
     mocks.resolveOutboundTarget.mockReturnValue({ ok: true, to: "123" });
-    mocks.deliverOutboundPayloads.mockResolvedValue([{ messageId: "m-reply", channel: "slack" }]);
+    mocks.deliverOutboundPayloads.mockResolvedValue([{ messageId: "m-reply", channel: "discord" }]);
     const outboundPlugin = { outbound: { sendPoll: mocks.sendPoll } };
     mocks.getChannelPlugin.mockReturnValue(outboundPlugin);
 
     const { respond } = await runSend({
       to: "123",
       message: "threaded completion",
-      channel: "slack",
+      channel: "discord",
       replyToId: "wamid.42",
       idempotencyKey: "idem-reply-to",
     });
 
-    expect(deliveryCall()?.channel).toBe("slack");
+    expect(deliveryCall()?.channel).toBe("discord");
     expect(deliveryCall()?.to).toBe("123");
     expect(deliveryCall()?.replyToId).toBe("wamid.42");
-    expect(outboundRouteCall()?.channel).toBe("slack");
+    expect(outboundRouteCall()?.channel).toBe("discord");
     expect(outboundRouteCall()?.target).toBe("123");
     expect(outboundRouteCall()?.replyToId).toBe("wamid.42");
     const response = firstRespondCall(respond);
     expect(response?.[0]).toBe(true);
     expect(response?.[1]?.messageId).toBe("m-reply");
     expect(response?.[2]).toBeUndefined();
-    expect(response?.[3]?.channel).toBe("slack");
+    expect(response?.[3]?.channel).toBe("discord");
   });
 
   it("dispatches message actions through the gateway for plugin-owned channels", async () => {
     const reactPlugin: ChannelPlugin = {
-      id: "whatsapp",
+      id: "telegram",
       meta: {
-        id: "whatsapp",
-        label: "WhatsApp",
-        selectionLabel: "WhatsApp",
-        docsPath: "/channels/whatsapp",
-        blurb: "WhatsApp action dispatch test plugin.",
+        id: "telegram",
+        label: "Telegram",
+        selectionLabel: "Telegram",
+        docsPath: "/channels/telegram",
+        blurb: "Telegram action dispatch test plugin.",
       },
       capabilities: { chatTypes: ["direct"], reactions: true },
       config: {
@@ -1236,7 +1234,7 @@ describe("gateway send mirroring", () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
-          pluginId: "whatsapp",
+          pluginId: "telegram",
           source: "test",
           plugin: reactPlugin,
         },
@@ -1257,7 +1255,7 @@ describe("gateway send mirroring", () => {
     );
 
     const { respond } = await runMessageActionRequest({
-      channel: "whatsapp",
+      channel: "telegram",
       action: "react",
       params: {
         chatJid: "+15551234567",
@@ -1268,7 +1266,7 @@ describe("gateway send mirroring", () => {
       inboundTurnKind: "room_event",
       toolContext: {
         currentGraphChannelId: "graph:team/chan",
-        currentChannelProvider: "whatsapp",
+        currentChannelProvider: "telegram",
         currentMessageId: "wamid.1",
         replyToMode: "first",
         hasRepliedRef: { value: true },
@@ -1290,7 +1288,7 @@ describe("gateway send mirroring", () => {
         skipCrossContextDecoration: true,
       },
       undefined,
-      { channel: "whatsapp" },
+      { channel: "telegram" },
     );
     expect(mocks.dispatchChannelMessageAction).toHaveBeenCalledWith(
       expect.objectContaining({ inboundEventKind: "room_event" }),

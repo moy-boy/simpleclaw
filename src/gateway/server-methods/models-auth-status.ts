@@ -10,7 +10,9 @@ import {
 import {
   ensureAuthProfileStore,
   ensureAuthProfileStoreWithoutExternalProfiles,
+  externalCliDiscoveryNone,
   externalCliDiscoveryForConfigStatus,
+  type ExternalCliAuthDiscovery,
   listProfilesForProvider,
   removeProviderAuthProfilesWithLock,
   resolvePersistedAuthProfileOwnerAgentDir,
@@ -28,6 +30,11 @@ import { PROVIDER_LABELS, resolveUsageProviderId } from "../../infra/provider-us
 import type { UsageProviderId, UsageWindow } from "../../infra/provider-usage.types.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { refreshActiveSecretsRuntimeSnapshot } from "../../secrets/runtime.js";
+import {
+  formatUnsupportedModelProviderMessage,
+  isSupportedModelProviderId,
+  shouldEnforceSupportedModelProviderIds,
+} from "../../supported-surface.js";
 import { abortChatRunsForProvider, type ChatAbortOps } from "../chat-abort.js";
 import { ErrorCodes, errorShape } from "../protocol/index.js";
 import { formatForLog } from "../ws-log.js";
@@ -173,6 +180,104 @@ function providerDisplayName(provider: string): string {
     return PROVIDER_LABELS[usageId];
   }
   return provider;
+}
+
+function shouldIncludeModelAuthProvider(cfg: OpenClawConfig, provider: string): boolean {
+  return !shouldEnforceSupportedModelProviderIds(cfg) || isSupportedModelProviderId(provider);
+}
+
+function filterProviderIdsForSupportedSurface(
+  cfg: OpenClawConfig,
+  providers: Iterable<string>,
+): string[] {
+  const out: string[] = [];
+  for (const provider of providers) {
+    const normalized = normalizeProviderId(provider);
+    if (normalized && shouldIncludeModelAuthProvider(cfg, normalized)) {
+      out.push(provider);
+    }
+  }
+  return out;
+}
+
+function resolveAuthProfileProvider(cfg: OpenClawConfig, profileId: string): string | undefined {
+  const configuredProvider = cfg.auth?.profiles?.[profileId]?.provider;
+  if (typeof configuredProvider === "string" && configuredProvider.trim()) {
+    return configuredProvider;
+  }
+  const prefix = profileId.split(":", 1)[0];
+  return prefix.trim() || undefined;
+}
+
+function filterProfileIdsForSupportedSurface(
+  cfg: OpenClawConfig,
+  profileIds: Iterable<string>,
+): string[] {
+  const out: string[] = [];
+  for (const profileId of profileIds) {
+    const provider = resolveAuthProfileProvider(cfg, profileId);
+    if (provider && shouldIncludeModelAuthProvider(cfg, provider)) {
+      out.push(profileId);
+    }
+  }
+  return out;
+}
+
+function resolveModelAuthExternalCliDiscovery(cfg: OpenClawConfig): ExternalCliAuthDiscovery {
+  const discovery = externalCliDiscoveryForConfigStatus({ cfg });
+  if (!shouldEnforceSupportedModelProviderIds(cfg) || discovery.mode !== "scoped") {
+    return discovery;
+  }
+  const providerIds = discovery.providerIds
+    ? filterProviderIdsForSupportedSurface(cfg, discovery.providerIds)
+    : [];
+  const profileIds = discovery.profileIds
+    ? filterProfileIdsForSupportedSurface(cfg, discovery.profileIds)
+    : [];
+  if (providerIds.length === 0 && profileIds.length === 0) {
+    return externalCliDiscoveryNone({ config: cfg });
+  }
+  return {
+    ...discovery,
+    providerIds,
+    profileIds,
+  };
+}
+
+function filterAuthHealthSummaryForSupportedSurface(
+  cfg: OpenClawConfig,
+  summary: AuthHealthSummary,
+): AuthHealthSummary {
+  if (!shouldEnforceSupportedModelProviderIds(cfg)) {
+    return summary;
+  }
+  const profiles = summary.profiles.filter((profile) =>
+    isSupportedModelProviderId(profile.provider),
+  );
+  const providers: AuthProviderHealth[] = [];
+  for (const provider of summary.providers) {
+    if (!isSupportedModelProviderId(provider.provider)) {
+      continue;
+    }
+    const filteredProvider: AuthProviderHealth = {
+      provider: provider.provider,
+      status: provider.status,
+      profiles: provider.profiles.filter((profile) => isSupportedModelProviderId(profile.provider)),
+    };
+    if (provider.expiresAt !== undefined) {
+      filteredProvider.expiresAt = provider.expiresAt;
+    }
+    if (provider.remainingMs !== undefined) {
+      filteredProvider.remainingMs = provider.remainingMs;
+    }
+    if (provider.effectiveProfiles !== undefined) {
+      filteredProvider.effectiveProfiles = provider.effectiveProfiles.filter((profile) =>
+        isSupportedModelProviderId(profile.provider),
+      );
+    }
+    providers.push(filteredProvider);
+  }
+  return { ...summary, profiles, providers };
 }
 
 /**
@@ -328,6 +433,9 @@ function resolveConfiguredProviders(cfg: OpenClawConfig): {
     if (envBacked.has(normalizeProviderId(id))) {
       continue;
     }
+    if (!shouldIncludeModelAuthProvider(cfg, id)) {
+      continue;
+    }
     out.add(id);
     if (mode === "oauth") {
       // Store normalized id so lookups against `AuthProviderHealth.provider`
@@ -351,6 +459,9 @@ function resolveConfiguredProviders(cfg: OpenClawConfig): {
     if (envBacked.has(normalizeProviderId(provider))) {
       continue;
     }
+    if (!shouldIncludeModelAuthProvider(cfg, provider)) {
+      continue;
+    }
     out.add(provider);
     if (mode === "oauth") {
       expectsOAuth.add(normalizeProviderId(provider));
@@ -368,6 +479,14 @@ export const modelsAuthStatusHandlers: GatewayRequestHandlers = {
     }
     try {
       const cfg = context.getRuntimeConfig();
+      if (shouldEnforceSupportedModelProviderIds(cfg) && !isSupportedModelProviderId(provider)) {
+        respond(
+          false,
+          undefined,
+          errorShape(ErrorCodes.INVALID_REQUEST, formatUnsupportedModelProviderMessage(provider)),
+        );
+        return;
+      }
       const agentDir = resolveDefaultAgentDir(cfg);
       const authProvider = resolveProviderIdForAuth(provider, { config: cfg });
       const store = ensureAuthProfileStoreWithoutExternalProfiles(agentDir);
@@ -422,14 +541,17 @@ export const modelsAuthStatusHandlers: GatewayRequestHandlers = {
       const cfg = context.getRuntimeConfig();
       const agentDir = resolveDefaultAgentDir(cfg);
       const store = ensureAuthProfileStore(agentDir, {
-        externalCli: externalCliDiscoveryForConfigStatus({ cfg }),
+        externalCli: resolveModelAuthExternalCliDiscovery(cfg),
       });
       const configured = resolveConfiguredProviders(cfg);
-      const authHealth: AuthHealthSummary = buildAuthHealthSummary({
-        store,
+      const authHealth: AuthHealthSummary = filterAuthHealthSummaryForSupportedSurface(
         cfg,
-        providers: configured.providers.length > 0 ? configured.providers : undefined,
-      });
+        buildAuthHealthSummary({
+          store,
+          cfg,
+          providers: configured.providers.length > 0 ? configured.providers : undefined,
+        }),
+      );
 
       // Usage queries only for refreshable credentials.
       const usageProviderIds = [

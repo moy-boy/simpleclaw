@@ -52,18 +52,6 @@ const providerConfig = {
     baseUrl: "https://api.openai.com/v1",
     timeoutSeconds: CROSS_OS_AGENT_TURN_TIMEOUT_SECONDS,
   },
-  anthropic: {
-    extensionId: "anthropic",
-    secretEnv: "ANTHROPIC_API_KEY",
-    authChoice: "apiKey",
-    model: "anthropic/claude-sonnet-4-6",
-  },
-  minimax: {
-    extensionId: "minimax",
-    secretEnv: "MINIMAX_API_KEY",
-    authChoice: "minimax-global-api",
-    model: "minimax/MiniMax-M2.7",
-  },
 };
 
 export function resolveProviderConfig(provider, env = process.env) {
@@ -2018,15 +2006,7 @@ async function startManualGatewayFromInstalledCli(params) {
   const gatewayLog = createWriteStream(params.logPath, { flags: "a" });
   const invocation = resolveInstalledCliInvocation(
     params.cliPath,
-    [
-      "gateway",
-      "run",
-      "--bind",
-      "loopback",
-      "--port",
-      String(params.lane.gatewayPort),
-      "--force",
-    ],
+    ["gateway", "run", "--bind", "loopback", "--port", String(params.lane.gatewayPort), "--force"],
     {
       comSpec: params.env?.ComSpec ?? params.env?.COMSPEC,
       platform: process.platform,

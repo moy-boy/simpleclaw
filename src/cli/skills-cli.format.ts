@@ -356,7 +356,7 @@ export function formatSkillInfo(
 
   if (skill.primaryEnv && skill.missing.env.includes(skill.primaryEnv)) {
     lines.push("");
-    lines.push(theme.heading("API key setup:"));
+    lines.push(theme.heading("Credential setup:"));
     if (safeHomepage) {
       lines.push(`  Get your key: ${safeHomepage}`);
     }

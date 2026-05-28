@@ -228,10 +228,19 @@ describe("generate-npm-shrinkwrap", () => {
   it("targets changed publishable plugin shrinkwraps", () => {
     expect(
       shrinkwrapPackageDirsForChangedPaths([
-        "extensions/acpx/package.json",
-        "extensions/acpx/npm-shrinkwrap.json",
+        "extensions/discord/package.json",
+        "extensions/discord/npm-shrinkwrap.json",
       ]).map(repoRelativePath),
-    ).toEqual(["extensions/acpx"]);
+    ).toEqual(["extensions/discord"]);
+  });
+
+  it("ignores unsupported plugin shrinkwrap changes", () => {
+    expect(
+      shrinkwrapPackageDirsForChangedPaths([
+        "extensions/slack/package.json",
+        "extensions/slack/npm-shrinkwrap.json",
+      ]).map(repoRelativePath),
+    ).toEqual([]);
   });
 
   it("falls back to every shrinkwrap when lockfile ownership is ambiguous", () => {
@@ -240,17 +249,19 @@ describe("generate-npm-shrinkwrap", () => {
     );
 
     expect(packageDirs).toContain("");
-    expect(packageDirs).toContain("extensions/acpx");
+    expect(packageDirs).toContain("extensions/codex");
+    expect(packageDirs).toContain("extensions/discord");
+    expect(packageDirs).not.toContain("extensions/acpx");
   });
 
   it("falls back to every shrinkwrap when mixed lockfile changes do not map to packages", () => {
     const packageDirs = shrinkwrapPackageDirsForChangedPaths([
-      "extensions/acpx/package.json",
+      "extensions/discord/package.json",
       "pnpm-lock.yaml",
     ]).map(repoRelativePath);
 
     expect(packageDirs).toContain("");
-    expect(packageDirs).toContain("extensions/acpx");
+    expect(packageDirs).toContain("extensions/discord");
     expect(packageDirs.length).toBeGreaterThan(1);
   });
 });

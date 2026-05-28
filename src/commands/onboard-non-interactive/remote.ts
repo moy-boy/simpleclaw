@@ -7,6 +7,7 @@ import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { applySkipBootstrapConfig } from "../onboard-config.js";
 import { applyWizardMetadata } from "../onboard-helpers.js";
 import type { OnboardOptions } from "../onboard-types.js";
+import { applySupportedPluginDefaults } from "../supported-surface.js";
 
 export async function runNonInteractiveRemoteSetup(params: {
   opts: OnboardOptions;
@@ -26,7 +27,7 @@ export async function runNonInteractiveRemoteSetup(params: {
     return;
   }
 
-  let nextConfig: OpenClawConfig = {
+  let nextConfig: OpenClawConfig = applySupportedPluginDefaults({
     ...baseConfig,
     gateway: {
       ...baseConfig.gateway,
@@ -36,7 +37,7 @@ export async function runNonInteractiveRemoteSetup(params: {
         token: normalizeOptionalString(opts.remoteToken),
       },
     },
-  };
+  });
   if (opts.skipBootstrap) {
     nextConfig = applySkipBootstrapConfig(nextConfig);
   }

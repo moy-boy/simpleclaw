@@ -67,11 +67,11 @@ describe("scripts/test-docker-all scheduler", () => {
     ).toBe(false);
   });
 
-  it("can co-schedule the split installer provider lanes", () => {
+  it("can co-schedule the OpenAI installer lane", () => {
     expect(
       canStartSchedulerLane(
         {
-          name: "install-e2e-anthropic",
+          name: "install-e2e-openai",
           resources: ["npm", "service"],
           weight: 3,
         },

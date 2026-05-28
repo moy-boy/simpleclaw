@@ -40,13 +40,13 @@ import {
   runInstalledWorkspaceBootstrapSmoke,
   WORKSPACE_TEMPLATE_PACK_PATHS,
 } from "./lib/workspace-bootstrap-smoke.mjs";
+import { resolveNpmRunner } from "./npm-runner.mjs";
 import {
   collectInstalledPackageErrors,
   normalizeInstalledBinaryVersion,
   resolveInstalledBinaryCommandInvocation,
   resolveInstalledBinaryPath,
 } from "./openclaw-npm-postpublish-verify.ts";
-import { resolveNpmRunner } from "./npm-runner.mjs";
 import { listStaticExtensionAssetOutputs } from "./runtime-postbuild.mjs";
 import { sparkleBuildFloorsFromShortVersion, type SparkleBuildFloors } from "./sparkle-build.ts";
 import { buildCmdExeCommandLine } from "./windows-cmd-helpers.mjs";
@@ -58,12 +58,13 @@ type PackFile = { path: string };
 type PackResult = { files?: PackFile[]; filename?: string; unpackedSize?: number };
 
 const rootPackageExcludedExtensionDirs = collectRootPackageExcludedExtensionDirs();
+const requiredPluginSdkDistArtifacts = listPluginSdkDistArtifacts();
 const requiredPathGroups = [
   "npm-shrinkwrap.json",
   PACKAGE_DIST_INVENTORY_RELATIVE_PATH,
   ["dist/index.js", "dist/index.mjs"],
   ["dist/entry.js", "dist/entry.mjs"],
-  ...listPluginSdkDistArtifacts(),
+  ...requiredPluginSdkDistArtifacts,
   ...listBundledPluginPackArtifacts(),
   ...listStaticExtensionAssetOutputs().filter((relativePath) => {
     const match = /^dist\/extensions\/([^/]+)\//u.exec(relativePath);
@@ -297,11 +298,14 @@ function runPackDry(): PackResult[] {
 }
 
 function runPack(packDestination: string): PackResult[] {
-  const raw = execNpm(["pack", "--json", "--ignore-scripts", "--pack-destination", packDestination], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    maxBuffer: 1024 * 1024 * 100,
-  });
+  const raw = execNpm(
+    ["pack", "--json", "--ignore-scripts", "--pack-destination", packDestination],
+    {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 1024 * 1024 * 100,
+    },
+  );
   return JSON.parse(raw) as PackResult[];
 }
 
@@ -695,19 +699,24 @@ export function collectMissingPackPaths(paths: Iterable<string>): string[] {
 }
 
 export function resolveMissingPackBuildHint(missing: readonly string[]): string | null {
+  const needsPluginSdkBuild = missing.some((path) => path.startsWith("dist/plugin-sdk/"));
   const needsControlUiBuild = missing.includes("dist/control-ui/index.html");
   const needsRuntimeBuild = missing.some(
     (path) =>
       path !== "dist/control-ui/index.html" &&
+      !path.startsWith("dist/plugin-sdk/") &&
       (path === "dist/build-info.json" || path.startsWith("dist/")),
   );
 
-  if (!needsControlUiBuild && !needsRuntimeBuild) {
+  if (!needsPluginSdkBuild && !needsControlUiBuild && !needsRuntimeBuild) {
     return null;
   }
 
+  if (needsPluginSdkBuild) {
+    return "release-check: plugin SDK package artifacts are missing. Run `pnpm build:ci-artifacts` before `pnpm release:check`.";
+  }
   if (needsControlUiBuild && needsRuntimeBuild) {
-    return "release-check: build and Control UI artifacts are missing. Run `pnpm build && pnpm ui:build` before `pnpm release:check`.";
+    return "release-check: build and Control UI artifacts are missing. Run `pnpm build` before `pnpm release:check`.";
   }
   if (needsControlUiBuild) {
     return "release-check: Control UI artifacts are missing. Run `pnpm ui:build` before `pnpm release:check`.";

@@ -1181,8 +1181,6 @@ jobs:
           - check_name: check-additional-boundaries-bcd
             group: boundaries
             boundary_shard: 2/4,3/4,4/4
-          - check_name: check-additional-extension-channels
-            group: extension-channels
           - check_name: check-additional-extension-bundled
             group: extension-bundled
           - check_name: check-additional-extension-package-boundary
@@ -1309,9 +1307,6 @@ jobs:
           case "$ADDITIONAL_CHECK_GROUP" in
             boundaries)
               node scripts/run-additional-boundary-checks.mjs
-              ;;
-            extension-channels)
-              run_check "lint:extensions:channels" pnpm run lint:extensions:channels
               ;;
             extension-bundled)
               run_check "lint:extensions:bundled" pnpm run lint:extensions:bundled

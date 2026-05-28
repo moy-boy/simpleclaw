@@ -6,13 +6,9 @@ on:
       scenario_id:
         description: Mantis scenario id to run
         required: true
-        default: discord-status-reactions-tool-only
+        default: telegram-desktop-proof
         type: choice
         options:
-          - discord-status-reactions-tool-only
-          - discord-thread-reply-filepath-attachment
-          - slack-desktop-smoke
-          - telegram-live
           - telegram-desktop-proof
       baseline_ref:
         description: Optional baseline ref for before/after scenarios
@@ -54,56 +50,6 @@ jobs:
           set -euo pipefail
 
           case "$SCENARIO_ID" in
-            discord-status-reactions-tool-only)
-              args=(
-                workflow run mantis-discord-status-reactions.yml
-                --repo "$GITHUB_REPOSITORY"
-                --ref main
-                -f "baseline_ref=${BASELINE_REF}"
-                -f "candidate_ref=${CANDIDATE_REF}"
-              )
-              if [[ -n "${PR_NUMBER:-}" ]]; then
-                args+=(-f "pr_number=${PR_NUMBER}")
-              fi
-              gh "${args[@]}"
-              ;;
-            discord-thread-reply-filepath-attachment)
-              args=(
-                workflow run mantis-discord-thread-attachment.yml
-                --repo "$GITHUB_REPOSITORY"
-                --ref main
-                -f "baseline_ref=${BASELINE_REF:-synthetic-reverted-thread-filepath-fix}"
-                -f "candidate_ref=${CANDIDATE_REF}"
-              )
-              if [[ -n "${PR_NUMBER:-}" ]]; then
-                args+=(-f "pr_number=${PR_NUMBER}")
-              fi
-              gh "${args[@]}"
-              ;;
-            slack-desktop-smoke)
-              args=(
-                workflow run mantis-slack-desktop-smoke.yml
-                --repo "$GITHUB_REPOSITORY"
-                --ref main
-                -f "candidate_ref=${CANDIDATE_REF}"
-              )
-              if [[ -n "${PR_NUMBER:-}" ]]; then
-                args+=(-f "pr_number=${PR_NUMBER}")
-              fi
-              gh "${args[@]}"
-              ;;
-            telegram-live)
-              args=(
-                workflow run mantis-telegram-live.yml
-                --repo "$GITHUB_REPOSITORY"
-                --ref main
-                -f "candidate_ref=${CANDIDATE_REF}"
-              )
-              if [[ -n "${PR_NUMBER:-}" ]]; then
-                args+=(-f "pr_number=${PR_NUMBER}")
-              fi
-              gh "${args[@]}"
-              ;;
             telegram-desktop-proof)
               baseline_ref="$BASELINE_REF"
               if [[ -z "$baseline_ref" || "$baseline_ref" == "0bf06e953fdda290799fc9fb9244a8f67fdae593" ]]; then

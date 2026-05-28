@@ -9,6 +9,7 @@ import { defaultRuntime } from "../runtime.js";
 import { createLazyImportLoader } from "../shared/lazy-promise.js";
 import { shortenHomePath } from "../utils.js";
 import { safeParseWithSchema } from "../utils/zod-parse.js";
+import { applySupportedPluginDefaults } from "./supported-surface.js";
 
 const JsonRecordSchema = z.record(z.string(), z.unknown());
 
@@ -147,7 +148,7 @@ export async function setupCommand(
   const workspace =
     desiredWorkspace ?? defaults.workspace ?? (await resolveDefaultAgentWorkspaceDir(deps));
 
-  const next: OpenClawConfig = {
+  const next: OpenClawConfig = applySupportedPluginDefaults({
     ...cfg,
     agents: {
       ...cfg.agents,
@@ -160,12 +161,14 @@ export async function setupCommand(
       ...cfg.gateway,
       mode: cfg.gateway?.mode ?? "local",
     },
-  };
+  });
+  const pluginsChanged = next.plugins !== cfg.plugins;
 
   if (
     !existingRaw.exists ||
     defaults.workspace !== workspace ||
-    cfg.gateway?.mode !== next.gateway?.mode
+    cfg.gateway?.mode !== next.gateway?.mode ||
+    pluginsChanged
   ) {
     const replaceConfig =
       deps.replaceConfigFile ?? ((params) => writeDefaultConfigFile(params.nextConfig));
@@ -183,6 +186,9 @@ export async function setupCommand(
       }
       if (cfg.gateway?.mode !== next.gateway?.mode) {
         updates.push("set gateway.mode");
+      }
+      if (pluginsChanged) {
+        updates.push("set plugin allowlist");
       }
       const suffix = updates.length > 0 ? `(${updates.join(", ")})` : undefined;
       await (deps.logConfigUpdated ?? logDefaultConfigUpdated)(runtime, {

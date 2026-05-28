@@ -28,6 +28,11 @@ import {
 } from "../../shared/string-coerce.js";
 import { theme } from "../../terminal/theme.js";
 import { resolveInstallableChannelPlugin } from "../channel-setup/channel-plugin-resolution.js";
+import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+} from "../supported-surface.js";
 import { formatChannelAccountLabel, requireValidConfig } from "./shared.js";
 
 export type ChannelsCapabilitiesOptions = {
@@ -229,6 +234,17 @@ export async function channelsCapabilitiesCommand(
   const timeoutMs = normalizeTimeout(opts.timeout, 10_000);
   const rawChannel = normalizeLowercaseStringOrEmpty(opts.channel);
   const rawTarget = normalizeOptionalString(opts.target) ?? "";
+  const enforceSupportedChannels = shouldEnforceSupportedChannelIds(cfg);
+  if (
+    enforceSupportedChannels &&
+    rawChannel &&
+    rawChannel !== "all" &&
+    !isSupportedChannelId(rawChannel)
+  ) {
+    runtime.error(danger(formatUnsupportedChannelMessage(rawChannel)));
+    runtime.exit(1);
+    return;
+  }
 
   if (opts.account && (!rawChannel || rawChannel === "all")) {
     runtime.error(
@@ -251,7 +267,7 @@ export async function channelsCapabilitiesCommand(
 
   const plugins = listReadOnlyChannelPluginsForConfig(cfg, {
     includeSetupFallbackPlugins: true,
-  });
+  }).filter((plugin) => !enforceSupportedChannels || isSupportedChannelId(plugin.id));
   const selected =
     !rawChannel || rawChannel === "all"
       ? plugins

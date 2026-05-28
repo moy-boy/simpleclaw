@@ -6,9 +6,18 @@
   "include": [
     "../../src/**/*.d.ts",
     "../../ui/**/*.d.ts",
-    "../../extensions/**/*.d.ts",
-    "../../extensions/**/*.test.ts",
-    "../../extensions/**/*.test.tsx",
+    "../../extensions/codex/**/*.d.ts",
+    "../../extensions/codex/**/*.test.ts",
+    "../../extensions/codex/**/*.test.tsx",
+    "../../extensions/discord/**/*.d.ts",
+    "../../extensions/discord/**/*.test.ts",
+    "../../extensions/discord/**/*.test.tsx",
+    "../../extensions/openai/**/*.d.ts",
+    "../../extensions/openai/**/*.test.ts",
+    "../../extensions/openai/**/*.test.tsx",
+    "../../extensions/telegram/**/*.d.ts",
+    "../../extensions/telegram/**/*.test.ts",
+    "../../extensions/telegram/**/*.test.tsx",
     "../../packages/**/*.d.ts"
   ]
 }

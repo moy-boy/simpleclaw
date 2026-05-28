@@ -61,6 +61,11 @@ import { createLazyImportLoader } from "../../shared/lazy-promise.js";
 import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { colorize, theme } from "../../terminal/theme.js";
 import { resolveUserPath, shortenHomePath } from "../../utils.js";
+import {
+  formatUnsupportedModelProviderMessage,
+  isSupportedModelProviderId,
+  shouldEnforceSupportedModelProviderIds,
+} from "../supported-surface.js";
 import { resolveProviderAuthOverview } from "./list.auth-overview.js";
 import { isRich } from "./list.format.js";
 import { type AuthProbeSummary } from "./list.probe.js";
@@ -233,6 +238,13 @@ export async function modelsStatusCommand(
   }
   const configPath = createConfigIO().configPath;
   const cfg = await loadModelsConfig({ commandName: "models status", runtime });
+  const enforceSupportedProviders = shouldEnforceSupportedModelProviderIds(cfg);
+  const probeProvider = normalizeOptionalString(opts.probeProvider);
+  if (probeProvider && enforceSupportedProviders && !isSupportedModelProviderId(probeProvider)) {
+    runtime.error(formatUnsupportedModelProviderMessage(probeProvider));
+    process.exitCode = 1;
+    return;
+  }
   const agentId = resolveKnownAgentId({ cfg, rawAgentId: opts.agent });
   const workspaceAgentId = agentId ?? resolveDefaultAgentId(cfg);
   const agentDir = agentId
@@ -399,13 +411,17 @@ export async function modelsStatusCommand(
     )
       .map((p) => normalizeOptionalString(p) ?? "")
       .filter(Boolean)
+      .filter((provider) => !enforceSupportedProviders || isSupportedModelProviderId(provider))
       .toSorted((a, b) => a.localeCompare(b));
+    const activeProviderUses = enforceSupportedProviders
+      ? providerUses.filter((usage) => isSupportedModelProviderId(usage.provider))
+      : providerUses;
     const syntheticProvidersToProbe = new Set(
       providers.map((provider) => normalizeProviderId(provider)),
     );
     const codexProvider = normalizeProviderId(OPENAI_CODEX_PROVIDER_ID);
     const codexProviderAlias = aliasMap[codexProvider] ?? codexProvider;
-    const codexRuntimeAuthUsages = providerUses.filter(
+    const codexRuntimeAuthUsages = activeProviderUses.filter(
       (usage) =>
         usage.allowCodexRuntimeFallback &&
         openAIProviderUsesCodexRuntimeByDefault({ provider: usage.provider, config: cfg }),
@@ -581,7 +597,7 @@ export async function modelsStatusCommand(
     ).toSorted((a, b) => a.provider.localeCompare(b.provider));
     const missingProvidersInUse = Array.from(
       new Set(
-        providerUses
+        activeProviderUses
           .filter(
             (usage) =>
               !hasUsableAuthForProviderInUse(usage.provider, {
@@ -635,7 +651,9 @@ export async function modelsStatusCommand(
           })?.ref,
       )
       .filter((ref): ref is { provider: string; model: string } => Boolean(ref));
-    const modelCandidates = resolvedCandidates.map((ref) => `${ref.provider}/${ref.model}`);
+    const modelCandidates = resolvedCandidates
+      .filter((ref) => !enforceSupportedProviders || isSupportedModelProviderId(ref.provider))
+      .map((ref) => `${ref.provider}/${ref.model}`);
 
     let probeSummary: AuthProbeSummary | undefined;
     if (opts.probe) {
@@ -681,12 +699,40 @@ export async function modelsStatusCommand(
         return `${entry.provider} (${count})`;
       });
 
-    const authHealth = buildAuthHealthSummary({
+    const authHealthRaw = buildAuthHealthSummary({
       store,
       cfg,
       warnAfterMs: DEFAULT_OAUTH_WARN_MS,
       runtimeCredentialsByProvider,
     });
+    const authHealth = enforceSupportedProviders
+      ? {
+          ...authHealthRaw,
+          profiles: authHealthRaw.profiles.filter((profile) =>
+            isSupportedModelProviderId(profile.provider),
+          ),
+          providers: authHealthRaw.providers
+            .filter((provider) => isSupportedModelProviderId(provider.provider))
+            .map((provider) =>
+              Object.assign(
+                {},
+                provider,
+                {
+                  profiles: provider.profiles.filter((profile) =>
+                    isSupportedModelProviderId(profile.provider),
+                  ),
+                },
+                provider.effectiveProfiles
+                  ? {
+                      effectiveProfiles: provider.effectiveProfiles.filter((profile) =>
+                        isSupportedModelProviderId(profile.provider),
+                      ),
+                    }
+                  : {},
+              ),
+            ),
+        }
+      : authHealthRaw;
     const oauthProfiles = authHealth.profiles.filter(
       (profile) => profile.type === "oauth" || profile.type === "token",
     );
@@ -725,7 +771,7 @@ export async function modelsStatusCommand(
 
     const checkStatus = (() => {
       const providersInUse = new Set<string>();
-      for (const usage of providerUses) {
+      for (const usage of activeProviderUses) {
         providersInUse.add(usage.provider);
         providersInUse.add(resolveProviderAuthHealthId(usage.provider));
         if (

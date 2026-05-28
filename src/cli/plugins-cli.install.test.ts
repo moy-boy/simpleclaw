@@ -808,55 +808,31 @@ describe("plugins cli install", () => {
 
   it("resolves exact official external plugin ids through their npm package", async () => {
     const cfg = createEmptyPluginConfig();
-    const enabledCfg = createEnabledPluginConfig("brave");
+    const enabledCfg = createEnabledPluginConfig("codex");
     loadConfig.mockReturnValue(cfg);
     findBundledPluginSourceMock.mockReturnValue(undefined);
-    installPluginFromNpmSpec.mockResolvedValue(createNpmPluginInstallResult("brave"));
+    installPluginFromNpmSpec.mockResolvedValue(createNpmPluginInstallResult("codex"));
     enablePluginInConfig.mockReturnValue({ config: enabledCfg });
     applyExclusiveSlotSelection.mockReturnValue({
       config: enabledCfg,
       warnings: [],
     });
 
-    await runPluginsCommand(["plugins", "install", "brave"]);
+    await runPluginsCommand(["plugins", "install", "codex"]);
 
     expect(findBundledPluginSourceMock).toHaveBeenCalledWith({
-      lookup: { kind: "pluginId", value: "brave" },
+      lookup: { kind: "pluginId", value: "codex" },
     });
     expect(installPluginFromClawHub).not.toHaveBeenCalled();
-    expect(npmInstallCall().spec).toBe("@openclaw/brave-plugin");
-    expect(npmInstallCall().expectedPluginId).toBe("brave");
+    expect(npmInstallCall().spec).toBe("@openclaw/codex");
+    expect(npmInstallCall().expectedPluginId).toBe("codex");
     expect(npmInstallCall().trustedSourceLinkedOfficialInstall).toBe(true);
-    const record = persistedInstallRecord("brave");
+    const record = persistedInstallRecord("codex");
     expect(record.source).toBe("npm");
-    expect(record.spec).toBe("@openclaw/brave-plugin");
-    expect(record.installPath).toBe(cliInstallPath("brave"));
+    expect(record.spec).toBe("@openclaw/codex");
+    expect(record.installPath).toBe(cliInstallPath("codex"));
     expect(record.version).toBe("1.2.3");
     expect(writeConfigFile).toHaveBeenCalledWith(enabledCfg);
-  });
-
-  it("passes third-party external catalog integrity with catalog install trust", async () => {
-    const cfg = createEmptyPluginConfig();
-    const enabledCfg = createEnabledPluginConfig("wecom-openclaw-plugin");
-    loadConfig.mockReturnValue(cfg);
-    findBundledPluginSourceMock.mockReturnValue(undefined);
-    installPluginFromNpmSpec.mockResolvedValue(
-      createNpmPluginInstallResult("wecom-openclaw-plugin"),
-    );
-    enablePluginInConfig.mockReturnValue({ config: enabledCfg });
-    applyExclusiveSlotSelection.mockReturnValue({
-      config: enabledCfg,
-      warnings: [],
-    });
-
-    await runPluginsCommand(["plugins", "install", "wecom"]);
-
-    expect(npmInstallCall().spec).toBe("@wecom/wecom-openclaw-plugin@2026.5.7");
-    expect(npmInstallCall().expectedPluginId).toBe("wecom-openclaw-plugin");
-    expect(npmInstallCall().expectedIntegrity).toBe(
-      "sha512-TCkP9as00WfEhgFWG8YL/rcmaWGIshAki2HQh83nTRccGfVBCoGjrEboTTqq3yDmK9koWTV11zi8u8A4dNtvug==",
-    );
-    expect(npmInstallCall().trustedSourceLinkedOfficialInstall).toBe(true);
   });
 
   it.each(OFFICIAL_EXTERNAL_NPM_INSTALLS_WITHOUT_INTEGRITY)(
@@ -885,29 +861,6 @@ describe("plugins cli install", () => {
       expect(npmInstallCall().expectedIntegrity).toBeUndefined();
     },
   );
-
-  it("passes third-party external catalog integrity to hook-pack fallback", async () => {
-    loadConfig.mockReturnValue(createEmptyPluginConfig());
-    findBundledPluginSourceMock.mockReturnValue(undefined);
-    installPluginFromNpmSpec.mockResolvedValue({
-      ok: false,
-      error: "package.json missing openclaw.extensions",
-      code: "missing_openclaw_extensions",
-    });
-    installHooksFromNpmSpec.mockResolvedValue({
-      ok: false,
-      error:
-        "aborted: npm package integrity drift detected for @wecom/wecom-openclaw-plugin@2026.5.7",
-    });
-
-    await expect(runPluginsCommand(["plugins", "install", "wecom"])).rejects.toThrow("__exit__:1");
-
-    expect(npmInstallCall().trustedSourceLinkedOfficialInstall).toBe(true);
-    expect(hookNpmInstallCall().spec).toBe("@wecom/wecom-openclaw-plugin@2026.5.7");
-    expect(hookNpmInstallCall().expectedIntegrity).toBe(
-      "sha512-TCkP9as00WfEhgFWG8YL/rcmaWGIshAki2HQh83nTRccGfVBCoGjrEboTTqq3yDmK9koWTV11zi8u8A4dNtvug==",
-    );
-  });
 
   it("installs ordinary bare plugin specs through npm without ClawHub lookup", async () => {
     const cfg = createEmptyPluginConfig();
@@ -1072,12 +1025,10 @@ describe("plugins cli install", () => {
 
   it("marks catalog npm package installs with alternate selectors as trusted", async () => {
     const cfg = createEmptyPluginConfig();
-    const enabledCfg = createEnabledPluginConfig("wecom-openclaw-plugin");
+    const enabledCfg = createEnabledPluginConfig("codex");
 
     loadConfig.mockReturnValue(cfg);
-    installPluginFromNpmSpec.mockResolvedValue(
-      createNpmPluginInstallResult("wecom-openclaw-plugin"),
-    );
+    installPluginFromNpmSpec.mockResolvedValue(createNpmPluginInstallResult("codex"));
     enablePluginInConfig.mockReturnValue({ config: enabledCfg });
     recordPluginInstall.mockReturnValue(enabledCfg);
     applyExclusiveSlotSelection.mockReturnValue({
@@ -1085,12 +1036,12 @@ describe("plugins cli install", () => {
       warnings: [],
     });
 
-    await runPluginsCommand(["plugins", "install", "@wecom/wecom-openclaw-plugin@latest"]);
+    await runPluginsCommand(["plugins", "install", "@openclaw/codex@latest"]);
 
     // Alternate selectors stay trusted by catalog package name, but must not
     // inherit catalog integrity unless the install spec matches exactly.
-    expect(npmInstallCall().spec).toBe("@wecom/wecom-openclaw-plugin@latest");
-    expect(npmInstallCall().expectedPluginId).toBe("wecom-openclaw-plugin");
+    expect(npmInstallCall().spec).toBe("@openclaw/codex@latest");
+    expect(npmInstallCall().expectedPluginId).toBe("codex");
     expect(npmInstallCall().trustedSourceLinkedOfficialInstall).toBe(true);
     expect(npmInstallCall().expectedIntegrity).toBeUndefined();
     expect(installPluginFromClawHub).not.toHaveBeenCalled();

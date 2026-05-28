@@ -465,6 +465,7 @@ describe("runConfigureWizard", () => {
     const setupChannelsOptions = requireRecord(setupChannelsCall?.[3], "setupChannels options");
     expect(setupChannelsOptions.deferStatusUntilSelection).toBe(true);
     expect(setupChannelsOptions.skipStatusNote).toBe(true);
+    expect(setupChannelsOptions.channelIds).toEqual(["telegram", "discord"]);
   });
 
   it("still supports keyless web search providers through the shared setup flow", async () => {

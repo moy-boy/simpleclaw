@@ -24,17 +24,17 @@ const subCliCommandCatalog = defineCommandDescriptorCatalog([
   },
   {
     name: "models",
-    description: "List, scan, and set model providers",
+    description: "List and set OpenAI subscription-backed models",
     hasSubcommands: true,
   },
   {
     name: "infer",
-    description: "Run provider-backed model, media, search, and embedding commands",
+    description: "Run OpenAI-backed model, media, search, and embedding commands",
     hasSubcommands: true,
   },
   {
     name: "capability",
-    description: "Run provider capability commands (fallback alias: infer)",
+    description: "Run inference capability commands (fallback alias: infer)",
     hasSubcommands: true,
   },
   {

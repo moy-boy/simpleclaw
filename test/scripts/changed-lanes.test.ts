@@ -579,7 +579,6 @@ describe("scripts/changed-lanes", () => {
         "-n",
         "scripts/lib/live-docker-auth.sh",
         "scripts/test-live-acp-bind-docker.sh",
-        "scripts/test-live-cli-backend-docker.sh",
         "scripts/test-live-codex-harness-docker.sh",
         "scripts/test-live-gateway-models-docker.sh",
         "scripts/test-live-models-docker.sh",
@@ -614,8 +613,8 @@ describe("scripts/changed-lanes", () => {
         name: "fixture",
         scripts: {
           "test:docker:all": "node scripts/test-docker-all.mjs",
-          "test:docker:live-acp-bind:droid":
-            "OPENCLAW_LIVE_ACP_BIND_AGENT=droid bash scripts/test-live-acp-bind-docker.sh",
+          "test:docker:live-acp-bind:codex":
+            "OPENCLAW_LIVE_ACP_BIND_AGENT=codex bash scripts/test-live-acp-bind-docker.sh",
         },
         dependencies: {
           leftpad: "1.0.0",
@@ -674,8 +673,8 @@ describe("scripts/changed-lanes", () => {
           name: "fixture",
           scripts: {
             "test:docker:all": "node scripts/test-docker-all.mjs",
-            "test:docker:live-acp-bind:droid":
-              "OPENCLAW_LIVE_ACP_BIND_AGENT=droid bash scripts/test-live-acp-bind-docker.sh",
+            "test:docker:live-acp-bind:codex":
+              "OPENCLAW_LIVE_ACP_BIND_AGENT=codex bash scripts/test-live-acp-bind-docker.sh",
           },
         },
         null,
@@ -777,8 +776,8 @@ describe("scripts/changed-lanes", () => {
       {
         name: "fixture",
         scripts: {
-          "test:docker:live-acp-bind:droid":
-            "OPENCLAW_LIVE_ACP_BIND_AGENT=droid bash scripts/test-live-acp-bind-docker.sh",
+          "test:docker:live-acp-bind:codex":
+            "OPENCLAW_LIVE_ACP_BIND_AGENT=codex bash scripts/test-live-acp-bind-docker.sh",
         },
         dependencies: { leftpad: "1.0.1" },
       },
@@ -872,18 +871,18 @@ describe("scripts/changed-lanes", () => {
     expect(
       shouldRunShrinkwrapGuard([
         "npm-shrinkwrap.json",
-        "extensions/slack/npm-shrinkwrap.json",
-        "extensions/slack/package.json",
+        "extensions/discord/npm-shrinkwrap.json",
+        "extensions/discord/package.json",
         "scripts/generate-npm-shrinkwrap.mjs",
       ]),
     ).toBe(true);
 
-    const result = detectChangedLanes(["extensions/slack/package.json"]);
+    const result = detectChangedLanes(["extensions/discord/package.json"]);
     const plan = createChangedCheckPlan(result);
-    const shrinkwrapGuard = createShrinkwrapGuardCommand(["extensions/slack/package.json"]);
+    const shrinkwrapGuard = createShrinkwrapGuardCommand(["extensions/discord/package.json"]);
 
     expect(
-      shrinkwrapGuard?.args.some((arg) => arg.replaceAll("\\", "/").endsWith("extensions/slack")),
+      shrinkwrapGuard?.args.some((arg) => arg.replaceAll("\\", "/").endsWith("extensions/discord")),
     ).toBe(true);
     expect(plan.commands.map((command) => command.name)).toContain("npm shrinkwrap guard");
     expect(plan.commands.map((command) => command.args[0])).not.toContain("deps:shrinkwrap:check");

@@ -33,9 +33,14 @@ describe("scripts/test-live-shard", () => {
       .filter(({ file }) => file === "extensions/music-generation-providers.live.test.ts")
       .map(({ shard }) => shard)
       .toSorted();
+    const runnableFiles = allFiles.filter(
+      (file) => file !== "src/gateway/gateway-cli-backend.live.test.ts",
+    );
 
     expect(allFiles.length).toBeGreaterThan(0);
-    expect([...new Set(selectedFiles)].toSorted((a, b) => a.localeCompare(b))).toEqual(allFiles);
+    expect([...new Set(selectedFiles)].toSorted((a, b) => a.localeCompare(b))).toEqual(
+      runnableFiles,
+    );
     expect(duplicateFiles).toEqual(["extensions/music-generation-providers.live.test.ts"]);
     expect(musicProviderFanout).toEqual([
       "native-live-extensions-media-music-google",
@@ -72,7 +77,6 @@ describe("scripts/test-live-shard", () => {
   it("keeps slow gateway backend and media-capable extension files in their own shards", () => {
     expect(selectLiveShardFiles("native-live-src-gateway-backends", allFiles)).toEqual([
       "src/gateway/gateway-acp-bind.live.test.ts",
-      "src/gateway/gateway-cli-backend.live.test.ts",
       "src/gateway/gateway-codex-bind.live.test.ts",
       "src/gateway/gateway-codex-harness.live.test.ts",
     ]);
@@ -108,13 +112,6 @@ describe("scripts/test-live-shard", () => {
     expect(selectLiveShardFiles("native-live-extensions-moonshot", allFiles)).toEqual([
       "extensions/moonshot/moonshot.live.test.ts",
     ]);
-  });
-
-  it("keeps the Codex CLI backend live smoke on a minimal tool profile", () => {
-    const source = readFileSync("src/gateway/gateway-cli-backend.live.test.ts", "utf8");
-
-    expect(source).toContain('providerId === "codex-cli" && !schemaProbePluginPath');
-    expect(source).toContain('profile: "minimal" as const');
   });
 
   it("rejects unknown shard names", () => {

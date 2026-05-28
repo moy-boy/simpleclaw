@@ -31,10 +31,10 @@ const EXAMPLES = [
   ["openclaw channels status", "See connected messaging accounts and login state."],
   ["openclaw --dev gateway", "Run a dev Gateway (isolated state/config) on ws://127.0.0.1:19001."],
   ["openclaw gateway run --force", "Start the Gateway and replace anything bound to its port."],
-  ["openclaw models status", "Show model/provider auth health before running agents."],
+  ["openclaw models status", "Show OpenAI subscription auth health before running agents."],
   ["openclaw plugins list", "Inspect enabled, disabled, and installed plugins."],
   [
-    'openclaw agent --to +15555550123 --message "Run summary" --deliver',
+    'openclaw agent --channel telegram --to @mychat --message "Run summary" --deliver',
     "Run one agent turn through the Gateway and optionally deliver the reply.",
   ],
   [

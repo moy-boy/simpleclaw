@@ -3,6 +3,7 @@ import { isEmbeddedMode, setEmbeddedMode } from "../infra/embedded-mode.js";
 import { defaultRuntime } from "../runtime.js";
 
 const agentCommandFromIngressMock = vi.fn();
+const loadGatewayModelCatalogMock = vi.hoisted(() => vi.fn());
 let registeredListener: ((evt: unknown) => void) | undefined;
 const embeddedEventTimestamp = Date.parse("2026-05-09T07:26:00.000Z");
 
@@ -93,7 +94,7 @@ vi.mock("../gateway/session-utils.js", () => ({
 }));
 
 vi.mock("../gateway/server-model-catalog.js", () => ({
-  loadGatewayModelCatalog: () => [],
+  loadGatewayModelCatalog: () => loadGatewayModelCatalogMock(),
 }));
 
 vi.mock("../gateway/session-reset-service.js", () => ({
@@ -139,6 +140,7 @@ describe("EmbeddedTuiBackend", () => {
     vi.useFakeTimers();
     vi.setSystemTime(embeddedEventTimestamp);
     agentCommandFromIngressMock.mockReset();
+    loadGatewayModelCatalogMock.mockReset().mockResolvedValue([]);
     registeredListener = undefined;
     setEmbeddedMode(false);
     defaultRuntime.log = originalRuntimeLog;
@@ -1063,6 +1065,26 @@ describe("EmbeddedTuiBackend", () => {
     } finally {
       await backend.stop();
     }
+  });
+
+  it("filters unsupported providers from embedded model choices", async () => {
+    const { EmbeddedTuiBackend } = await import("./embedded-backend.js");
+    loadGatewayModelCatalogMock.mockResolvedValueOnce([
+      { provider: "openai", id: "gpt-5.4", name: "GPT-5.4" },
+      { provider: "legacy-provider", id: "legacy-model", name: "Legacy Model" },
+    ]);
+
+    const backend = new EmbeddedTuiBackend();
+
+    await expect(backend.listModels()).resolves.toEqual([
+      {
+        id: "gpt-5.4",
+        name: "GPT-5.4",
+        provider: "openai",
+        contextWindow: undefined,
+        reasoning: undefined,
+      },
+    ]);
   });
 
   it("restores embedded mode and runtime loggers on stop", async () => {

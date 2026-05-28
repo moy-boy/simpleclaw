@@ -8,17 +8,13 @@ import {
   formatStaticAuthChoiceChoicesForCli,
 } from "./auth-choice-options.static.js";
 import type { AuthChoice, AuthChoiceGroupId } from "./onboard-types.js";
+import { isSupportedSubscriptionAuthChoice } from "./supported-surface.js";
 
 function compareOptionLabels(a: AuthChoiceOption, b: AuthChoiceOption): number {
   return a.label.localeCompare(b.label);
 }
 
-const FEATURED_AUTH_GROUP_ORDER = new Map<string, number>([
-  ["openai", 0],
-  ["anthropic", 1],
-  ["xai", 2],
-  ["google", 3],
-]);
+const FEATURED_AUTH_GROUP_ORDER = new Map<string, number>([["openai", 0]]);
 
 function compareAssistantOptions(a: AuthChoiceOption, b: AuthChoiceOption): number {
   const priorityA = a.assistantPriority ?? 0;
@@ -28,6 +24,10 @@ function compareAssistantOptions(a: AuthChoiceOption, b: AuthChoiceOption): numb
 
 function compareLabelsCaseInsensitive(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: "base" });
+}
+
+function isSupportedAuthChoiceOption(option: Pick<AuthChoiceOption, "value">): boolean {
+  return isSupportedSubscriptionAuthChoice(option.value);
 }
 
 export function compareAuthChoiceGroups(a: AuthChoiceGroup, b: AuthChoiceGroup): number {
@@ -86,7 +86,7 @@ export function formatAuthChoiceChoicesForCli(params?: {
       ...params,
       scope: "text-inference",
     }).map((contribution) => contribution.option.value),
-  ];
+  ].filter((value) => value === "skip" || isSupportedSubscriptionAuthChoice(value));
 
   return [...new Set(values)].join("|");
 }
@@ -113,6 +113,7 @@ export function buildAuthChoiceOptions(params: {
   }
 
   const options: AuthChoiceOption[] = Array.from(optionByValue.values())
+    .filter(isSupportedAuthChoiceOption)
     .toSorted(compareOptionLabels)
     .filter((option) =>
       params.assistantVisibleOnly ? option.assistantVisibility !== "manual-only" : true,

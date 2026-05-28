@@ -12,6 +12,7 @@ import { DEFAULT_ACCOUNT_ID, normalizeAgentId } from "../routing/session-key.js"
 import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { normalizeStringEntries } from "../shared/string-normalization.js";
 import type { ChannelChoice } from "./onboard-types.js";
+import { isSupportedChannelId, shouldEnforceSupportedChannelIds } from "./supported-surface.js";
 
 export { describeBinding } from "./agents.binding-format.js";
 
@@ -316,6 +317,17 @@ export function parseBindingSpecs(params: {
       continue;
     }
     const [channelRaw, accountRaw] = trimmed.split(":", 2);
+    const normalizedRawChannel = normalizeOptionalString(channelRaw)?.toLowerCase();
+    if (
+      normalizedRawChannel &&
+      shouldEnforceSupportedChannelIds(params.config) &&
+      !isSupportedChannelId(normalizedRawChannel)
+    ) {
+      errors.push(
+        `Unsupported channel "${normalizedRawChannel}". This setup supports Telegram and Discord only.`,
+      );
+      continue;
+    }
     const channel = normalizeBindingChannelId(channelRaw, params.config);
     if (!channel) {
       errors.push(formatUnknownChannelMessage({ channel: channelRaw }));
