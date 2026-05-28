@@ -17,7 +17,6 @@
         "@earendil-works/pi-ai": "0.75.4",
         "@earendil-works/pi-coding-agent": "0.75.4",
         "@earendil-works/pi-tui": "0.75.4",
-        "@google/genai": "2.5.0",
         "@grammyjs/runner": "2.0.3",
         "@grammyjs/transformer-throttler": "1.2.1",
         "@homebridge/ciao": "1.3.8",
@@ -610,30 +609,6 @@
         "node": ">=22.19.0"
       }
     },
-    "node_modules/@earendil-works/pi-ai/node_modules/@google/genai": {
-      "version": "1.52.0",
-      "resolved": "https://registry.npmjs.org/@google/genai/-/genai-1.52.0.tgz",
-      "integrity": "sha512-gwSvbpiN/17O9TbsqSsE/OzZcpv5Fo4RQjdngGgogtuB9RsyJ8ZHhX5KjHj1bp5N9snN2eK8LDGXSaWW2hof8Q==",
-      "hasInstallScript": true,
-      "license": "Apache-2.0",
-      "dependencies": {
-        "google-auth-library": "^10.3.0",
-        "p-retry": "^4.6.2",
-        "protobufjs": "^7.5.4",
-        "ws": "^8.18.0"
-      },
-      "engines": {
-        "node": ">=20.0.0"
-      },
-      "peerDependencies": {
-        "@modelcontextprotocol/sdk": "^1.25.2"
-      },
-      "peerDependenciesMeta": {
-        "@modelcontextprotocol/sdk": {
-          "optional": true
-        }
-      }
-    },
     "node_modules/@earendil-works/pi-ai/node_modules/openai": {
       "version": "6.26.0",
       "resolved": "https://registry.npmjs.org/openai/-/openai-6.26.0.tgz",
@@ -706,9 +681,9 @@
       }
     },
     "node_modules/@google/genai": {
-      "version": "2.5.0",
-      "resolved": "https://registry.npmjs.org/@google/genai/-/genai-2.5.0.tgz",
-      "integrity": "sha512-qDi3LLh9I3llJK0f9uV8kZ8EdT9oHPxGJJ9yOJ/i5YXYrVwRCs8jHo9x4e99uOeKYDvD3TZwT70p/H/LS3BixQ==",
+      "version": "1.52.0",
+      "resolved": "https://registry.npmjs.org/@google/genai/-/genai-1.52.0.tgz",
+      "integrity": "sha512-gwSvbpiN/17O9TbsqSsE/OzZcpv5Fo4RQjdngGgogtuB9RsyJ8ZHhX5KjHj1bp5N9snN2eK8LDGXSaWW2hof8Q==",
       "hasInstallScript": true,
       "license": "Apache-2.0",
       "dependencies": {

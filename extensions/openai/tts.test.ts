@@ -7,8 +7,8 @@ import {
   initializeDebugProxyCapture,
 } from "openclaw/plugin-sdk/proxy-capture";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { installDebugProxyTestResetHooks } from "../test-support/debug-proxy-env-test-helpers.js";
-import { createStreamingErrorResponse } from "../test-support/streaming-error-response.js";
+import { installDebugProxyTestResetHooks } from "./test-support/debug-proxy-env-test-helpers.js";
+import { createStreamingErrorResponse } from "./test-support/streaming-error-response.js";
 import {
   isValidOpenAIModel,
   isValidOpenAIVoice,

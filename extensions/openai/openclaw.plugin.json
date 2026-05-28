@@ -328,7 +328,7 @@
       "assistantVisibility": "manual-only",
       "groupId": "openai",
       "groupLabel": "OpenAI",
-      "groupHint": "ChatGPT/Codex sign-in or API key"
+      "groupHint": "ChatGPT/Codex subscription sign-in"
     },
     {
       "provider": "openai",
@@ -340,7 +340,7 @@
       "assistantVisibility": "manual-only",
       "groupId": "openai",
       "groupLabel": "OpenAI",
-      "groupHint": "ChatGPT/Codex sign-in or API key"
+      "groupHint": "ChatGPT/Codex subscription sign-in"
     },
     {
       "provider": "openai-codex",
@@ -352,7 +352,7 @@
       "assistantPriority": -30,
       "groupId": "openai",
       "groupLabel": "OpenAI",
-      "groupHint": "ChatGPT/Codex sign-in or API key",
+      "groupHint": "ChatGPT/Codex subscription sign-in",
       "onboardingFeatured": true
     },
     {
@@ -364,7 +364,7 @@
       "assistantPriority": -10,
       "groupId": "openai",
       "groupLabel": "OpenAI",
-      "groupHint": "ChatGPT/Codex sign-in or API key"
+      "groupHint": "ChatGPT/Codex subscription sign-in"
     },
     {
       "provider": "openai-codex",
@@ -376,7 +376,7 @@
       "assistantVisibility": "manual-only",
       "groupId": "openai",
       "groupLabel": "OpenAI",
-      "groupHint": "ChatGPT/Codex sign-in or API key",
+      "groupHint": "ChatGPT/Codex subscription sign-in",
       "optionKey": "openaiApiKey",
       "cliFlag": "--openai-api-key",
       "cliOption": "--openai-api-key <key>",
@@ -389,10 +389,10 @@
       "choiceLabel": "OpenAI API Key",
       "choiceHint": "Use your OpenAI API key directly",
       "assistantPriority": 5,
+      "assistantVisibility": "manual-only",
       "groupId": "openai",
       "groupLabel": "OpenAI",
-      "groupHint": "ChatGPT/Codex sign-in or API key",
-      "onboardingFeatured": true,
+      "groupHint": "ChatGPT/Codex subscription sign-in",
       "optionKey": "openaiApiKey",
       "cliFlag": "--openai-api-key",
       "cliOption": "--openai-api-key <key>",
