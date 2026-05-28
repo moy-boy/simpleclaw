@@ -1,15 +1,16 @@
 ---
-summary: "Model providers (LLMs) supported by OpenClaw"
+summary: "OpenAI subscription model provider support in OpenClaw"
 read_when:
   - You want to choose a model provider
   - You need a quick overview of supported LLM backends
 title: "Provider directory"
 ---
 
-OpenClaw can use many LLM providers. Pick a provider, authenticate, then set the
-default model as `provider/model`.
+This simplified OpenClaw setup uses OpenAI subscription login for model access.
+Authenticate with the Codex/OpenAI subscription provider, then set the default
+model as `openai/model`.
 
-Looking for chat channel docs (WhatsApp/Telegram/Discord/Slack/Mattermost (plugin)/etc.)? See [Channels](/channels).
+Looking for chat channel docs? See [Channels](/channels).
 
 ## Quick start
 
@@ -18,84 +19,12 @@ Looking for chat channel docs (WhatsApp/Telegram/Discord/Slack/Mattermost (plugi
 
 ```json5
 {
-  agents: { defaults: { model: { primary: "anthropic/claude-opus-4-6" } } },
+  agents: { defaults: { model: { primary: "openai/gpt-5.5" } } },
 }
 ```
 
 ## Provider docs
 
-- [Alibaba Model Studio](/providers/alibaba)
-- [Amazon Bedrock](/providers/bedrock)
-- [Amazon Bedrock Mantle](/providers/bedrock-mantle)
-- [Anthropic (API + Claude CLI)](/providers/anthropic)
-- [Arcee AI (Trinity models)](/providers/arcee)
-- [Azure Speech](/providers/azure-speech)
-- [BytePlus (International)](/concepts/model-providers#byteplus-international)
-- [Cerebras](/providers/cerebras)
-- [Chutes](/providers/chutes)
-- [Cloudflare AI Gateway](/providers/cloudflare-ai-gateway)
-- [ComfyUI](/providers/comfy)
-- [DeepSeek](/providers/deepseek)
-- [ds4 (local DeepSeek V4)](/providers/ds4)
-- [ElevenLabs](/providers/elevenlabs)
-- [fal](/providers/fal)
-- [Fireworks](/providers/fireworks)
-- [GitHub Copilot](/providers/github-copilot)
-- [Google (Gemini)](/providers/google)
-- [Gradium](/providers/gradium)
-- [Groq (LPU inference)](/providers/groq)
-- [Hugging Face (Inference)](/providers/huggingface)
-- [inferrs (local models)](/providers/inferrs)
-- [Kilocode](/providers/kilocode)
-- [LiteLLM (unified gateway)](/providers/litellm)
-- [LM Studio (local models)](/providers/lmstudio)
-- [MiniMax](/providers/minimax)
-- [Mistral](/providers/mistral)
-- [Moonshot AI (Kimi + Kimi Coding)](/providers/moonshot)
-- [NVIDIA](/providers/nvidia)
-- [Ollama (cloud + local models)](/providers/ollama)
-- [OpenAI (API + Codex)](/providers/openai)
-- [OpenCode](/providers/opencode)
-- [OpenCode Go](/providers/opencode-go)
-- [OpenRouter](/providers/openrouter)
-- [Perplexity (web search)](/providers/perplexity-provider)
-- [Qianfan](/providers/qianfan)
-- [Qwen Cloud](/providers/qwen)
-- [Runway](/providers/runway)
-- [SenseAudio](/providers/senseaudio)
-- [SGLang (local models)](/providers/sglang)
-- [StepFun](/providers/stepfun)
-- [Synthetic](/providers/synthetic)
-- [Tencent Cloud (TokenHub)](/providers/tencent)
-- [Together AI](/providers/together)
-- [Venice (Venice AI, privacy-focused)](/providers/venice)
-- [Vercel AI Gateway](/providers/vercel-ai-gateway)
-- [vLLM (local models)](/providers/vllm)
-- [Volcengine (Doubao)](/providers/volcengine)
-- [Vydra](/providers/vydra)
-- [xAI](/providers/xai)
-- [Xiaomi](/providers/xiaomi)
-- [Z.AI (GLM)](/providers/zai)
+- [OpenAI subscription/Codex](/providers/openai) - browser login or device pairing through `openai-codex`.
 
-## Shared overview pages
-
-- [Additional bundled variants](/providers/models#additional-bundled-provider-variants) - Anthropic Vertex, Copilot Proxy, and Gemini CLI OAuth
-- [Image Generation](/tools/image-generation) - Shared `image_generate` tool, provider selection, and failover
-- [Music Generation](/tools/music-generation) - Shared `music_generate` tool, provider selection, and failover
-- [Video Generation](/tools/video-generation) - Shared `video_generate` tool, provider selection, and failover
-
-## Transcription providers
-
-- [Deepgram (audio transcription)](/providers/deepgram)
-- [ElevenLabs](/providers/elevenlabs#speech-to-text)
-- [Mistral](/providers/mistral#audio-transcription-voxtral)
-- [OpenAI](/providers/openai#speech-to-text)
-- [SenseAudio](/providers/senseaudio)
-- [xAI](/providers/xai#speech-to-text)
-
-## Community tools
-
-- [Claude Max API Proxy](/providers/claude-max-api-proxy) - Community proxy for Claude subscription credentials (verify Anthropic policy/terms before use)
-
-For the full provider catalog (xAI, Groq, Mistral, etc.) and advanced configuration,
-see [Model providers](/concepts/model-providers).
+Onboarding rejects non-subscription, custom-provider, and unsupported auth choices. Use `--auth-choice openai-codex`, `--auth-choice openai-codex-device-code`, or `--auth-choice skip`.

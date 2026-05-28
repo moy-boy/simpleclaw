@@ -9,10 +9,10 @@ title: "Features"
 
 <Columns>
   <Card title="Channels" icon="message-square" href="/channels">
-    Discord, iMessage, Signal, Slack, Telegram, WhatsApp, WebChat, and more with a single Gateway.
+    Telegram and Discord through one Gateway.
   </Card>
   <Card title="Plugins" icon="plug" href="/tools/plugin">
-    Bundled plugins add Matrix, Nextcloud Talk, Nostr, Twitch, Zalo, and more without separate installs in normal current releases.
+    Bundled plugins are limited to the simplified Telegram, Discord, OpenAI, and Codex surface.
   </Card>
   <Card title="Routing" icon="route" href="/concepts/multi-agent">
     Multi-agent routing with isolated sessions.
@@ -32,10 +32,7 @@ title: "Features"
 
 **Channels:**
 
-- Built-in channels include Discord, Google Chat, iMessage, IRC, Signal, Slack, Telegram, WebChat, and WhatsApp
-- Bundled plugin channels include Feishu, LINE, Matrix, Mattermost, Microsoft Teams, Nextcloud Talk, Nostr, QQ Bot, Synology Chat, Tlon, Twitch, Zalo, and Zalo Personal
-- Optional separately installed channel plugins include Voice Call and third-party packages such as WeChat
-- Third-party channel plugins can extend the Gateway further, such as WeChat
+- Supported channels are Discord and Telegram
 - Group chat support with mention-based activation
 - DM safety with allowlists and pairing
 
@@ -48,9 +45,9 @@ title: "Features"
 
 **Auth and providers:**
 
-- 35+ model providers (Anthropic, OpenAI, Google, and more)
-- Subscription auth via OAuth (e.g. OpenAI Codex)
-- Custom and self-hosted provider support (vLLM, SGLang, Ollama, and any OpenAI-compatible or Anthropic-compatible endpoint)
+- OpenAI subscription-backed model access through OpenAI/Codex auth
+- Browser OAuth and device-code subscription login
+- Unsupported model providers, custom providers, and API-key onboarding are rejected in the simplified setup
 
 **Media:**
 
@@ -61,7 +58,7 @@ title: "Features"
 
 **Apps and interfaces:**
 
-- WebChat and browser Control UI
+- Browser Control UI
 - macOS menu bar companion app
 - iOS node with pairing, Canvas, camera, screen recording, location, and voice
 - Android node with pairing, chat, voice, Canvas, camera, and device commands
@@ -69,7 +66,7 @@ title: "Features"
 **Tools and automation:**
 
 - Browser automation, exec, sandboxing
-- Web search (Brave, DuckDuckGo, Exa, Firecrawl, Gemini, Grok, Kimi, MiniMax Search, Ollama Web Search, Perplexity, SearXNG, Tavily)
+- Web search and fetch tools when configured
 - Cron jobs and heartbeat scheduling
 - Skills, plugins, and workflow pipelines (Lobster)
 
@@ -83,7 +80,7 @@ title: "Features"
     Agent runtime model and how runs are dispatched.
   </Card>
   <Card title="Channels" href="/channels" icon="message-square">
-    Connect Telegram, WhatsApp, Discord, Slack, and more from one Gateway.
+    Connect Telegram and Discord from one Gateway.
   </Card>
   <Card title="Plugins" href="/tools/plugin" icon="plug">
     Bundled and third-party plugins that extend OpenClaw.

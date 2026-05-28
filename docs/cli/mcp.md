@@ -1,7 +1,7 @@
 ---
 summary: "Expose OpenClaw channel conversations over MCP and manage saved MCP server definitions"
 read_when:
-  - Connecting Codex, Claude Code, or another MCP client to OpenClaw-backed channels
+  - Connecting Codex or another MCP client to OpenClaw-backed channels
   - Running `openclaw mcp serve`
   - Managing OpenClaw-saved MCP server definitions
 title: "MCP"
@@ -18,8 +18,6 @@ In other words:
 - `serve` is OpenClaw acting as an MCP server
 - `list` / `show` / `set` / `unset` is OpenClaw acting as an MCP client-side registry for other MCP servers its runtimes may consume later
 
-Use [`openclaw acp`](/cli/acp) when OpenClaw should host a coding harness session itself and route that runtime through ACP.
-
 ## OpenClaw as an MCP server
 
 This is the `openclaw mcp serve` path.
@@ -28,11 +26,9 @@ This is the `openclaw mcp serve` path.
 
 Use `openclaw mcp serve` when:
 
-- Codex, Claude Code, or another MCP client should talk directly to OpenClaw-backed channel conversations
+- Codex or another MCP client should talk directly to OpenClaw-backed channel conversations
 - you already have a local or remote OpenClaw Gateway with routed sessions
 - you want one MCP server that works across OpenClaw's channel backends instead of running separate per-channel bridges
-
-Use [`openclaw acp`](/cli/acp) instead when OpenClaw should host the coding runtime itself and keep the agent session inside OpenClaw.
 
 ### How it works
 
@@ -51,8 +47,8 @@ Use [`openclaw acp`](/cli/acp) instead when OpenClaw should host the coding runt
   <Step title="Live events queue">
     Live events are queued in memory while the bridge is connected.
   </Step>
-  <Step title="Optional Claude push">
-    If Claude channel mode is enabled, the same session can also receive Claude-specific push notifications.
+  <Step title="Optional live notifications">
+    Compatible clients can receive live notification events while the bridge is connected.
   </Step>
 </Steps>
 
@@ -60,7 +56,7 @@ Use [`openclaw acp`](/cli/acp) instead when OpenClaw should host the coding runt
   <Accordion title="Important behavior">
     - live queue state starts when the bridge connects
     - older transcript history is read with `messages_read`
-    - Claude push notifications only exist while the MCP session is alive
+    - live notifications only exist while the MCP session is alive
     - when the client disconnects, the bridge exits and the live queue is gone
     - one-shot agent entry points such as `openclaw agent` and `openclaw infer model run` retire any bundled MCP runtimes they open when the reply completes, so repeated scripted runs do not accumulate stdio MCP child processes
     - stdio MCP servers launched by OpenClaw (bundled or user-configured) are torn down as a process tree on shutdown, so child subprocesses started by the server do not survive after the parent stdio client exits
@@ -77,8 +73,8 @@ Use the same bridge in two different ways:
   <Tab title="Generic MCP clients">
     Standard MCP tools only. Use `conversations_list`, `messages_read`, `events_poll`, `events_wait`, `messages_send`, and the approval tools.
   </Tab>
-  <Tab title="Claude Code">
-    Standard MCP tools plus the Claude-specific channel adapter. Enable `--claude-channel-mode on` or leave the default `auto`.
+  <Tab title="Notification clients">
+    Standard MCP tools plus client notification events when the client supports them.
   </Tab>
 </Tabs>
 
@@ -121,10 +117,9 @@ This gives MCP clients one place to:
     openclaw mcp serve --url wss://gateway-host:18789 --password-file ~/.openclaw/gateway.password
     ```
   </Tab>
-  <Tab title="Verbose / Claude off">
+  <Tab title="Verbose">
     ```bash
     openclaw mcp serve --verbose
-    openclaw mcp serve --claude-channel-mode off
     ```
   </Tab>
 </Tabs>
@@ -161,7 +156,7 @@ The current bridge exposes these MCP tools:
   <Accordion title="events_wait">
     Long-polls until the next matching queued event arrives or a timeout expires.
 
-    Use this when a generic MCP client needs near-real-time delivery without a Claude-specific push protocol.
+    Use this when a generic MCP client needs near-real-time delivery.
 
   </Accordion>
   <Accordion title="messages_send">
@@ -198,7 +193,6 @@ Current event types:
 - `exec_approval_resolved`
 - `plugin_approval_requested`
 - `plugin_approval_resolved`
-- `claude_permission_request`
 
 <Warning>
 - the queue is live-only; it starts when the MCP bridge starts
@@ -207,33 +201,11 @@ Current event types:
 
 </Warning>
 
-### Claude channel notifications
-
-The bridge can also expose Claude-specific channel notifications. This is the OpenClaw equivalent of a Claude Code channel adapter: standard MCP tools remain available, but live inbound messages can also arrive as Claude-specific MCP notifications.
-
-<Tabs>
-  <Tab title="off">
-    `--claude-channel-mode off`: standard MCP tools only.
-  </Tab>
-  <Tab title="on">
-    `--claude-channel-mode on`: enable Claude channel notifications.
-  </Tab>
-  <Tab title="auto (default)">
-    `--claude-channel-mode auto`: current default; same bridge behavior as `on`.
-  </Tab>
-</Tabs>
-
-When Claude channel mode is enabled, the server advertises Claude experimental capabilities and can emit:
-
-- `notifications/claude/channel`
-- `notifications/claude/channel/permission`
-
 Current bridge behavior:
 
-- inbound `user` transcript messages are forwarded as `notifications/claude/channel`
-- Claude permission requests received over MCP are tracked in-memory
-- if the linked conversation later sends `yes abcde` or `no abcde`, the bridge converts that to `notifications/claude/channel/permission`
-- these notifications are live-session only; if the MCP client disconnects, there is no push target
+- inbound `user` transcript messages are available through the live event queue
+- permission requests received over MCP are tracked in-memory
+- these events are live-session only; if the MCP client disconnects, there is no push target
 
 This is intentionally client-specific. Generic MCP clients should rely on the standard polling tools.
 
@@ -259,7 +231,7 @@ Example stdio client config:
 }
 ```
 
-For most generic MCP clients, start with the standard tool surface and ignore Claude mode. Turn Claude mode on only for clients that actually understand the Claude-specific notification methods.
+For most generic MCP clients, start with the standard tool surface and use the live event queue when near-real-time delivery is needed.
 
 ### Options
 
@@ -279,9 +251,6 @@ For most generic MCP clients, start with the standard tool surface and ignore Cl
 </ParamField>
 <ParamField path="--password-file" type="string">
   Read password from file.
-</ParamField>
-<ParamField path="--claude-channel-mode" type='"auto" | "on" | "off"'>
-  Claude notification mode.
 </ParamField>
 <ParamField path="-v, --verbose" type="boolean">
   Verbose logs on stderr.
@@ -317,7 +286,7 @@ That smoke:
 - starts a seeded Gateway container
 - starts a second container that spawns `openclaw mcp serve`
 - verifies conversation discovery, transcript reads, attachment metadata reads, live event queue behavior, and outbound send routing
-- validates Claude-style channel and permission notifications over the real stdio MCP bridge
+- validates live channel and permission events over the real stdio MCP bridge
 
 This is the fastest way to prove the bridge works without wiring a real Telegram, Discord, or iMessage account into the test run.
 
@@ -332,12 +301,11 @@ For broader testing context, see [Testing](/help/testing).
   <Accordion title="events_poll or events_wait misses older messages">
     Expected. The live queue starts when the bridge connects. Read older transcript history with `messages_read`.
   </Accordion>
-  <Accordion title="Claude notifications do not show up">
+  <Accordion title="Client notifications do not show up">
     Check all of these:
 
     - the client kept the stdio MCP session open
-    - `--claude-channel-mode` is `on` or `auto`
-    - the client actually understands the Claude-specific notification methods
+    - the client actually understands OpenClaw notification methods
     - the inbound message happened after the bridge connected
 
   </Accordion>
@@ -366,11 +334,11 @@ Those saved definitions are for runtimes that OpenClaw launches or configures la
   </Accordion>
 </AccordionGroup>
 
-Runtime adapters may normalize this shared registry into the shape their downstream client expects. For example, embedded Pi consumes OpenClaw `transport` values directly, while Claude Code and Gemini receive CLI-native `type` values such as `http`, `sse`, or `stdio`.
+Runtime adapters may normalize this shared registry into the shape their downstream client expects. Codex app-server consumes the optional `codex` projection described below.
 
 Codex app-server also honors an optional `codex` block on each server. This is
 OpenClaw projection metadata for Codex app-server threads only; it does not
-change ACP sessions, generic Codex harness config, or other runtime adapters.
+change other runtime adapters.
 Use non-empty `codex.agents` to project a server only into specific OpenClaw
 agent ids. Empty, blank, or invalid agent lists are rejected by config
 validation and omitted by the runtime projection path instead of becoming
@@ -518,7 +486,7 @@ This page documents the bridge as shipped today.
 Current limits:
 
 - conversation discovery depends on existing Gateway session route metadata
-- no generic push protocol beyond the Claude-specific adapter
+- no generic push protocol beyond the live event queue
 - no message edit or react tools yet
 - HTTP/SSE/streamable-http transport connects to a single remote server; no multiplexed upstream yet
 - `permissions_list_open` only includes approvals observed while the bridge is connected

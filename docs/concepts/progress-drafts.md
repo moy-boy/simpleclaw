@@ -356,7 +356,7 @@ used by Discord and Telegram.
 - [Messages](/concepts/messages)
 - [Channel configuration](/gateway/config-channels)
 - [Discord](/channels/discord)
-- [Matrix](/channels/matrix)
-- [Microsoft Teams](/channels/msteams)
-- [Slack](/channels/slack)
+- Matrix
+- Microsoft Teams
+- Slack
 - [Telegram](/channels/telegram)

@@ -43,14 +43,14 @@ Related:
 ## Examples
 
 ```bash
-openclaw agent --to +15555550123 --message "status update" --deliver
+openclaw agent --channel telegram --to @mychat --message "status update" --deliver
 openclaw agent --agent ops --message "Summarize logs"
 openclaw agent --agent ops --model openai/gpt-5.4 --message "Summarize logs"
 openclaw agent --session-key agent:ops:incident-42 --message "Summarize status"
 openclaw agent --agent ops --session-key incident-42 --message "Summarize status"
 openclaw agent --session-id 1234 --message "Summarize inbox" --thinking medium
-openclaw agent --to +15555550123 --message "Trace logs" --verbose on --json
-openclaw agent --agent ops --message "Generate report" --deliver --reply-channel slack --reply-to "#reports"
+openclaw agent --channel telegram --to @mychat --message "Trace logs" --verbose on --json
+openclaw agent --agent ops --message "Generate report" --deliver --reply-channel discord --reply-to "channel:123"
 openclaw agent --agent ops --message "Run locally" --local
 ```
 
@@ -58,7 +58,7 @@ openclaw agent --agent ops --message "Run locally" --local
 
 - Gateway mode falls back to the embedded agent when the Gateway request fails. Use `--local` to force embedded execution up front.
 - `--local` still preloads the plugin registry first, so plugin-provided providers, tools, and channels stay available during embedded runs.
-- `--local` and embedded fallback runs are treated as one-shot runs. Bundled MCP loopback resources and warm Claude stdio sessions opened for that local process are retired after the reply, so scripted invocations do not keep local child processes alive.
+- `--local` and embedded fallback runs are treated as one-shot runs. Bundled MCP loopback resources and runtime child processes opened for that local process are retired after the reply, so scripted invocations do not keep local child processes alive.
 - Gateway-backed runs leave Gateway-owned MCP loopback resources under the running Gateway process; older clients may still send the historical cleanup flag, but the Gateway accepts it as a compatibility no-op.
 - `--channel`, `--reply-channel`, and `--reply-account` affect reply delivery, not session routing.
 - `--session-key` selects an explicit session key. Agent-prefixed keys must use `agent:<agent-id>:<session-key>`, and `--agent` must match the key's agent id when both are provided. Bare non-sentinel keys are scoped to `--agent` when supplied, or to the configured default agent otherwise; for example, `--agent ops --session-key incident-42` routes to `agent:ops:incident-42`. Literal `global` and `unknown` remain unscoped only when no `--agent` is supplied; in that case, embedded fallback and store ownership use the configured default agent.

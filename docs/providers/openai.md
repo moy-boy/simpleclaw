@@ -53,7 +53,6 @@ The names are similar but not interchangeable:
 | `codex` plugin                          | Plugin                     | Bundled OpenClaw plugin that provides native Codex app-server runtime and `/codex` chat controls.                    |
 | provider/model `agentRuntime.id: codex` | Agent runtime              | Force the native Codex app-server harness for matching embedded turns.                                               |
 | `/codex ...`                            | Chat command set           | Bind/control Codex app-server threads from a conversation.                                                           |
-| `runtime: "acp", agentId: "codex"`      | ACP session route          | Explicit fallback path that runs Codex through ACP/acpx.                                                             |
 
 This means a config can intentionally contain `openai/*` model refs while auth
 profiles still point at Codex-compatible credentials. Prefer `auth.order.openai`
@@ -547,7 +546,7 @@ See [Video Generation](/tools/video-generation) for shared tool parameters, prov
 
 ## GPT-5 prompt contribution
 
-OpenClaw adds a shared GPT-5 prompt contribution for GPT-5-family runs on OpenClaw-assembled prompt surfaces. It applies by model id, so PI/provider routes such as legacy pre-repair refs (`openai-codex/gpt-5.5`), `openrouter/openai/gpt-5.5`, `opencode/gpt-5.5`, and other compatible GPT-5 refs receive the same overlay. Older GPT-4.x models do not.
+OpenClaw adds a shared GPT-5 prompt contribution for GPT-5-family runs on OpenClaw-assembled prompt surfaces. It applies by model id, so OpenAI routes such as legacy pre-repair refs (`openai-codex/gpt-5.5`) and canonical `openai/gpt-5.5` refs receive the same overlay. Older GPT-4.x models do not.
 
 The bundled native Codex harness does not receive this OpenClaw GPT-5 overlay through Codex app-server developer instructions. Native Codex keeps Codex-owned base, model, personality, and project-doc behavior; OpenClaw contributes only runtime context such as channel delivery, OpenClaw dynamic tools, ACP delegation, workspace context, and OpenClaw skills.
 
@@ -720,9 +719,9 @@ Legacy `plugins.entries.openai.config.personality` is still read as a compatibil
     profile. Gateway relay and Voice Call backend realtime WebSocket bridges use
     the same OAuth fallback for native OpenAI endpoints. Maintainer live
     verification is available with
-    `OPENAI_API_KEY=... GEMINI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts`;
-    the OpenAI legs verify both the backend WebSocket bridge and the browser
-    WebRTC SDP exchange without logging secrets.
+    `OPENAI_API_KEY=... node --import tsx scripts/dev/realtime-talk-live-smoke.ts`;
+    the command verifies the OpenAI backend WebSocket bridge, the browser WebRTC
+    SDP exchange, and the Gateway relay browser adapter without logging secrets.
     </Note>
 
   </Accordion>

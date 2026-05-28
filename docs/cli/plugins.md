@@ -195,8 +195,6 @@ is available, then fall back to `latest`.
     npm install records. Plain archive paths still install as local archives
     under the plugin extensions root.
 
-    Claude marketplace installs are also supported.
-
   </Accordion>
 </AccordionGroup>
 
@@ -223,47 +221,13 @@ openclaw plugins install npm:@scope/plugin-name@1.0.1
 OpenClaw checks the advertised plugin API / minimum gateway compatibility before install. When the selected ClawHub version publishes a ClawPack artifact, OpenClaw downloads the versioned npm-pack `.tgz`, verifies the ClawHub digest header and the artifact digest, then installs it through the normal archive path. Older ClawHub versions without ClawPack metadata still install through the legacy package archive verification path. Recorded installs keep their ClawHub source metadata, artifact kind, npm integrity, npm shasum, tarball name, and ClawPack digest facts for later updates.
 Unversioned ClawHub installs keep an unversioned recorded spec so `openclaw plugins update` can follow newer ClawHub releases; explicit version or tag selectors such as `clawhub:pkg@1.2.3` and `clawhub:pkg@beta` remain pinned to that selector.
 
-#### Marketplace shorthand
-
-Use `plugin@marketplace` shorthand when the marketplace name exists in Claude's local registry cache at `~/.claude/plugins/known_marketplaces.json`:
-
-```bash
-openclaw plugins marketplace list <marketplace-name>
-openclaw plugins install <plugin-name>@<marketplace-name>
-```
-
-Use `--marketplace` when you want to pass the marketplace source explicitly:
-
-```bash
-openclaw plugins install <plugin-name> --marketplace <marketplace-name>
-openclaw plugins install <plugin-name> --marketplace <owner/repo>
-openclaw plugins install <plugin-name> --marketplace https://github.com/<owner>/<repo>
-openclaw plugins install <plugin-name> --marketplace ./my-marketplace
-```
-
-<Tabs>
-  <Tab title="Marketplace sources">
-    - a Claude known-marketplace name from `~/.claude/plugins/known_marketplaces.json`
-    - a local marketplace root or `marketplace.json` path
-    - a GitHub repo shorthand such as `owner/repo`
-    - a GitHub repo URL such as `https://github.com/owner/repo`
-    - a git URL
-
-  </Tab>
-  <Tab title="Remote marketplace rules">
-    For remote marketplaces loaded from GitHub or git, plugin entries must stay inside the cloned marketplace repo. OpenClaw accepts relative path sources from that repo and rejects HTTP(S), absolute-path, git, GitHub, and other non-path plugin sources from remote manifests.
-  </Tab>
-</Tabs>
-
 For local paths and archives, OpenClaw auto-detects:
 
 - native OpenClaw plugins (`openclaw.plugin.json`)
 - Codex-compatible bundles (`.codex-plugin/plugin.json`)
-- Claude-compatible bundles (`.claude-plugin/plugin.json` or the default Claude component layout)
-- Cursor-compatible bundles (`.cursor-plugin/plugin.json`)
 
 <Note>
-Compatible bundles install into the normal plugin root and participate in the same list/info/enable/disable flow. Today, bundle skills, Claude command-skills, Claude `settings.json` defaults, Claude `.lsp.json` / manifest-declared `lspServers` defaults, Cursor command-skills, and compatible Codex hook directories are supported; other detected bundle capabilities are shown in diagnostics/info but are not yet wired into runtime execution.
+Compatible bundles install into the normal plugin root and participate in the same list/info/enable/disable flow. Today, compatible Codex hook directories are supported; other detected bundle capabilities are shown in diagnostics/info but are not yet wired into runtime execution.
 </Note>
 
 ### List
@@ -353,7 +317,6 @@ openclaw plugins uninstall <id> --keep-files
 openclaw plugins update <id-or-npm-spec>
 openclaw plugins update --all
 openclaw plugins update <id-or-npm-spec> --dry-run
-openclaw plugins update @openclaw/voice-call
 openclaw plugins update openclaw-codex-app-server --dangerously-force-unsafe-install
 ```
 

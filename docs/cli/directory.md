@@ -26,41 +26,35 @@ Directory lookups for channels that support it (contacts/peers, groups, and "me"
 ## Using results with `message send`
 
 ```bash
-openclaw directory peers list --channel slack --query "U0"
-openclaw message send --channel slack --target user:U012ABCDEF --message "hello"
+openclaw directory peers list --channel discord --query "Jane"
+openclaw message send --channel discord --target user:123456789012345678 --message "hello"
 ```
 
 ## ID formats (by channel)
 
-- WhatsApp: `+15551234567` (DM), `1234567890-1234567890@g.us` (group), `120363123456789@newsletter` (Channel/Newsletter outbound target)
 - Telegram: `@username` or numeric chat id; groups are numeric ids
-- Slack: `user:U…` and `channel:C…`
 - Discord: `user:<id>` and `channel:<id>`
-- Matrix (plugin): `user:@user:server`, `room:!roomId:server`, or `#alias:server`
-- Microsoft Teams (plugin): `user:<id>` and `conversation:<id>`
-- Zalo (plugin): user id (Bot API)
-- Zalo Personal / `zalouser` (plugin): thread id (DM/group) from `zca` (`me`, `friend list`, `group list`)
 
 ## Self ("me")
 
 ```bash
-openclaw directory self --channel zalouser
+openclaw directory self --channel discord
 ```
 
 ## Peers (contacts/users)
 
 ```bash
-openclaw directory peers list --channel zalouser
-openclaw directory peers list --channel zalouser --query "name"
-openclaw directory peers list --channel zalouser --limit 50
+openclaw directory peers list --channel discord
+openclaw directory peers list --channel discord --query "name"
+openclaw directory peers list --channel discord --limit 50
 ```
 
 ## Groups
 
 ```bash
-openclaw directory groups list --channel zalouser
-openclaw directory groups list --channel zalouser --query "work"
-openclaw directory groups members --channel zalouser --group-id <id>
+openclaw directory groups list --channel discord
+openclaw directory groups list --channel discord --query "work"
+openclaw directory groups members --channel discord --group-id <id>
 ```
 
 ## Related

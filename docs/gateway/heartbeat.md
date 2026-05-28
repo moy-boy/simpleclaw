@@ -21,7 +21,7 @@ Troubleshooting: [Scheduled Tasks](/automation/cron-jobs#troubleshooting)
 
 <Steps>
   <Step title="Pick a cadence">
-    Leave heartbeats enabled (default is `30m`, or `1h` for Anthropic OAuth/token auth, including Claude CLI reuse) or set your own cadence.
+    Leave heartbeats enabled (default is `30m`) or set your own cadence.
   </Step>
   <Step title="Add HEARTBEAT.md (optional)">
     Create a tiny `HEARTBEAT.md` checklist or `tasks:` block in the agent workspace.
@@ -61,7 +61,7 @@ Example config:
 
 ## Defaults
 
-- Interval: `30m` (or `1h` when Anthropic OAuth/token auth is the detected auth mode, including Claude CLI reuse). Set `agents.defaults.heartbeat.every` or per-agent `agents.list[].heartbeat.every`; use `0m` to disable.
+- Interval: `30m`. Set `agents.defaults.heartbeat.every` or per-agent `agents.list[].heartbeat.every`; use `0m` to disable.
 - Prompt body (configurable via `agents.defaults.heartbeat.prompt`): `Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`
 - The heartbeat prompt is sent **verbatim** as the user message. The system prompt includes a "Heartbeat" section only when heartbeats are enabled for the default agent, and the run is flagged internally.
 - When heartbeats are disabled with `0m`, normal runs also omit `HEARTBEAT.md` from bootstrap context so the model does not see heartbeat-only instructions.
@@ -97,7 +97,7 @@ Outside heartbeats, stray `HEARTBEAT_OK` at the start/end of a message is stripp
     defaults: {
       heartbeat: {
         every: "30m", // default: 30m (0m disables)
-        model: "anthropic/claude-opus-4-6",
+        model: "openai/gpt-5.5",
         includeReasoning: false, // default: false (deliver separate Thinking message when available)
         lightContext: false, // default: false; true keeps only HEARTBEAT.md from workspace bootstrap files
         isolatedSession: false, // default: false; true runs each heartbeat in a fresh session (no conversation history)
@@ -256,7 +256,7 @@ Use `accountId` to target a specific account on multi-account channels like Tele
 
 </ParamField>
 <ParamField path="to" type="string">
-  Optional recipient override (channel-specific id, e.g. E.164 for WhatsApp or a Telegram chat id). For Telegram topics/threads, use `<chatId>:topic:<messageThreadId>`.
+  Optional recipient override (channel-specific id, such as a Telegram chat id or Discord `channel:<id>` / `user:<id>` target). For Telegram topics/threads, use `<chatId>:topic:<messageThreadId>`.
 
 </ParamField>
 <ParamField path="accountId" type="string">
@@ -290,7 +290,7 @@ Use `accountId` to target a specific account on multi-account channels like Tele
 
 <AccordionGroup>
   <Accordion title="Session and target routing">
-    - Heartbeats run in the agent's main session by default (`agent:<id>:<mainKey>`), or `global` when `session.scope = "global"`. Set `session` to override to a specific channel session (Discord/WhatsApp/etc.).
+    - Heartbeats run in the agent's main session by default (`agent:<id>:<mainKey>`), or `global` when `session.scope = "global"`. Set `session` to override to a specific Discord or Telegram channel session.
     - `session` only affects the run context; delivery is controlled by `target` and `to`.
     - To deliver to a specific channel/recipient, set `target` + `to`. With `target: "last"`, delivery uses the last external channel for that session.
     - Heartbeat deliveries allow direct/DM targets by default. Set `directPolicy: "block"` to suppress direct-target sends while still running the heartbeat turn.
@@ -353,16 +353,12 @@ channels:
       showOk: false
       showAlerts: true
       useIndicator: true
-  slack:
-    heartbeat:
-      showOk: true # all Slack accounts
-    accounts:
-      ops:
-        heartbeat:
-          showAlerts: false # suppress alerts for the ops account only
   telegram:
     heartbeat:
       showOk: true
+  discord:
+    heartbeat:
+      showAlerts: true
 ```
 
 ### Common patterns
@@ -475,13 +471,13 @@ Heartbeats run full agent turns. Shorter intervals burn more tokens. To reduce c
 
 - Use `isolatedSession: true` to avoid sending full conversation history (~100K tokens down to ~2-5K per run).
 - Use `lightContext: true` to limit bootstrap files to just `HEARTBEAT.md`.
-- Set a cheaper `model` (e.g. `ollama/llama3.2:1b`).
+- Set a cheaper `model` (e.g. `openai/gpt-5.4-mini`).
 - Keep `HEARTBEAT.md` small.
 - Use `target: "none"` if you only want internal state updates.
 
 ## Context overflow after heartbeat
 
-If a heartbeat previously left an existing session on a smaller local model, for example an Ollama model with a 32k window, and the next main-session turn reports context overflow, reset the session runtime model back to the configured primary model. OpenClaw's reset message calls this out when the last runtime model matches configured `heartbeat.model`.
+If a heartbeat previously left an existing session on a smaller model and the next main-session turn reports context overflow, reset the session runtime model back to the configured primary model. OpenClaw's reset message calls this out when the last runtime model matches configured `heartbeat.model`.
 
 Current heartbeats preserve the shared session's existing runtime model after the run completes. You can still use `isolatedSession: true` to run heartbeats in a fresh session, combine it with `lightContext: true` for the smallest prompt, or choose a heartbeat model with a context window large enough for the shared session.
 

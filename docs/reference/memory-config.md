@@ -115,18 +115,11 @@ When `provider` is not set, OpenClaw selects the first available:
 
 ### API key resolution
 
-Remote embeddings require an API key. Bedrock uses the AWS SDK default credential chain instead (instance roles, SSO, access keys).
+Remote embeddings require an API key.
 
-| Provider       | Env var                                            | Config key                          |
-| -------------- | -------------------------------------------------- | ----------------------------------- |
-| Bedrock        | AWS credential chain                               | No API key needed                   |
-| DeepInfra      | `DEEPINFRA_API_KEY`                                | `models.providers.deepinfra.apiKey` |
-| Gemini         | `GEMINI_API_KEY`                                   | `models.providers.google.apiKey`    |
-| GitHub Copilot | `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN` | Auth profile via device login       |
-| Mistral        | `MISTRAL_API_KEY`                                  | `models.providers.mistral.apiKey`   |
-| Ollama         | `OLLAMA_API_KEY` (placeholder)                     | --                                  |
-| OpenAI         | `OPENAI_API_KEY`                                   | `models.providers.openai.apiKey`    |
-| Voyage         | `VOYAGE_API_KEY`                                   | `models.providers.voyage.apiKey`    |
+| Provider | Env var          | Config key                       |
+| -------- | ---------------- | -------------------------------- |
+| OpenAI   | `OPENAI_API_KEY` | `models.providers.openai.apiKey` |
 
 <Note>
 Codex OAuth covers chat/completions only and does not satisfy embedding requests.

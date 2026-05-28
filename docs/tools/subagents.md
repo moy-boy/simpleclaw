@@ -99,13 +99,12 @@ whether a user-facing update is needed.
     - A final-update instruction for the no-more-action path, written in normal assistant voice without forwarding raw internal metadata.
 
   </Accordion>
-  <Accordion title="Modes and ACP runtime">
+  <Accordion title="Modes">
     - `--model` and `--thinking` override defaults for that specific run.
     - Use `info`/`log` to inspect details and output after completion.
     - For persistent thread-bound sessions, use `sessions_spawn` with `thread: true` and `mode: "session"`.
     - If the requester channel does not support thread bindings, use `mode: "run"` instead of retrying impossible thread-bound combinations.
-    - For ACP harness sessions (Claude Code, Gemini CLI, OpenCode, or explicit Codex ACP/acpx), use `sessions_spawn` with `runtime: "acp"` when the tool advertises that runtime. See [ACP delivery model](/tools/acp-agents#delivery-model) when debugging completions or agent-to-agent loops. When the `codex` plugin is enabled, Codex chat/thread control should prefer `/codex ...` over ACP unless the user explicitly asks for ACP/acpx.
-    - OpenClaw hides `runtime: "acp"` until ACP is enabled, the requester is not sandboxed, and a backend plugin such as `acpx` is loaded. `runtime: "acp"` expects an external ACP harness id, or an `agents.list[]` entry with `runtime.type="acp"`; use the default sub-agent runtime for normal OpenClaw config agents from `agents_list`.
+    - Use the default sub-agent runtime for normal OpenClaw config agents from `agents_list`.
 
   </Accordion>
 </AccordionGroup>
@@ -185,15 +184,6 @@ Per-agent overrides use `agents.list[].subagents.delegationMode`.
 </ParamField>
 <ParamField path="agentId" type="string">
   Spawn under another configured agent id when allowed by `subagents.allowAgents`.
-</ParamField>
-<ParamField path="runtime" type='"subagent" | "acp"' default="subagent">
-  `acp` is only for external ACP harnesses (`claude`, `droid`, `gemini`, `opencode`, or explicitly requested Codex ACP/acpx) and for `agents.list[]` entries whose `runtime.type` is `acp`.
-</ParamField>
-<ParamField path="resumeSessionId" type="string">
-  ACP-only. Resumes an existing ACP harness session when `runtime: "acp"`; ignored for native sub-agent spawns.
-</ParamField>
-<ParamField path="streamTo" type='"parent"'>
-  ACP-only. Streams ACP run output to the parent session when `runtime: "acp"`; omit for native sub-agent spawns.
 </ParamField>
 <ParamField path="model" type="string">
   Override the sub-agent model. Invalid values are skipped and the sub-agent runs on the default model with a warning in the tool result.
@@ -642,7 +632,6 @@ still need normal device approval for scope upgrades.
 
 ## Related
 
-- [ACP agents](/tools/acp-agents)
 - [Agent send](/tools/agent-send)
 - [Background tasks](/automation/tasks)
 - [Multi-agent sandbox tools](/tools/multi-agent-sandbox-tools)

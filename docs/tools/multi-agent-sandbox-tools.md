@@ -130,7 +130,7 @@ Auth is scoped by agent: each agent has its own `agentDir` auth store at `~/.ope
     **Result:**
 
     - default agents get coding tools.
-    - `support` agent is messaging-only (+ Slack tool).
+    - `support` agent is messaging-only.
 
   </Accordion>
   <Accordion title="Example 3: Different sandbox modes per agent">

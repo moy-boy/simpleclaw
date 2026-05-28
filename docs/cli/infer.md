@@ -1,12 +1,12 @@
 ---
-summary: "Infer-first CLI for provider-backed model, image, audio, TTS, video, web, and embedding workflows"
+summary: "Infer-first CLI for OpenAI-backed model, image, audio, TTS, video, web, and embedding workflows"
 read_when:
   - Adding or modifying `openclaw infer` commands
   - Designing stable headless capability automation
 title: "Inference CLI"
 ---
 
-`openclaw infer` is the canonical headless surface for provider-backed inference workflows.
+`openclaw infer` is the canonical headless surface for OpenAI-backed inference workflows.
 
 It intentionally exposes capability families, not raw gateway RPC names and not raw agent tool ids.
 
@@ -37,7 +37,7 @@ Typical infer-focused skill coverage:
 
 ## Why use infer
 
-`openclaw infer` provides one consistent CLI for provider-backed inference tasks inside OpenClaw.
+`openclaw infer` provides one consistent CLI for OpenAI-backed inference tasks inside OpenClaw.
 
 Benefits:
 
@@ -142,12 +142,12 @@ This table maps common inference tasks to the corresponding infer command.
 
 ## Model
 
-Use `model` for provider-backed text inference and model/provider inspection.
+Use `model` for OpenAI-backed text inference and model inspection.
 
 ```bash
 openclaw infer model run --prompt "Reply with exactly: smoke-ok" --json
 openclaw infer model run --prompt "Summarize this changelog entry" --model openai/gpt-5.4 --json
-openclaw infer model run --prompt "Describe this image in one sentence" --file ./photo.jpg --model google/gemini-2.5-flash --json
+openclaw infer model run --prompt "Describe this image in one sentence" --file ./photo.jpg --model openai/gpt-5.5 --json
 openclaw infer model run --prompt "Use more reasoning here" --thinking high --json
 openclaw infer model providers --json
 openclaw infer model inspect --name gpt-5.5 --json
@@ -157,21 +157,14 @@ Use full `<provider/model>` refs to smoke-test a specific provider without
 starting the Gateway or loading the full agent tool surface:
 
 ```bash
-openclaw infer model run --local --model anthropic/claude-sonnet-4-6 --prompt "Reply with exactly: pong" --json
-openclaw infer model run --local --model cerebras/zai-glm-4.7 --prompt "Reply with exactly: pong" --json
-openclaw infer model run --local --model google/gemini-2.5-flash --prompt "Reply with exactly: pong" --json
-openclaw infer model run --local --model groq/llama-3.1-8b-instant --prompt "Reply with exactly: pong" --json
-openclaw infer model run --local --model mistral/mistral-medium-3-5 --prompt "Reply with exactly: pong" --json
-openclaw infer model run --local --model mistral/mistral-small-latest --prompt "Reply with exactly: pong" --json
 openclaw infer model run --local --model openai/gpt-5.5 --prompt "Reply with exactly: pong" --json
-openclaw infer model run --local --model ollama/qwen2.5vl:7b --prompt "Describe this image." --file ./photo.jpg --json
+openclaw infer model run --local --model openai/gpt-5.5 --prompt "Describe this image." --file ./photo.jpg --json
 ```
 
 Notes:
 
-- Local `model run` is the narrowest CLI smoke for provider/model/auth health because, for non-Codex providers, it sends only the supplied prompt to the selected model.
-- Local `model run --model <provider/model>` can use exact bundled static catalog rows from `models list --all` before that provider is written to config. Provider auth is still required; missing credentials fail as auth errors, not `Unknown model`.
-- For Mistral Medium 3.5 reasoning probes, leave temperature unset/default. Mistral rejects `reasoning_effort="high"` plus `temperature: 0`; use `mistral/mistral-medium-3-5` with default temperature or a non-zero reasoning-mode value such as `0.7`.
+- Local `model run` is the narrowest CLI smoke for OpenAI model/auth health because it sends only the supplied prompt to the selected model.
+- Local `model run --model <provider/model>` can use exact bundled OpenAI catalog rows from `models list --all` before that model is written to config. OpenAI subscription auth is still required; missing credentials fail as auth errors, not `Unknown model`.
 - `openai-codex/*` local probes are the narrow exception: OpenClaw adds a minimal system instruction so the Codex Responses transport can populate its required `instructions` field, without adding full agent context, tools, memory, or session transcript.
 - Local `model run --file` keeps that lean path and attaches image content directly to the single user message. Common image files such as PNG, JPEG, and WebP work when their MIME type is detected as `image/*`; unsupported or unrecognized files fail before the provider is called.
 - `model run --file` is best when you want to test the selected multimodal text model directly. Use `infer image describe` when you want OpenClaw's image-understanding provider selection and default image-model routing.
@@ -179,7 +172,7 @@ Notes:
 - `model run --prompt` must contain non-whitespace text; empty prompts are rejected before local providers or the Gateway are called.
 - Local `model run` exits non-zero when the provider returns no text output, so unreachable local providers and empty completions do not look like successful probes.
 - Use `model run --gateway` when you need to test Gateway routing, agent-runtime setup, or Gateway-managed provider state while keeping the model input raw. Use `openclaw agent` or chat surfaces when you want the full agent context, tools, memory, and session transcript.
-- `model auth login`, `model auth logout`, and `model auth status` manage saved provider auth state.
+- `model auth login`, `model auth logout`, and `model auth status` manage saved OpenAI subscription auth state.
 
 ## Image
 
@@ -197,7 +190,6 @@ openclaw infer image describe --file https://example.com/photo.png --json
 openclaw infer image describe --file ./receipt.jpg --prompt "Extract the merchant, date, and total" --json
 openclaw infer image describe-many --file ./before.png --file ./after.png --prompt "Compare the screenshots and list visible UI changes" --json
 openclaw infer image describe --file ./ui-screenshot.png --model openai/gpt-5.4-mini --json
-openclaw infer image describe --file ./photo.jpg --model ollama/qwen2.5vl:7b --prompt "Describe the image in one sentence" --timeout-ms 300000 --json
 ```
 
 Notes:
@@ -218,7 +210,7 @@ Notes:
   ```bash
   openclaw infer image providers --json
   openclaw infer image generate \
-    --model google/gemini-3.1-flash-image-preview \
+    --model openai/gpt-image-1.5 \
     --prompt "Minimal flat test image: one blue square on a white background, no text." \
     --output ./openclaw-infer-image-smoke.png \
     --json
@@ -229,9 +221,8 @@ Notes:
   provider's returned MIME type.
 
 - For `image describe` and `image describe-many`, use `--prompt` to give the vision model a task-specific instruction such as OCR, comparison, UI inspection, or concise captioning.
-- Use `--timeout-ms` with slow local vision models or cold Ollama starts.
+- Use `--timeout-ms` when a live image provider is slow.
 - For `image describe`, `--model` must be an image-capable `<provider/model>`.
-- For local Ollama vision models, pull the model first and set `OLLAMA_API_KEY` to any placeholder value, for example `ollama-local`. See [Ollama](/providers/ollama#vision-and-image-description).
 
 ## Audio
 

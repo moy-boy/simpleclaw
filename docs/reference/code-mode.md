@@ -174,8 +174,8 @@ Out of scope:
 - package manager, file, network, or module access in guest code
 - direct reuse of Codex Code mode internals
 
-Provider-owned tools such as remote Python sandboxes remain separate tools. See
-[Code execution](/tools/code-execution).
+Provider-owned remote execution tools remain outside this runtime. The
+supported bundled surface uses local `exec`/`process` for host execution.
 
 ## Terms
 
@@ -770,4 +770,3 @@ Docs-only changes to this page should still run `pnpm check:docs`.
 - [Tool Search](/tools/tool-search)
 - [Agent runtimes](/concepts/agent-runtimes)
 - [Exec tool](/tools/exec)
-- [Code execution](/tools/code-execution)

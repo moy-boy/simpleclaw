@@ -67,16 +67,9 @@ Use these hubs to discover every page, including deep dives and reference docs t
 
 - [Chat channels hub](/channels)
 - [Model providers hub](/providers/models)
-- [WhatsApp](/channels/whatsapp)
 - [Telegram](/channels/telegram)
-- [Slack](/channels/slack)
 - [Discord](/channels/discord)
-- [Mattermost](/channels/mattermost)
-- [Signal](/channels/signal)
-- [QQ Bot](/channels/qqbot)
-- [iMessage](/channels/imessage)
 - [Location parsing](/channels/location)
-- [WebChat](/web/webchat)
 - [Webhooks](/automation/cron-jobs#webhooks)
 - [Gmail Pub/Sub](/automation/cron-jobs#gmail-pubsub-integration)
 
@@ -169,8 +162,6 @@ Use these hubs to discover every page, including deep dives and reference docs t
 - [Plugin bundles](/plugins/bundles)
 - [ClawHub](/clawhub)
 - [Capability cookbook](/tools/capability-cookbook)
-- [Voice call plugin](/plugins/voice-call)
-- [Zalo user plugin](/plugins/zalouser)
 
 ## Workspace + templates
 

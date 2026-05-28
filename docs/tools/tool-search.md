@@ -228,26 +228,15 @@ Session logs should make it possible to answer:
 - which final tool was called
 - whether the result came from OpenClaw, MCP, or a client tool
 
-## E2E validation
-
-The gateway E2E runner proves both paths with the PI harness:
+## Regression Coverage
 
 ```bash
-node --import tsx scripts/tool-search-gateway-e2e.ts
+pnpm test src/agents/tool-search.test.ts
 ```
 
-It creates a temporary fake plugin with a large tool catalog, starts the mock
-OpenAI provider, starts a Gateway once in direct mode and once with Tool Search
-enabled, then compares provider request payloads and session logs.
-
-The regression proves:
-
-1. Direct mode can call the fake plugin tool.
-2. Tool Search can call the same fake plugin tool.
-3. Direct mode exposes the fake plugin tool schemas directly to the provider.
-4. Tool Search exposes only the compact bridge.
-5. The Tool Search request payload is smaller for the large fake catalog.
-6. Session logs show the expected tool-call counts and bridged call telemetry.
+The focused regression covers code-mode compaction, structured fallback mode,
+search/describe/call behavior, run-scoped catalogs, telemetry, and policy-safe
+tool execution through OpenClaw.
 
 ## Failure behavior
 
@@ -265,5 +254,4 @@ Tool Search should fail closed:
 - [Tools and plugins](/tools)
 - [Multi-agent sandbox and tools](/tools/multi-agent-sandbox-tools)
 - [Exec tool](/tools/exec)
-- [ACP agents setup](/tools/acp-agents-setup)
 - [Building plugins](/plugins/building-plugins)

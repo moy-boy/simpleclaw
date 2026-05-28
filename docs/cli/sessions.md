@@ -10,7 +10,7 @@ title: "Sessions"
 List stored conversation sessions.
 
 Session lists are not channel/provider liveness checks. They show persisted
-conversation rows from session stores. A quiet Discord, Slack, Telegram, or
+conversation rows from session stores. A quiet Discord, Telegram, or
 other channel can reconnect successfully without creating a new session row
 until a message is processed. Use `openclaw channels status --probe`,
 `openclaw status --deep`, or `openclaw health --verbose` when you need live
@@ -58,8 +58,8 @@ This is the command path used by the `/export-trajectory` slash command after
 the owner approves the exec request. The output directory is always resolved
 inside `.openclaw/trajectory-exports/` under the selected workspace.
 
-`openclaw sessions --all-agents` reads configured agent stores. Gateway and ACP
-session discovery are broader: they also include disk-only stores found under
+`openclaw sessions --all-agents` reads configured agent stores. Gateway
+session discovery is broader: it also includes disk-only stores found under
 the default `agents/` root or a templated `session.store` root. Those
 discovered stores must resolve to regular `sessions.json` files inside the
 agent root; symlinks and out-of-root paths are skipped.
@@ -83,7 +83,7 @@ JSON examples:
   "activeMinutes": null,
   "sessions": [
     { "agentId": "main", "key": "agent:main:main", "model": "gpt-5" },
-    { "agentId": "work", "key": "agent:work:main", "model": "claude-opus-4-6" }
+    { "agentId": "work", "key": "agent:work:main", "model": "gpt-5.4" }
   ]
 }
 ```

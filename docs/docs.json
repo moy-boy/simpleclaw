@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "name": "OpenClaw",
-  "description": "Self-hosted gateway that connects Discord, Google Chat, iMessage, Matrix, Microsoft Teams, Signal, Slack, Telegram, WhatsApp, Zalo, and more to AI coding agents. Run one Gateway process on your own machine and message your AI assistant from anywhere.",
+  "description": "Self-hosted gateway that connects Discord and Telegram to OpenAI subscription-backed AI coding agents. Run one Gateway process on your own machine and message your AI assistant from anywhere.",
   "theme": "mint",
   "icons": {
     "library": "lucide"
@@ -53,32 +53,8 @@
   },
   "redirects": [
     {
-      "source": "/channels/bluebubbles",
-      "destination": "/channels/imessage-from-bluebubbles"
-    },
-    {
-      "source": "/install/migrating-matrix",
-      "destination": "/channels/matrix-migration"
-    },
-    {
-      "source": "/help/gpt54-codex-agentic-parity",
-      "destination": "/help/gpt55-codex-agentic-parity"
-    },
-    {
-      "source": "/help/gpt54-codex-agentic-parity-maintainers",
-      "destination": "/help/gpt55-codex-agentic-parity-maintainers"
-    },
-    {
       "source": "/mcp",
       "destination": "/cli/mcp"
-    },
-    {
-      "source": "/providers/modelstudio",
-      "destination": "/providers/qwen"
-    },
-    {
-      "source": "/providers/qwen_modelstudio",
-      "destination": "/providers/qwen"
     },
     {
       "source": "/platforms/oracle",
@@ -101,10 +77,6 @@
       "destination": "/plugins/building-plugins#registering-agent-tools"
     },
     {
-      "source": "/gateway/admin-http-rpc",
-      "destination": "/plugins/admin-http-rpc"
-    },
-    {
       "source": "/cli/capability",
       "destination": "/cli/infer"
     },
@@ -113,36 +85,8 @@
       "destination": "/plugins/adding-capabilities"
     },
     {
-      "source": "/brave-search",
-      "destination": "/tools/brave-search"
-    },
-    {
-      "source": "/perplexity",
-      "destination": "/tools/perplexity-search"
-    },
-    {
       "source": "/web-fetch",
       "destination": "/tools/web-fetch"
-    },
-    {
-      "source": "/duckduckgo-search",
-      "destination": "/tools/duckduckgo-search"
-    },
-    {
-      "source": "/exa-search",
-      "destination": "/tools/exa-search"
-    },
-    {
-      "source": "/gemini-search",
-      "destination": "/tools/gemini-search"
-    },
-    {
-      "source": "/grok-search",
-      "destination": "/tools/grok-search"
-    },
-    {
-      "source": "/kimi-search",
-      "destination": "/tools/kimi-search"
     },
     {
       "source": "/tts",
@@ -169,72 +113,12 @@
       "destination": "/automation/cron-jobs"
     },
     {
-      "source": "/minimax",
-      "destination": "/providers/minimax"
-    },
-    {
-      "source": "/xiaomi",
-      "destination": "/providers/xiaomi"
-    },
-    {
       "source": "/openai",
       "destination": "/providers/openai"
     },
     {
       "source": "/openai/",
       "destination": "/providers/openai"
-    },
-    {
-      "source": "/anthropic",
-      "destination": "/providers/anthropic"
-    },
-    {
-      "source": "/anthropic/",
-      "destination": "/providers/anthropic"
-    },
-    {
-      "source": "/moonshot",
-      "destination": "/providers/moonshot"
-    },
-    {
-      "source": "/mistral",
-      "destination": "/providers/mistral"
-    },
-    {
-      "source": "/openrouter",
-      "destination": "/providers/openrouter"
-    },
-    {
-      "source": "/opencode",
-      "destination": "/providers/opencode"
-    },
-    {
-      "source": "/opencode-go",
-      "destination": "/providers/opencode-go"
-    },
-    {
-      "source": "/qianfan",
-      "destination": "/providers/qianfan"
-    },
-    {
-      "source": "/mattermost",
-      "destination": "/channels/mattermost"
-    },
-    {
-      "source": "/line",
-      "destination": "/channels/line"
-    },
-    {
-      "source": "/glm",
-      "destination": "/providers/zai"
-    },
-    {
-      "source": "/zai",
-      "destination": "/providers/zai"
-    },
-    {
-      "source": "/providers/glm",
-      "destination": "/providers/zai"
     },
     {
       "source": "/message",
@@ -245,56 +129,12 @@
       "destination": "/channels/discord"
     },
     {
-      "source": "/providers/googlechat",
-      "destination": "/channels/googlechat"
-    },
-    {
       "source": "/providers/grammy",
       "destination": "/channels/telegram"
     },
     {
-      "source": "/providers/imessage",
-      "destination": "/channels/imessage"
-    },
-    {
-      "source": "/providers/location",
-      "destination": "/channels/location"
-    },
-    {
-      "source": "/providers/mattermost",
-      "destination": "/channels/mattermost"
-    },
-    {
-      "source": "/providers/msteams",
-      "destination": "/channels/msteams"
-    },
-    {
-      "source": "/providers/line",
-      "destination": "/channels/line"
-    },
-    {
-      "source": "/providers/signal",
-      "destination": "/channels/signal"
-    },
-    {
-      "source": "/providers/slack",
-      "destination": "/channels/slack"
-    },
-    {
       "source": "/providers/telegram",
       "destination": "/channels/telegram"
-    },
-    {
-      "source": "/providers/troubleshooting",
-      "destination": "/channels/troubleshooting"
-    },
-    {
-      "source": "/providers/zalo",
-      "destination": "/channels/zalo"
-    },
-    {
-      "source": "/providers/whatsapp",
-      "destination": "/channels/whatsapp"
     },
     {
       "source": "/sandbox",
@@ -494,11 +334,11 @@
     },
     {
       "source": "/channels/openclaw-weixin",
-      "destination": "/channels/wechat"
+      "destination": "/channels"
     },
     {
       "source": "/channels/weixin",
-      "destination": "/channels/wechat"
+      "destination": "/channels"
     },
     {
       "source": "/group-messages",
@@ -525,10 +365,6 @@
       "destination": "/nodes/images"
     },
     {
-      "source": "/imessage",
-      "destination": "/channels/imessage"
-    },
-    {
       "source": "/ios",
       "destination": "/platforms/ios"
     },
@@ -538,7 +374,7 @@
     },
     {
       "source": "/location",
-      "destination": "/channels/location"
+      "destination": "/channels"
     },
     {
       "source": "/location-command",
@@ -725,20 +561,12 @@
       "destination": "/start/showcase"
     },
     {
-      "source": "/signal",
-      "destination": "/channels/signal"
-    },
-    {
       "source": "/skills",
       "destination": "/tools/skills"
     },
     {
       "source": "/skills-config",
       "destination": "/tools/skills-config"
-    },
-    {
-      "source": "/slack",
-      "destination": "/channels/slack"
     },
     {
       "source": "/slash-commands",
@@ -831,10 +659,6 @@
     {
       "source": "/webhook",
       "destination": "/automation/cron-jobs"
-    },
-    {
-      "source": "/whatsapp",
-      "destination": "/channels/whatsapp"
     },
     {
       "source": "/windows",
@@ -1003,14 +827,6 @@
                 "group": "Maintenance",
                 "pages": [
                   "install/updating",
-                  {
-                    "group": "Migrating",
-                    "pages": [
-                      "install/migrating",
-                      "install/migrating-claude",
-                      "install/migrating-hermes"
-                    ]
-                  },
                   "install/uninstall",
                   "install/development-channels"
                 ]
@@ -1059,49 +875,11 @@
             "groups": [
               {
                 "group": "Overview",
-                "pages": ["channels/index", "announcements/bluebubbles-imessage"]
+                "pages": ["channels/index"]
               },
               {
                 "group": "Mainstream messaging",
-                "pages": [
-                  "channels/discord",
-                  "channels/slack",
-                  "channels/telegram",
-                  "channels/whatsapp",
-                  "channels/signal",
-                  "channels/msteams",
-                  "channels/googlechat",
-                  "channels/imessage",
-                  "channels/imessage-from-bluebubbles",
-                  "channels/matrix",
-                  "channels/matrix-migration",
-                  "channels/matrix-presentation",
-                  "channels/matrix-push-rules"
-                ]
-              },
-              {
-                "group": "Developer and self-hosted",
-                "pages": [
-                  "channels/irc",
-                  "channels/mattermost",
-                  "channels/nextcloud-talk",
-                  "channels/nostr",
-                  "channels/tlon",
-                  "channels/synology-chat",
-                  "channels/twitch"
-                ]
-              },
-              {
-                "group": "Regional platforms",
-                "pages": [
-                  "channels/line",
-                  "channels/wechat",
-                  "channels/qqbot",
-                  "channels/feishu",
-                  "channels/yuanbao",
-                  "channels/zalo",
-                  "channels/zalouser"
-                ]
+                "pages": ["channels/discord", "channels/telegram"]
               },
               {
                 "group": "Configuration",
@@ -1110,12 +888,8 @@
                   "channels/access-groups",
                   "channels/group-messages",
                   "channels/groups",
-                  "channels/ambient-room-events",
-                  "channels/broadcast-groups",
                   "channels/channel-routing",
-                  "channels/location",
-                  "channels/troubleshooting",
-                  "channels/qa-channel"
+                  "channels/troubleshooting"
                 ]
               }
             ]
@@ -1137,10 +911,7 @@
                   "concepts/soul",
                   "concepts/oauth",
                   "start/bootstrapping",
-                  "concepts/experimental-features",
-                  "concepts/qa-e2e-automation",
-                  "concepts/personal-agent-benchmark-pack",
-                  "concepts/qa-matrix"
+                  "concepts/experimental-features"
                 ]
               },
               {
@@ -1210,17 +981,7 @@
                 "pages": [
                   "plugins/codex-harness",
                   "plugins/codex-native-plugins",
-                  "plugins/codex-computer-use",
-                  "plugins/google-meet",
-                  "plugins/meeting-notes",
-                  "plugins/webhooks",
-                  "plugins/admin-http-rpc",
-                  "plugins/voice-call",
-                  "plugins/memory-wiki",
-                  "plugins/memory-lancedb",
-                  "plugins/oc-path",
-                  "plugins/skill-workshop",
-                  "plugins/zalouser"
+                  "plugins/codex-computer-use"
                 ]
               },
               {
@@ -1230,7 +991,6 @@
                   "plugins/tool-plugins",
                   "plugins/sdk-channel-plugins",
                   "plugins/sdk-provider-plugins",
-                  "plugins/cli-backend-plugins",
                   "plugins/hooks",
                   "plugins/plugin-permission-requests",
                   "plugins/adding-capabilities"
@@ -1262,7 +1022,6 @@
                 "pages": [
                   "tools/apply-patch",
                   "tools/btw",
-                  "tools/code-execution",
                   "tools/diffs",
                   "tools/elevated",
                   "tools/exec-approvals",
@@ -1272,7 +1031,6 @@
                   "tools/llm-task",
                   "tools/lobster",
                   "tools/media-overview",
-                  "tools/music-generation",
                   "tools/pdf",
                   "tools/reactions",
                   "tools/thinking",
@@ -1296,19 +1054,7 @@
                     "group": "Web tools",
                     "pages": [
                       "tools/web-fetch",
-                      "tools/web",
-                      "tools/brave-search",
-                      "tools/duckduckgo-search",
-                      "tools/exa-search",
-                      "tools/firecrawl",
-                      "tools/gemini-search",
-                      "tools/grok-search",
-                      "tools/kimi-search",
-                      "tools/minimax-search",
-                      "tools/ollama-search",
-                      "tools/perplexity-search",
-                      "tools/searxng-search",
-                      "tools/tavily"
+                      "tools/web"
                     ]
                   }
                 ]
@@ -1319,8 +1065,6 @@
                   "tools/agent-send",
                   "tools/steer",
                   "tools/subagents",
-                  "tools/acp-agents",
-                  "tools/acp-agents-setup",
                   "tools/multi-agent-sandbox-tools"
                 ]
               }
@@ -1364,67 +1108,11 @@
               },
               {
                 "group": "Concepts and configuration",
-                "pages": ["concepts/models", "concepts/model-providers", "concepts/model-failover"]
+                "pages": ["concepts/models"]
               },
               {
                 "group": "Providers",
-                "pages": [
-                  "providers/alibaba",
-                  "providers/bedrock",
-                  "providers/bedrock-mantle",
-                  "providers/anthropic",
-                  "providers/arcee",
-                  "providers/azure-speech",
-                  "providers/cerebras",
-                  "providers/chutes",
-                  "providers/claude-max-api-proxy",
-                  "providers/cloudflare-ai-gateway",
-                  "providers/comfy",
-                  "providers/deepgram",
-                  "providers/deepinfra",
-                  "providers/deepseek",
-                  "providers/ds4",
-                  "providers/elevenlabs",
-                  "providers/fal",
-                  "providers/fireworks",
-                  "providers/github-copilot",
-                  "providers/google",
-                  "providers/gradium",
-                  "providers/groq",
-                  "providers/huggingface",
-                  "providers/inferrs",
-                  "providers/inworld",
-                  "providers/kilocode",
-                  "providers/litellm",
-                  "providers/lmstudio",
-                  "providers/minimax",
-                  "providers/mistral",
-                  "providers/moonshot",
-                  "providers/nvidia",
-                  "providers/ollama",
-                  "providers/openai",
-                  "providers/opencode",
-                  "providers/opencode-go",
-                  "providers/openrouter",
-                  "providers/perplexity-provider",
-                  "providers/qianfan",
-                  "providers/qwen",
-                  "providers/runway",
-                  "providers/senseaudio",
-                  "providers/sglang",
-                  "providers/stepfun",
-                  "providers/synthetic",
-                  "providers/tencent",
-                  "providers/together",
-                  "providers/venice",
-                  "providers/vercel-ai-gateway",
-                  "providers/vllm",
-                  "providers/volcengine",
-                  "providers/vydra",
-                  "providers/xai",
-                  "providers/xiaomi",
-                  "providers/zai"
-                ]
+                "pages": ["providers/openai"]
               }
             ]
           },
@@ -1552,10 +1240,7 @@
                       "gateway/bridge-protocol",
                       "gateway/openai-http-api",
                       "gateway/openresponses-http-api",
-                      "gateway/tools-invoke-http-api",
-                      "gateway/cli-backends",
-                      "gateway/local-models",
-                      "gateway/local-model-services"
+                      "gateway/tools-invoke-http-api"
                     ]
                   },
                   {
@@ -1621,7 +1306,6 @@
                       "cli/gateway",
                       "cli/health",
                       "cli/logs",
-                      "cli/migrate",
                       "cli/onboard",
                       "cli/reset",
                       "cli/secrets",
@@ -1655,8 +1339,7 @@
                       "cli/devices",
                       "cli/directory",
                       "cli/pairing",
-                      "cli/qr",
-                      "cli/voicecall"
+                      "cli/qr"
                     ]
                   },
                   {
@@ -1673,7 +1356,7 @@
                   },
                   {
                     "group": "Configuration",
-                    "pages": ["cli/config", "cli/configure", "cli/webhooks"]
+                    "pages": ["cli/config", "cli/configure"]
                   },
                   {
                     "group": "Plugins and skills",
@@ -1686,14 +1369,12 @@
                   {
                     "group": "Utility",
                     "pages": [
-                      "cli/acp",
                       "cli/clawbot",
                       "cli/completion",
                       "cli/dns",
                       "cli/docs",
                       "cli/mcp",
-                      "cli/proxy",
-                      "cli/wiki"
+                      "cli/proxy"
                     ]
                   }
                 ]
@@ -1787,9 +1468,7 @@
                   "concepts/markdown-formatting",
                   "concepts/typing-indicators",
                   "concepts/usage-tracking",
-                  "concepts/timezone",
-                  "help/gpt55-codex-agentic-parity",
-                  "help/gpt55-codex-agentic-parity-maintainers"
+                  "concepts/timezone"
                 ]
               },
               {

@@ -72,8 +72,8 @@ posture, and tool metadata looks like this:
   },
   "models": {
     "providers": {
-      "allow": ["openai", "anthropic"],
-      "deny": ["openrouter"],
+      "allow": ["openai"],
+      "deny": ["openai-codex"],
     },
   },
   "network": {
@@ -623,7 +623,7 @@ Example model-provider finding:
 {
   "checkId": "policy/models-unapproved-provider",
   "severity": "error",
-  "message": "Model ref 'anthropic/claude-sonnet-4.7' uses unapproved provider 'anthropic'.",
+  "message": "Model ref 'openai-codex/gpt-5.5' uses unapproved provider 'openai-codex'.",
   "source": "policy",
   "path": "openclaw config",
   "ocPath": "oc://openclaw.config/agents/defaults/model/fallbacks/#0",

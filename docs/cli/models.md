@@ -1,14 +1,14 @@
 ---
-summary: "CLI reference for `openclaw models` (status/list/set/scan, aliases, fallbacks, auth)"
+summary: "CLI reference for `openclaw models` (status/list/set, aliases, fallbacks, auth)"
 read_when:
-  - You want to change default models or view provider auth status
-  - You want to scan available models/providers and debug auth profiles
+  - You want to change default models or view OpenAI subscription auth status
+  - You want to debug OpenAI subscription auth profiles
 title: "Models"
 ---
 
 # `openclaw models`
 
-Model discovery, scanning, and configuration (default model, fallbacks, auth profiles).
+Model discovery and configuration for the simplified OpenAI subscription setup.
 
 Related:
 
@@ -22,16 +22,11 @@ Related:
 openclaw models status
 openclaw models list
 openclaw models set <model-or-alias>
-openclaw models scan
 ```
 
 `openclaw models status` shows the resolved default/fallbacks plus an auth overview.
-When provider usage snapshots are available, the OAuth/API-key status section includes
-provider usage windows and quota snapshots.
-Current usage-window providers: Anthropic, GitHub Copilot, Gemini CLI, OpenAI
-Codex, MiniMax, Xiaomi, and z.ai. Usage auth comes from provider-specific hooks
-when available; otherwise OpenClaw falls back to matching OAuth/API-key
-credentials from auth profiles, env, or config.
+When provider usage snapshots are available, the auth status section includes
+OpenAI Codex subscription usage windows and quota snapshots.
 In `--json` output, `auth.providers` is the env/config/store-aware provider
 overview, while `auth.oauth` is auth-store profile health only.
 Add `--probe` to run live auth probes against each configured provider profile.
@@ -75,46 +70,18 @@ Notes:
   output, `Ctx` shows `contextTokens/contextWindow` when an effective runtime
   cap differs from the native context window; JSON rows include `contextTokens`
   when a provider exposes that cap.
-- `models list --provider <id>` filters by provider id, such as `moonshot` or
+- `models list --provider <id>` filters by provider id, such as `openai` or
   `openai-codex`. It does not accept display labels from interactive provider
-  pickers, such as `Moonshot AI`.
-- Model refs are parsed by splitting on the **first** `/`. If the model ID includes `/` (OpenRouter-style), include the provider prefix (example: `openrouter/moonshotai/kimi-k2`).
+  pickers.
+- Model refs are parsed by splitting on the **first** `/`. The simplified setup
+  uses OpenAI refs such as `openai/gpt-5.4`.
 - If you omit the provider, OpenClaw resolves the input as an alias first, then
   as a unique configured-provider match for that exact model id, and only then
   falls back to the configured default provider with a deprecation warning.
   If that provider no longer exposes the configured default model, OpenClaw
   falls back to the first configured provider/model instead of surfacing a
   stale removed-provider default.
-- `models status` may show `marker(<value>)` in auth output for non-secret placeholders (for example `OPENAI_API_KEY`, `secretref-managed`, `minimax-oauth`, `oauth:chutes`, `ollama-local`) instead of masking them as secrets.
-
-### Models scan
-
-`models scan` reads OpenRouter's public `:free` catalog and ranks candidates for
-fallback use. The catalog itself is public, so metadata-only scans do not need
-an OpenRouter key.
-
-By default OpenClaw tries to probe tool and image support with live model calls.
-If no OpenRouter key is configured, the command falls back to metadata-only
-output and explains that `:free` models still require `OPENROUTER_API_KEY` for
-probes and inference.
-
-Options:
-
-- `--no-probe` (metadata only; no config/secrets lookup)
-- `--min-params <b>`
-- `--max-age-days <days>`
-- `--provider <name>`
-- `--max-candidates <n>`
-- `--timeout <ms>` (catalog request and per-probe timeout)
-- `--concurrency <n>`
-- `--yes`
-- `--no-input`
-- `--set-default`
-- `--set-image`
-- `--json`
-
-`--set-default` and `--set-image` require live probes; metadata-only scan
-results are informational and are not applied to config.
+- `models status` may show `marker(<value>)` in auth output for non-secret placeholders (for example `OPENAI_API_KEY` or `secretref-managed`) instead of masking them as secrets.
 
 ### Models status
 
@@ -153,7 +120,7 @@ Probe detail/reason-code cases to expect:
   trying it.
 - `missing_credential`, `invalid_expires`, `expired`, `unresolved_ref`:
   profile is present but not eligible/resolvable.
-- `no_model`: provider auth exists, but OpenClaw could not resolve a probeable
+- `no_model`: auth exists, but OpenClaw could not resolve a probeable
   model candidate for that provider.
 
 ## Aliases + fallbacks
@@ -167,68 +134,37 @@ openclaw models fallbacks list
 
 ```bash
 openclaw models auth add
-openclaw models auth list [--provider <id>] [--json]
-openclaw models auth login --provider <id>
+openclaw models auth list --provider openai [--json]
+openclaw models auth login --provider openai
 openclaw models auth login --provider openai --profile-id openai:work
-openclaw models auth paste-api-key --provider <id>
-openclaw models auth setup-token --provider <id>
-openclaw models auth paste-token
 ```
 
-`models auth add` is the interactive auth helper. It can launch a provider auth
-flow (OAuth/API key) or guide you into manual token paste, depending on the
-provider you choose.
+`models auth add` is the interactive auth helper. In the simplified setup it
+guides you through OpenAI subscription login.
 
 `models auth list` lists saved auth profiles for the selected agent without
 printing token, API-key, or OAuth secret material. Use `--provider <id>` to
 filter to one provider, such as `openai-codex`, and `--json` for scripting.
 
-`models auth login` runs a provider plugin's auth flow (OAuth/API key). Use
-`openclaw plugins list` to see which providers are installed.
+`models auth login` runs the OpenAI subscription auth flow.
 Use `openclaw models auth --agent <id> <subcommand>` to write auth results to a
-specific configured agent store. The parent `--agent` flag is honored by
-`add`, `list`, `login`, `paste-api-key`, `setup-token`, `paste-token`, and
-`login-github-copilot`.
+specific configured agent store. The parent `--agent` flag is honored by `add`,
+`list`, and `login`.
 
 For OpenAI models, `--provider openai` defaults to ChatGPT/Codex account login.
-Use `--method api-key` only when you want to add an OpenAI API-key profile,
-usually as a backup for Codex subscription limits. The legacy
-`--provider openai-codex` spelling still works for existing scripts.
+The legacy `--provider openai-codex` spelling still works for existing scripts.
 
 Examples:
 
 ```bash
 openclaw models auth login --provider openai --set-default
-openclaw models auth login --provider openai --method api-key
-openclaw models auth paste-api-key --provider openai-codex
 openclaw models auth list --provider openai
 ```
 
 Notes:
 
-- `login` accepts `--profile-id <id>` for providers that support named
-  profiles during login. Use this to keep multiple logins for the same
-  provider separate.
-- `paste-api-key` accepts API keys generated elsewhere, prompts for the key
-  value, and writes it to the default profile id `<provider>:manual` unless you
-  pass `--profile-id`. In automation, pipe the key on stdin, for example
-  `printf "%s\n" "$OPENAI_API_KEY" | openclaw models auth paste-api-key --provider openai-codex`.
-- `setup-token` and `paste-token` remain generic token commands for providers
-  that expose token auth methods.
-- `setup-token` requires an interactive TTY and runs the provider's token-auth
-  method (defaulting to that provider's `setup-token` method when it exposes
-  one).
-- `paste-token` accepts a token string generated elsewhere or from automation.
-- `paste-token` requires `--provider`, prompts for the token value, and writes
-  it to the default profile id `<provider>:manual` unless you pass
-  `--profile-id`.
-- `paste-token --expires-in <duration>` stores an absolute token expiry from a
-  relative duration such as `365d` or `12h`.
-- For `openai-codex`, OpenAI API keys and ChatGPT/OAuth token material are
-  different auth shapes. Use `paste-api-key` for `sk-...` OpenAI API keys and
-  `paste-token` only for token auth material.
-- Anthropic note: Anthropic staff told us OpenClaw-style Claude CLI usage is allowed again, so OpenClaw treats Claude CLI reuse and `claude -p` usage as sanctioned for this integration unless Anthropic publishes a new policy.
-- Anthropic `setup-token` / `paste-token` remain available as a supported OpenClaw token path, but OpenClaw now prefers Claude CLI reuse and `claude -p` when available.
+- `login` accepts `--profile-id <id>` so multiple OpenAI logins can stay
+  separate.
 
 ## Related
 

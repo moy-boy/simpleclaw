@@ -69,21 +69,21 @@ By default, compaction uses the agent's primary model. Set `agents.defaults.comp
   "agents": {
     "defaults": {
       "compaction": {
-        "model": "openrouter/anthropic/claude-sonnet-4-6"
+        "model": "openai/gpt-5.5"
       }
     }
   }
 }
 ```
 
-This works with local models too, for example a second Ollama model dedicated to summarization:
+Use a separate OpenAI model when summarization should run on a cheaper or faster route:
 
 ```json
 {
   "agents": {
     "defaults": {
       "compaction": {
-        "model": "ollama/llama3.1:8b"
+        "model": "openai/gpt-5.4-mini"
       }
     }
   }
@@ -141,7 +141,7 @@ Before compaction, OpenClaw can run a **silent memory flush** turn to store dura
     "defaults": {
       "compaction": {
         "memoryFlush": {
-          "model": "ollama/qwen3:8b"
+          "model": "openai/gpt-5.4-mini"
         }
       }
     }

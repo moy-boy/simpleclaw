@@ -159,43 +159,6 @@ Related:
 - [Skills config](/tools/skills-config#symlinked-sibling-repos)
 - [Configuration examples](/gateway/configuration-examples#symlinked-sibling-skill-repo)
 
-## Anthropic 429 extra usage required for long context
-
-Use this when logs/errors include: `HTTP 429: rate_limit_error: Extra usage is required for long context requests`.
-
-```bash
-openclaw logs --follow
-openclaw models status
-openclaw config get agents.defaults.models
-```
-
-Look for:
-
-- Selected Anthropic model is a GA-capable 1M Claude 4.x model, or the model has legacy `params.context1m: true`.
-- Current Anthropic credential is not eligible for long-context usage.
-- Requests fail only on long sessions/model runs that need the 1M context path.
-
-Fix options:
-
-<Steps>
-  <Step title="Use a standard context window">
-    Switch to a standard-window model, or remove legacy `context1m` from older
-    model config that is not GA-capable for 1M context.
-  </Step>
-  <Step title="Use an eligible credential">
-    Use an Anthropic credential that is eligible for long-context requests, or switch to an Anthropic API key.
-  </Step>
-  <Step title="Configure fallback models">
-    Configure fallback models so runs continue when Anthropic long-context requests are rejected.
-  </Step>
-</Steps>
-
-Related:
-
-- [Anthropic](/providers/anthropic)
-- [Token use and costs](/reference/token-use)
-- [Why am I seeing HTTP 429 from Anthropic?](/help/faq-first-run#why-am-i-seeing-http-429-ratelimiterror-from-anthropic)
-
 ## Upstream 403 blocked responses
 
 Use this when an upstream LLM provider returns a generic `403` such as
@@ -281,7 +244,6 @@ Look for:
 Related:
 
 - [Configuration](/gateway/configuration)
-- [Local models](/gateway/local-models)
 - [OpenAI-compatible endpoints](/gateway/configuration-reference#openai-compatible-endpoints)
 
 ## No replies
@@ -614,7 +576,6 @@ Related:
 - [Channel troubleshooting](/channels/troubleshooting)
 - [Discord](/channels/discord)
 - [Telegram](/channels/telegram)
-- [WhatsApp](/channels/whatsapp)
 
 ## Cron and heartbeat delivery
 

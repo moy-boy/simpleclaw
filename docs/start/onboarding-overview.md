@@ -27,12 +27,10 @@ you the most control.
 
 Regardless of which path you choose, onboarding sets up:
 
-1. **Model provider and auth** — API key, OAuth, or setup token for your chosen provider
+1. **OpenAI subscription auth** — ChatGPT/Codex login for OpenAI models
 2. **Workspace** — directory for agent files, bootstrap templates, and memory
 3. **Gateway** — port, bind address, auth mode
-4. **Channels** (optional) — built-in and bundled chat channels such as
-   iMessage, Discord, Feishu, Google Chat, Mattermost, Microsoft Teams,
-   Telegram, WhatsApp, and more
+4. **Channels** (optional) — Telegram or Discord
 5. **Daemon** (optional) — background service so the Gateway starts automatically
 
 ## CLI onboarding
@@ -54,17 +52,6 @@ Open the OpenClaw app. The first-run wizard walks you through the same steps
 with a visual interface.
 
 Full reference: [Onboarding (macOS App)](/start/onboarding)
-
-## Custom or unlisted providers
-
-If your provider is not listed in onboarding, choose **Custom Provider** and
-enter:
-
-- API compatibility mode (OpenAI-compatible, Anthropic-compatible, or auto-detect)
-- Base URL and API key
-- Model ID and optional alias
-
-Multiple custom endpoints can coexist — each gets its own endpoint ID.
 
 ## Related
 

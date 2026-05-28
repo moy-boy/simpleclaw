@@ -38,9 +38,9 @@ For a complete map of the docs, see [Docs hubs](/start/hubs).
 - [Control UI (browser)](/web/control-ui)
 - [Telegram](/channels/telegram)
 - [Discord](/channels/discord)
-- [Mattermost](/channels/mattermost)
-- [QQ Bot](/channels/qqbot)
-- [iMessage](/channels/imessage)
+- Mattermost
+- QQ Bot
+- iMessage
 - [Groups](/channels/groups)
 - [WhatsApp group messages](/channels/group-messages)
 - [Media images](/nodes/images)

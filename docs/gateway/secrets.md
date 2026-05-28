@@ -256,17 +256,17 @@ Use a file SecretRef on a supported credential field instead:
 {
   secrets: {
     providers: {
-      xai_key_file: {
+      openai_key_file: {
         source: "file",
-        path: "~/.openclaw/secrets/xai-api-key.txt",
+        path: "~/.openclaw/secrets/openai-api-key.txt",
         mode: "singleValue",
       },
     },
   },
   models: {
     providers: {
-      xai: {
-        apiKey: { source: "file", provider: "xai_key_file", id: "value" },
+      openai: {
+        apiKey: { source: "file", provider: "openai_key_file", id: "value" },
       },
     },
   },
@@ -275,7 +275,7 @@ Use a file SecretRef on a supported credential field instead:
 
 For `mode: "singleValue"`, the SecretRef `id` is `"value"`. For
 `mode: "json"`, use an absolute JSON pointer such as
-`"/providers/xai/apiKey"`.
+`"/providers/openai/apiKey"`.
 
 See [SecretRef credential surface](/reference/secretref-credential-surface) for
 the config fields that accept SecretRefs.

@@ -1,7 +1,7 @@
 ---
-summary: "Reusable sender allowlists for message channels"
+summary: "Reusable sender allowlists for Telegram and Discord"
 read_when:
-  - Configuring the same allowlist across multiple message channels
+  - Configuring the same allowlist across Telegram and Discord
   - Sharing DM and group sender access rules
   - Reviewing message-channel access control
 title: "Access groups"
@@ -9,7 +9,7 @@ title: "Access groups"
 
 Access groups are named sender lists you define once and reference from channel allowlists with `accessGroup:<name>`.
 
-Use them when the same people should be allowed across several message channels, or when one trusted set should apply to both DMs and group sender authorization.
+Use them when the same people should be allowed across Telegram and Discord, or when one trusted set should apply to both DMs and group sender authorization.
 
 Access groups do not grant access by themselves. A group only matters when an allowlist field references it.
 
@@ -26,27 +26,25 @@ Static sender groups use `type: "message.senders"`.
         "*": ["global-owner-id"],
         discord: ["discord:123456789012345678"],
         telegram: ["987654321"],
-        whatsapp: ["+15551234567"],
       },
     },
   },
 }
 ```
 
-Member lists are keyed by message-channel id:
+Member lists are keyed by supported message-channel id:
 
 | Key        | Meaning                                                                 |
 | ---------- | ----------------------------------------------------------------------- |
 | `"*"`      | Shared entries checked for every message channel that references group. |
 | `discord`  | Entries checked only for Discord allowlist matching.                    |
 | `telegram` | Entries checked only for Telegram allowlist matching.                   |
-| `whatsapp` | Entries checked only for WhatsApp allowlist matching.                   |
 
 Entries are matched with the destination channel's normal `allowFrom` rules. OpenClaw does not translate sender ids between channels. If Alice has a Telegram id and a Discord id, list both ids under the appropriate keys.
 
 ## Reference groups from allowlists
 
-Reference a group with `accessGroup:<name>` anywhere the message channel path supports sender allowlists.
+Reference a group with `accessGroup:<name>` anywhere the supported channel path accepts sender allowlists.
 
 DM allowlist example:
 
@@ -82,21 +80,30 @@ Group sender allowlist example:
     oncall: {
       type: "message.senders",
       members: {
-        whatsapp: ["+15551234567"],
-        googlechat: ["users/1234567890"],
+        discord: ["discord:123456789012345678"],
+        telegram: ["987654321"],
       },
     },
   },
   channels: {
-    whatsapp: {
+    discord: {
+      groupPolicy: "allowlist",
+      guilds: {
+        "<DISCORD_GUILD_ID>": {
+          channels: {
+            "<DISCORD_CHANNEL_ID>": {
+              allow: true,
+              users: ["accessGroup:oncall"],
+            },
+          },
+        },
+      },
+    },
+    telegram: {
       groupPolicy: "allowlist",
       groupAllowFrom: ["accessGroup:oncall"],
-    },
-    googlechat: {
-      spaces: {
-        "spaces/AAA": {
-          users: ["accessGroup:oncall"],
-        },
+      groups: {
+        "<TELEGRAM_GROUP_CHAT_ID>": { requireMention: true },
       },
     },
   },
@@ -116,16 +123,14 @@ You can mix groups and direct entries:
 }
 ```
 
-## Supported message-channel paths
+## Supported paths
 
-Access groups are available in shared message-channel authorization paths, including:
+Access groups are available in the shared sender-authorization paths used by Telegram and Discord:
 
-- DM sender allowlists such as `channels.<channel>.allowFrom`
-- group sender allowlists such as `channels.<channel>.groupAllowFrom`
-- channel-specific per-room sender allowlists that use the same sender matching rules
+- DM sender allowlists such as `channels.telegram.allowFrom` and `channels.discord.allowFrom`
+- group sender allowlists such as `channels.telegram.groupAllowFrom`
+- Discord guild/channel sender allowlists that use the same sender matching rules
 - command authorization paths that reuse message-channel sender allowlists
-
-Channel support depends on whether that channel is wired through the shared OpenClaw sender-authorization helpers. Current bundled support includes Discord, Feishu, Google Chat, iMessage, LINE, Mattermost, Microsoft Teams, Nextcloud Talk, Nostr, QQBot, Signal, WhatsApp, Zalo, and Zalo Personal. Static `message.senders` groups are designed to be channel-agnostic, so new message channels should support them by using the shared plugin SDK helpers instead of custom allowlist expansion.
 
 ## Plugin diagnostics
 
@@ -137,7 +142,7 @@ import { resolveAccessGroupAllowFromState } from "openclaw/plugin-sdk/security-r
 const state = await resolveAccessGroupAllowFromState({
   accessGroups: cfg.accessGroups,
   allowFrom: channelConfig.allowFrom,
-  channel: "my-channel",
+  channel: "telegram",
   accountId: "default",
   senderId,
   isSenderAllowed,
@@ -186,7 +191,7 @@ More Discord-specific examples: [Discord access control](/channels/discord#acces
 - Access groups are allowlist aliases, not roles. They do not create owners, approve pairing requests, or grant tool permissions by themselves.
 - `dmPolicy: "open"` still requires `"*"` in the effective DM allowlist. Referencing an access group is not the same as public access.
 - Missing group names fail closed. If `allowFrom` contains `accessGroup:operators` and `accessGroups.operators` is absent, that entry authorizes nobody.
-- Keep channel ids stable. Prefer numeric/user ids over display names when the channel supports both.
+- Keep channel ids stable. Prefer numeric user ids over display names when the channel supports both.
 
 ## Troubleshooting
 

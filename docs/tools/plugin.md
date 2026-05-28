@@ -3,7 +3,7 @@ summary: "Install, configure, and manage OpenClaw plugins"
 read_when:
   - Installing or configuring plugins
   - Understanding plugin discovery and load rules
-  - Working with Codex/Claude-compatible plugin bundles
+  - Working with Codex-compatible plugin bundles
 title: "Plugins"
 sidebarTitle: "Getting Started"
 doc-schema-version: 1
@@ -115,13 +115,12 @@ Before installing a plugin, make sure you have:
 
 ### Choose an install source
 
-| Source      | Use when                                                                       | Example                                                        |
-| ----------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| ClawHub     | You want OpenClaw-native discovery, scans, version metadata, and install hints | `openclaw plugins install clawhub:<package>`                   |
-| npm         | You need direct npm registry or dist-tag workflows                             | `openclaw plugins install npm:<package>`                       |
-| git         | You need a branch, tag, or commit from a repository                            | `openclaw plugins install git:github.com/<owner>/<repo>@<ref>` |
-| local path  | You are developing or testing a plugin on the same machine                     | `openclaw plugins install --link ./my-plugin`                  |
-| marketplace | You are installing a Claude-compatible marketplace plugin                      | `openclaw plugins install <plugin> --marketplace <source>`     |
+| Source     | Use when                                                                       | Example                                                        |
+| ---------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| ClawHub    | You want OpenClaw-native discovery, scans, version metadata, and install hints | `openclaw plugins install clawhub:<package>`                   |
+| npm        | You need direct npm registry or dist-tag workflows                             | `openclaw plugins install npm:<package>`                       |
+| git        | You need a branch, tag, or commit from a repository                            | `openclaw plugins install git:github.com/<owner>/<repo>@<ref>` |
+| local path | You are developing or testing a plugin on the same machine                     | `openclaw plugins install --link ./my-plugin`                  |
 
 Bare package specs have special compatibility behavior. If the bare name matches
 a bundled plugin id, OpenClaw uses that bundled source. If it matches an
@@ -139,12 +138,11 @@ The common plugin config shape is:
 {
   plugins: {
     enabled: true,
-    allow: ["voice-call"],
+    allow: ["codex", "discord", "openai", "telegram"],
     deny: ["untrusted-plugin"],
-    load: { paths: ["~/Projects/oss/voice-call-plugin"] },
-    slots: { memory: "memory-core" },
+    load: { paths: ["~/Projects/oss/custom-plugin"] },
     entries: {
-      "voice-call": { enabled: true, config: { provider: "twilio" } },
+      codex: { enabled: true },
     },
   },
 }
@@ -185,10 +183,10 @@ stale plugin ids, allowlist/tool mismatches, or legacy bundled plugin paths.
 
 OpenClaw recognizes two plugin formats:
 
-| Format                 | How it loads                                                                 | Use when                                                               |
-| ---------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Native OpenClaw plugin | `openclaw.plugin.json` plus a runtime module loaded in process               | You are installing or building OpenClaw-specific runtime capabilities  |
-| Compatible bundle      | Codex, Claude, or Cursor plugin layout mapped into OpenClaw plugin inventory | You are reusing compatible skills, commands, hooks, or bundle metadata |
+| Format                 | How it loads                                                         | Use when                                                               |
+| ---------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Native OpenClaw plugin | `openclaw.plugin.json` plus a runtime module loaded in process       | You are installing or building OpenClaw-specific runtime capabilities  |
+| Compatible bundle      | Codex-compatible plugin layout mapped into OpenClaw plugin inventory | You are reusing compatible skills, commands, hooks, or bundle metadata |
 
 Both formats appear in `openclaw plugins list`, `openclaw plugins inspect`,
 `openclaw plugins enable`, and `openclaw plugins disable`. See

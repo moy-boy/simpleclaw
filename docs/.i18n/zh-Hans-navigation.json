@@ -75,37 +75,16 @@
         },
         {
           "group": "消息平台",
-          "pages": [
-            "zh-CN/channels/discord",
-            "zh-CN/channels/feishu",
-            "zh-CN/channels/grammy",
-            "zh-CN/channels/googlechat",
-            "zh-CN/channels/imessage",
-            "zh-CN/channels/line",
-            "zh-CN/channels/matrix",
-            "zh-CN/channels/mattermost",
-            "zh-CN/channels/msteams",
-            "zh-CN/channels/nextcloud-talk",
-            "zh-CN/channels/nostr",
-            "zh-CN/channels/signal",
-            "zh-CN/channels/slack",
-            "zh-CN/channels/telegram",
-            "zh-CN/channels/tlon",
-            "zh-CN/channels/twitch",
-            "zh-CN/channels/whatsapp",
-            "zh-CN/channels/zalo",
-            "zh-CN/channels/zalouser"
-          ]
+          "pages": ["zh-CN/channels/discord", "zh-CN/channels/telegram"]
         },
         {
           "group": "配置",
           "pages": [
             "zh-CN/channels/pairing",
+            "zh-CN/channels/access-groups",
             "zh-CN/channels/group-messages",
             "zh-CN/channels/groups",
-            "zh-CN/channels/broadcast-groups",
             "zh-CN/channels/channel-routing",
-            "zh-CN/channels/location",
             "zh-CN/channels/troubleshooting"
           ]
         }
@@ -178,14 +157,11 @@
           "group": "内置工具",
           "pages": [
             "zh-CN/tools/apply-patch",
-            "zh-CN/brave-search",
             "zh-CN/tools/elevated",
             "zh-CN/tools/exec",
             "zh-CN/tools/exec-approvals",
-            "zh-CN/tools/firecrawl",
             "zh-CN/tools/llm-task",
             "zh-CN/tools/lobster",
-            "zh-CN/perplexity",
             "zh-CN/tools/reactions",
             "zh-CN/tools/thinking",
             "zh-CN/tools/web"
@@ -220,8 +196,6 @@
         {
           "group": "扩展",
           "pages": [
-            "zh-CN/plugins/voice-call",
-            "zh-CN/plugins/zalouser",
             "zh-CN/plugins/manifest",
             "zh-CN/plugins/agent-tools",
             "zh-CN/prose"
@@ -260,31 +234,8 @@
           "pages": ["zh-CN/concepts/models"]
         },
         {
-          "group": "配置",
-          "pages": ["zh-CN/concepts/model-providers", "zh-CN/concepts/model-failover"]
-        },
-        {
           "group": "提供商",
-          "pages": [
-            "zh-CN/providers/anthropic",
-            "zh-CN/providers/bedrock",
-            "zh-CN/providers/claude-max-api-proxy",
-            "zh-CN/providers/deepgram",
-            "zh-CN/providers/github-copilot",
-            "zh-CN/providers/moonshot",
-            "zh-CN/providers/minimax",
-            "zh-CN/providers/opencode",
-            "zh-CN/providers/ollama",
-            "zh-CN/providers/openai",
-            "zh-CN/providers/openrouter",
-            "zh-CN/providers/qianfan",
-            "zh-CN/providers/qwen",
-            "zh-CN/providers/synthetic",
-            "zh-CN/providers/venice",
-            "zh-CN/providers/vercel-ai-gateway",
-            "zh-CN/providers/xiaomi",
-            "zh-CN/providers/zai"
-          ]
+          "pages": ["zh-CN/providers/openai"]
         }
       ]
     },
@@ -455,9 +406,7 @@
             "zh-CN/cli/system",
             "zh-CN/cli/tui",
             "zh-CN/cli/uninstall",
-            "zh-CN/cli/update",
-            "zh-CN/cli/voicecall",
-            "zh-CN/cli/webhooks"
+            "zh-CN/cli/update"
           ]
         },
         {

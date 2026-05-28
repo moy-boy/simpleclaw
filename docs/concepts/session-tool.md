@@ -157,8 +157,6 @@ the completion origin only identifies a channel OpenClaw can still reuse the
 requester session's stored route (`lastChannel` / `lastTo`) for direct
 delivery.
 
-For ACP-specific behavior, see [ACP Agents](/tools/acp-agents).
-
 ## Visibility
 
 Session tools are scoped to limit what the agent can see:
@@ -176,7 +174,6 @@ config.
 ## Further reading
 
 - [Session Management](/concepts/session) -- routing, lifecycle, maintenance
-- [ACP Agents](/tools/acp-agents) -- external harness spawning
 - [Multi-agent](/concepts/multi-agent) -- multi-agent architecture
 - [Gateway Configuration](/gateway/configuration) -- session tool config knobs
 

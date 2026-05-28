@@ -87,19 +87,19 @@ Tool policies (global, agent, sandbox) support `group:*` entries that expand to 
 
 Available groups:
 
-- `group:runtime`: `exec`, `process`, `code_execution` (`bash` is accepted as
+- `group:runtime`: `exec`, `process` (`bash` is accepted as
   an alias for `exec`)
 - `group:fs`: `read`, `write`, `edit`, `apply_patch`
   For read-only agents, deny `group:runtime` as well as mutating filesystem tools unless sandbox filesystem policy or a separate host boundary enforces the read-only constraint.
 - `group:sessions`: `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status`
 - `group:memory`: `memory_search`, `memory_get`
-- `group:web`: `web_search`, `x_search`, `web_fetch`
+- `group:web`: `web_search`, `web_fetch`
 - `group:ui`: `browser`, `canvas`
 - `group:automation`: `heartbeat_respond`, `cron`, `gateway`
 - `group:messaging`: `message`
 - `group:nodes`: `nodes`
 - `group:agents`: `agents_list`, `update_plan`
-- `group:media`: `image`, `image_generate`, `music_generate`, `video_generate`, `tts`
+- `group:media`: `image`, `image_generate`, `video_generate`, `tts`
 - `group:openclaw`: all built-in OpenClaw tools (excludes provider plugins)
 - `group:plugins`: all loaded plugin-owned tools, including configured MCP servers exposed through `bundle-mcp`
 

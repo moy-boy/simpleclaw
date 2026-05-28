@@ -128,11 +128,11 @@ OPENCLAW_UPGRADE_SURVIVOR_SCENARIO=bootstrap-persona \
 pnpm test:docker:published-upgrade-survivor
 ```
 
-Available scenarios are `base`, `feishu-channel`, `bootstrap-persona`,
-`plugin-deps-cleanup`, `configured-plugin-installs`,
+Available scenarios are `base`, `bootstrap-persona`, `plugin-deps-cleanup`,
 `stale-source-plugin-shadow`, `tilde-log-path`, and `versioned-runtime-deps`. In aggregate runs,
 `OPENCLAW_UPGRADE_SURVIVOR_SCENARIOS=reported-issues` expands to all reported
-issue-shaped scenarios, including the configured-plugin install migration.
+issue-shaped scenarios, including plugin dependency cleanup and source-only
+plugin shadow repair.
 
 Full update migration is intentionally separate from Full Release CI. Use the
 manual `Update Migration` workflow when the release question is "can every

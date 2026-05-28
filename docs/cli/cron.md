@@ -35,7 +35,7 @@ Run `openclaw cron --help` for the full command surface. See [Cron jobs](/automa
 
 `openclaw cron list` and `openclaw cron show <job-id>` preview the resolved delivery route. For `channel: "last"`, the preview shows whether the route resolved from the main or current session, or will fail closed.
 
-Provider-prefixed targets can disambiguate unresolved announce channels. For example, `to: "telegram:123"` selects Telegram when `delivery.channel` is omitted or `last`. Only prefixes advertised by the loaded plugin are provider selectors. If `delivery.channel` is explicit, the prefix must match that channel; `channel: "whatsapp"` with `to: "telegram:123"` is rejected. Service prefixes such as `imessage:` and `sms:` remain channel-owned target syntax.
+Provider-prefixed targets can disambiguate unresolved announce channels. For example, `to: "telegram:123"` selects Telegram when `delivery.channel` is omitted or `last`. Only prefixes advertised by the loaded plugin are provider selectors. If `delivery.channel` is explicit, the prefix must match that channel; `channel: "discord"` with `to: "telegram:123"` is rejected.
 
 <Note>
 Isolated `cron add` jobs default to `--announce` delivery. Use `--no-deliver` to keep output internal. `--deliver` remains as a deprecated alias for `--announce`.
@@ -52,7 +52,7 @@ Isolated cron chat delivery is shared between the agent and the runner:
 
 `--announce` is runner fallback delivery for the final reply. `--no-deliver` disables that fallback but does not remove the agent's `message` tool when a chat route is available.
 
-Reminders created from an active chat preserve the live chat delivery target for fallback announce delivery. Internal session keys may be lowercase; do not use them as a source of truth for case-sensitive provider IDs such as Matrix room IDs.
+Reminders created from an active chat preserve the live chat delivery target for fallback announce delivery. Use the preserved delivery target or an explicit Telegram/Discord target instead of reconstructing one from internal session keys.
 
 ### Failure delivery
 
@@ -67,7 +67,7 @@ Main-session jobs may only use `delivery.failureDestination` when primary delive
 </Note>
 
 Note: isolated cron runs treat run-level agent failures as job errors even when
-no reply payload is produced, so model/provider failures still increment error
+no reply payload is produced, so model failures still increment error
 counters and trigger failure notifications.
 
 If an isolated run times out before the first model request, `openclaw cron show`
@@ -94,7 +94,7 @@ Recurring jobs use exponential retry backoff after consecutive errors: 30s, 1m, 
 
 Skipped runs are tracked separately from execution errors. They do not affect retry backoff, but `openclaw cron edit <job-id> --failure-alert-include-skipped` can opt failure alerts into repeated skipped-run notifications.
 
-For isolated jobs that target a local configured model provider, cron runs a lightweight provider preflight before starting the agent turn. Loopback, private-network, and `.local` `api: "ollama"` providers are probed at `/api/tags`; local OpenAI-compatible providers such as vLLM, SGLang, and LM Studio are probed at `/models`. If the endpoint is unreachable, the run is recorded as `skipped` and retried on a later schedule; matching dead endpoints are cached for 5 minutes to avoid many jobs hammering the same local server.
+For isolated jobs that target a local configured model provider, cron runs a lightweight provider preflight before starting the agent turn. Local OpenAI-compatible providers are probed at `/models`. If the endpoint is unreachable, the run is recorded as `skipped` and retried on a later schedule; matching dead endpoints are cached for 5 minutes to avoid many jobs hammering the same local server.
 
 Note: cron job definitions live in `jobs.json`, while pending runtime state lives in `jobs-state.json`. If `jobs.json` is edited externally, the Gateway reloads changed schedules and clears stale pending slots; formatting-only rewrites do not clear the pending slot.
 
@@ -207,7 +207,7 @@ openclaw cron edit <job-id> --light-context
 Announce to a specific channel:
 
 ```bash
-openclaw cron edit <job-id> --announce --channel slack --to "channel:C1234567890"
+openclaw cron edit <job-id> --announce --channel discord --to "channel:123456789012345678"
 ```
 
 Announce to a Telegram forum topic:
@@ -269,7 +269,7 @@ openclaw cron edit <job-id> --session "session:daily-brief"
 Delivery tweaks:
 
 ```bash
-openclaw cron edit <job-id> --announce --channel slack --to "channel:C1234567890"
+openclaw cron edit <job-id> --announce --channel discord --to "channel:123456789012345678"
 openclaw cron edit <job-id> --best-effort-deliver
 openclaw cron edit <job-id> --no-best-effort-deliver
 openclaw cron edit <job-id> --no-deliver

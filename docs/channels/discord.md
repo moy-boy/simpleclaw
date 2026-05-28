@@ -797,77 +797,12 @@ Default slash command settings:
 
     - `session.threadBindings.*` sets global defaults.
     - `channels.discord.threadBindings.*` overrides Discord behavior.
-    - `spawnSessions` controls auto-create/bind threads for `sessions_spawn({ thread: true })` and ACP thread spawns. Default: `true`.
+    - `spawnSessions` controls auto-create/bind threads for `sessions_spawn({ thread: true })`. Default: `true`.
     - `defaultSpawnContext` controls native subagent context for thread-bound spawns. Default: `"fork"`.
     - Deprecated `spawnSubagentSessions`/`spawnAcpSessions` keys are migrated by `openclaw doctor --fix`.
     - If thread bindings are disabled for an account, `/focus` and related thread binding operations are unavailable.
 
-    See [Sub-agents](/tools/subagents), [ACP Agents](/tools/acp-agents), and [Configuration Reference](/gateway/configuration-reference).
-
-  </Accordion>
-
-  <Accordion title="Persistent ACP channel bindings">
-    For stable "always-on" ACP workspaces, configure top-level typed ACP bindings targeting Discord conversations.
-
-    Config path:
-
-    - `bindings[]` with `type: "acp"` and `match.channel: "discord"`
-
-    Example:
-
-```json5
-{
-  agents: {
-    list: [
-      {
-        id: "codex",
-        runtime: {
-          type: "acp",
-          acp: {
-            agent: "codex",
-            backend: "acpx",
-            mode: "persistent",
-            cwd: "/workspace/openclaw",
-          },
-        },
-      },
-    ],
-  },
-  bindings: [
-    {
-      type: "acp",
-      agentId: "codex",
-      match: {
-        channel: "discord",
-        accountId: "default",
-        peer: { kind: "channel", id: "222222222222222222" },
-      },
-      acp: { label: "codex-main" },
-    },
-  ],
-  channels: {
-    discord: {
-      guilds: {
-        "111111111111111111": {
-          channels: {
-            "222222222222222222": {
-              requireMention: false,
-            },
-          },
-        },
-      },
-    },
-  },
-}
-```
-
-    Notes:
-
-    - `/acp spawn codex --bind here` binds the current channel or thread in place and keeps future messages on the same ACP session. Thread messages inherit the parent channel binding.
-    - In a bound channel or thread, `/new` and `/reset` reset the same ACP session in place. Temporary thread bindings can override target resolution while active.
-    - `spawnSessions` gates child thread creation/binding via `--thread auto|here`.
-
-    See [ACP Agents](/tools/acp-agents) for binding behavior details.
+    See [Sub-agents](/tools/subagents) and [Configuration Reference](/gateway/configuration-reference).
 
   </Accordion>
 
@@ -1731,7 +1666,7 @@ Primary reference: [Configuration reference - Discord](/gateway/config-channels#
 - actions: `actions.*`
 - presence: `activity`, `status`, `activityType`, `activityUrl`
 - UI: `ui.components.accentColor`
-- features: `threadBindings`, top-level `bindings[]` (`type: "acp"`), `pluralkit`, `execApprovals`, `intents`, `agentComponents.enabled`, `agentComponents.ttlMs`, `heartbeat`, `responsePrefix`
+- features: `threadBindings`, top-level `bindings[]`, `pluralkit`, `execApprovals`, `intents`, `agentComponents.enabled`, `agentComponents.ttlMs`, `heartbeat`, `responsePrefix`
 
 </Accordion>
 

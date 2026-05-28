@@ -13,7 +13,7 @@ and a working chat session.
 ## What you need
 
 - **Node.js** — Node 24 recommended (Node 22.19+ also supported)
-- **An API key** from a model provider (Anthropic, OpenAI, Google, etc.) — onboarding will prompt you
+- **An OpenAI subscription** for ChatGPT/Codex login — onboarding will prompt you
 
 <Tip>
 Check your Node version with `node --version`.
@@ -54,8 +54,8 @@ Need to install Node? See [Node setup](/install/node).
     openclaw onboard --install-daemon
     ```
 
-    The wizard walks you through choosing a model provider, setting an API key,
-    and configuring the Gateway. It takes about 2 minutes.
+    The wizard walks you through OpenAI subscription login and Gateway
+    configuration. It takes about 2 minutes.
 
     See [Onboarding (CLI)](/start/wizard) for the full reference.
 
@@ -79,9 +79,8 @@ Need to install Node? See [Node setup](/install/node).
   <Step title="Send your first message">
     Type a message in the Control UI chat and you should get an AI reply.
 
-    Want to chat from your phone instead? The fastest channel to set up is
-    [Telegram](/channels/telegram) (just a bot token). See [Channels](/channels)
-    for all options.
+    Want to chat from your phone instead? Set up [Telegram](/channels/telegram)
+    or [Discord](/channels/discord). See [Channels](/channels) for details.
 
   </Step>
 </Steps>
@@ -122,7 +121,7 @@ openclaw dashboard
 
 <Columns>
   <Card title="Connect a channel" href="/channels" icon="message-square">
-    Discord, Feishu, iMessage, Matrix, Microsoft Teams, Signal, Slack, Telegram, WhatsApp, Zalo, and more.
+    Telegram or Discord.
   </Card>
   <Card title="Pairing and safety" href="/channels/pairing" icon="shield">
     Control who can message your agent.

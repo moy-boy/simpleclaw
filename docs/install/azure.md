@@ -270,7 +270,7 @@ This guide sets up an Azure Linux VM with the Azure CLI, applies Network Securit
     openclaw gateway status
     ```
 
-    Most enterprise Azure teams already have GitHub Copilot licenses. If that is your case, we recommend choosing the GitHub Copilot provider in the OpenClaw onboarding wizard. See [GitHub Copilot provider](/providers/github-copilot).
+    During onboarding, choose OpenAI subscription login and then add Telegram or Discord channel credentials.
 
   </Step>
 </Steps>
@@ -306,7 +306,7 @@ This removes the resource group and everything inside it (VM, VNet, NSG, Bastion
 - Set up messaging channels: [Channels](/channels)
 - Pair local devices as nodes: [Nodes](/nodes)
 - Configure the Gateway: [Gateway configuration](/gateway/configuration)
-- For more details on OpenClaw Azure deployment with the GitHub Copilot model provider: [OpenClaw on Azure with GitHub Copilot](https://github.com/johnsonshi/openclaw-azure-github-copilot)
+- For model setup after install, see [OpenAI provider](/providers/openai).
 
 ## Related
 

@@ -127,7 +127,7 @@ transcript text, audio payloads, turn ids, call ids, and provider item ids.
 
 Console logs are **TTY-aware** and formatted for readability:
 
-- Subsystem prefixes (e.g. `gateway/channels/whatsapp`)
+- Subsystem prefixes (e.g. `gateway/channels/discord`)
 - Level coloring (info/warn/error)
 - Optional compact or JSON mode
 

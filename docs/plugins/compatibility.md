@@ -148,7 +148,7 @@ Current compatibility records include:
 - persisted plugin registry disable and install-migration env flags while
   repair flows migrate operators to `openclaw plugins registry --refresh` and
   `openclaw doctor --fix`
-- legacy plugin-owned web search, web fetch, and x_search config paths while
+- legacy plugin-owned web search and web fetch config paths while
   doctor migrates them to `plugins.entries.<plugin>.config`
 - legacy `plugins.installs` authored config and bundled plugin load-path
   aliases while install metadata moves into the state-managed plugin ledger

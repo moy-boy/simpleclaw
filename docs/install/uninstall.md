@@ -128,4 +128,3 @@ If you run from a repo checkout (`git clone` + `openclaw ...` / `bun run opencla
 ## Related
 
 - [Install overview](/install)
-- [Migration guide](/install/migrating)

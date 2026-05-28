@@ -28,6 +28,10 @@
     "target": "配对"
   },
   {
+    "source": "Group messages",
+    "target": "群组消息"
+  },
+  {
     "source": "Channel Routing",
     "target": "频道路由"
   },
@@ -40,8 +44,16 @@
     "target": "OpenAI"
   },
   {
+    "source": "OpenAI subscription/Codex",
+    "target": "OpenAI 订阅/Codex"
+  },
+  {
     "source": "OpenAI provider",
     "target": "OpenAI provider"
+  },
+  {
+    "source": "Telegram/Discord assistant setup",
+    "target": "Telegram/Discord 助手设置"
   },
   {
     "source": "Mantis",
@@ -248,10 +260,6 @@
     "target": "微信"
   },
   {
-    "source": "Mattermost",
-    "target": "Mattermost"
-  },
-  {
     "source": "BytePlus (International)",
     "target": "BytePlus（国际版）"
   },
@@ -262,10 +270,6 @@
   {
     "source": "Amazon Bedrock Mantle",
     "target": "Amazon Bedrock Mantle"
-  },
-  {
-    "source": "Anthropic (API + Claude CLI)",
-    "target": "Anthropic（API + Claude CLI）"
   },
   {
     "source": "Moonshot AI",
@@ -306,10 +310,6 @@
   {
     "source": "Capability Cookbook",
     "target": "能力扩展手册"
-  },
-  {
-    "source": "WhatsApp group messages",
-    "target": "WhatsApp 群组消息"
   },
   {
     "source": "Oracle Cloud",
@@ -454,10 +454,6 @@
   {
     "source": "Microsoft Teams",
     "target": "Microsoft Teams"
-  },
-  {
-    "source": "Slack",
-    "target": "Slack"
   },
   {
     "source": "Telegram",
@@ -1054,5 +1050,73 @@
   {
     "source": "Z.AI (GLM)",
     "target": "Z.AI (GLM)"
+  },
+  {
+    "source": "Models concept",
+    "target": "模型概念"
+  },
+  {
+    "source": "Models CLI",
+    "target": "Models CLI"
+  },
+  {
+    "source": "Authentication",
+    "target": "认证"
+  },
+  {
+    "source": "OAuth",
+    "target": "OAuth"
+  },
+  {
+    "source": "First-run FAQ",
+    "target": "首次运行常见问题"
+  },
+  {
+    "source": "Channels overview",
+    "target": "频道概览"
+  },
+  {
+    "source": "Models FAQ",
+    "target": "模型常见问题"
+  },
+  {
+    "source": "Configuration - channels",
+    "target": "配置 - 渠道"
+  },
+  {
+    "source": "Streaming",
+    "target": "流式输出"
+  },
+  {
+    "source": "Media support",
+    "target": "媒体支持"
+  },
+  {
+    "source": "Image generation",
+    "target": "图像生成"
+  },
+  {
+    "source": "Audio and voice notes",
+    "target": "音频和语音消息"
+  },
+  {
+    "source": "Media overview",
+    "target": "媒体概览"
+  },
+  {
+    "source": "Agent send",
+    "target": "Agent send"
+  },
+  {
+    "source": "Discord channel",
+    "target": "Discord 频道"
+  },
+  {
+    "source": "Telegram channel",
+    "target": "Telegram 频道"
+  },
+  {
+    "source": "Elevated mode",
+    "target": "提升模式"
   }
 ]

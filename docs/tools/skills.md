@@ -105,23 +105,6 @@ workspace skill overrides them. You can gate them via
 See [Plugins](/tools/plugin) for discovery/config and [Tools](/tools) for
 the tool surface those skills teach.
 
-## Skill Workshop
-
-The optional, experimental **Skill Workshop** plugin can create or update
-workspace skills from reusable procedures observed during agent work. It
-is disabled by default and must be explicitly enabled via
-`plugins.entries.skill-workshop`.
-
-Skill Workshop writes only to `<workspace>/skills`, scans generated
-content, supports pending approval or automatic safe writes, quarantines
-unsafe proposals, and refreshes the skill snapshot after successful
-writes so new skills become available without a Gateway restart.
-
-Use it for corrections such as _"next time, verify GIF attribution"_ or
-hard-won workflows such as media QA checklists. Start with pending
-approval; use automatic writes only in trusted workspaces after reviewing
-its proposals. Full guide: [Skill Workshop plugin](/plugins/skill-workshop).
-
 ## ClawHub (install and sync)
 
 [ClawHub](https://clawhub.ai) is the public skills registry for OpenClaw.
@@ -252,8 +235,8 @@ metadata:
   {
     "openclaw":
       {
-        "requires": { "bins": ["uv"], "env": ["GEMINI_API_KEY"], "config": ["browser.enabled"] },
-        "primaryEnv": "GEMINI_API_KEY",
+        "requires": { "bins": ["uv"], "env": ["OPENAI_API_KEY"], "config": ["browser.enabled"] },
+        "primaryEnv": "OPENAI_API_KEY",
       },
   }
 ---
@@ -312,22 +295,22 @@ dependency gates and installer hints. New and updated skills should use
 
 ```markdown
 ---
-name: gemini
-description: Use Gemini CLI for coding assistance and Google search lookups.
+name: image-lab
+description: Use a local image helper with OpenAI credentials.
 metadata:
   {
     "openclaw":
       {
-        "emoji": "♊️",
-        "requires": { "bins": ["gemini"] },
+        "emoji": "🖼️",
+        "requires": { "bins": ["image-lab"], "env": ["OPENAI_API_KEY"] },
         "install":
           [
             {
               "id": "brew",
               "kind": "brew",
-              "formula": "gemini-cli",
-              "bins": ["gemini"],
-              "label": "Install Gemini CLI (brew)",
+              "formula": "image-lab",
+              "bins": ["image-lab"],
+              "label": "Install image-lab (brew)",
             },
           ],
       },
@@ -340,7 +323,7 @@ metadata:
     - If multiple installers are listed, the gateway picks a single preferred option (brew when available, otherwise node).
     - If all installers are `download`, OpenClaw lists each entry so you can see the available artifacts.
     - Installer specs can include `os: ["darwin"|"linux"|"win32"]` to filter options by platform.
-    - Node installs honor `skills.install.nodeManager` in `openclaw.json` (default: npm; options: npm/pnpm/yarn/bun). This only affects skill installs; the Gateway runtime should still be Node - Bun is not recommended for WhatsApp/Telegram.
+    - Node installs honor `skills.install.nodeManager` in `openclaw.json` (default: npm; options: npm/pnpm/yarn/bun). This only affects skill installs; the Gateway runtime should still be Node.
     - Gateway-backed installer selection is preference-driven: when install specs mix kinds, OpenClaw prefers Homebrew when `skills.install.preferBrew` is enabled and `brew` exists, then `uv`, then the configured node manager, then other fallbacks like `go` or `download`.
     - If every install spec is `download`, OpenClaw surfaces all download options instead of collapsing to one preferred installer.
 
@@ -367,9 +350,9 @@ under `skills.entries` in `~/.openclaw/openclaw.json`:
     entries: {
       "image-lab": {
         enabled: true,
-        apiKey: { source: "env", provider: "default", id: "GEMINI_API_KEY" }, // or plaintext string
+        apiKey: { source: "env", provider: "default", id: "OPENAI_API_KEY" }, // or plaintext string
         env: {
-          GEMINI_API_KEY: "GEMINI_KEY_HERE",
+          OPENAI_API_KEY: "OPENAI_KEY_HERE",
         },
         config: {
           endpoint: "https://example.invalid",
@@ -412,9 +395,8 @@ For stock image generation/editing inside OpenClaw, use the core
 `image_generate` tool with `agents.defaults.imageGenerationModel` instead
 of a bundled skill. Skill examples here are for custom or third-party
 workflows. For native image analysis use the `image` tool with
-`agents.defaults.imageModel`. If you pick `openai/*`, `google/*`,
-`fal/*`, or another provider-specific image model, add that provider's
-auth/API key too.
+`agents.defaults.imageModel`. For the supported bundled setup, use
+`openai/*` models and provide OpenAI auth.
 </Note>
 
 ## Environment injection
@@ -429,12 +411,9 @@ When an agent run starts, OpenClaw:
 Environment injection is **scoped to the agent run**, not a global shell
 environment.
 
-For the bundled `claude-cli` backend, OpenClaw also materializes the same
-eligible snapshot as a temporary Claude Code plugin and passes it with
-`--plugin-dir`. Claude Code can then use its native skill resolver while
-OpenClaw still owns precedence, per-agent allowlists, gating, and
-`skills.entries.*` env/API key injection. Other CLI backends use the
-prompt catalog only.
+Codex harness sessions receive the same eligible skill snapshot through the
+OpenClaw prompt catalog, so OpenClaw still owns precedence, per-agent
+allowlists, gating, and `skills.entries.*` env/API key injection.
 
 ## Snapshots and refresh
 
@@ -529,6 +508,5 @@ schema: [Skills config](/tools/skills-config).
 - [ClawHub](/clawhub) - public skills registry
 - [Creating skills](/tools/creating-skills) - building custom skills
 - [Plugins](/tools/plugin) - plugin system overview
-- [Skill Workshop plugin](/plugins/skill-workshop) - generate skills from agent work
 - [Skills config](/tools/skills-config) - skill configuration reference
 - [Slash commands](/tools/slash-commands) - all available slash commands

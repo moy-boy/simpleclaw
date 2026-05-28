@@ -24,18 +24,18 @@ Use the setup commands by intent:
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Setup and onboarding | [`crestodian`](/cli/crestodian) · [`setup`](/cli/setup) · [`onboard`](/cli/onboard) · [`configure`](/cli/configure) · [`config`](/cli/config) · [`completion`](/cli/completion) · [`doctor`](/cli/doctor) · [`dashboard`](/cli/dashboard) |
 | Reset and uninstall  | [`backup`](/cli/backup) · [`reset`](/cli/reset) · [`uninstall`](/cli/uninstall) · [`update`](/cli/update)                                                                                                                                 |
-| Messaging and agents | [`message`](/cli/message) · [`agent`](/cli/agent) · [`agents`](/cli/agents) · [`acp`](/cli/acp) · [`mcp`](/cli/mcp)                                                                                                                       |
+| Messaging and agents | [`message`](/cli/message) · [`agent`](/cli/agent) · [`agents`](/cli/agents) · [`mcp`](/cli/mcp)                                                                                                                                           |
 | Health and sessions  | [`status`](/cli/status) · [`health`](/cli/health) · [`sessions`](/cli/sessions)                                                                                                                                                           |
 | Gateway and logs     | [`gateway`](/cli/gateway) · [`logs`](/cli/logs) · [`system`](/cli/system)                                                                                                                                                                 |
-| Models and inference | [`models`](/cli/models) · [`infer`](/cli/infer) · `capability` (alias for [`infer`](/cli/infer)) · [`memory`](/cli/memory) · [`commitments`](/cli/commitments) · [`wiki`](/cli/wiki)                                                      |
+| Models and inference | [`models`](/cli/models) · [`infer`](/cli/infer) · `capability` (alias for [`infer`](/cli/infer)) · [`memory`](/cli/memory) · [`commitments`](/cli/commitments)                                                                            |
 | Network and nodes    | [`directory`](/cli/directory) · [`nodes`](/cli/nodes) · [`devices`](/cli/devices) · [`node`](/cli/node)                                                                                                                                   |
 | Runtime and sandbox  | [`approvals`](/cli/approvals) · `exec-policy` (see [`approvals`](/cli/approvals)) · [`sandbox`](/cli/sandbox) · [`tui`](/cli/tui) · `chat`/`terminal` (aliases for [`tui --local`](/cli/tui)) · [`browser`](/cli/browser)                 |
-| Automation           | [`cron`](/cli/cron) · [`tasks`](/cli/tasks) · [`hooks`](/cli/hooks) · [`webhooks`](/cli/webhooks)                                                                                                                                         |
+| Automation           | [`cron`](/cli/cron) · [`tasks`](/cli/tasks) · [`hooks`](/cli/hooks)                                                                                                                                                                       |
 | Discovery and docs   | [`dns`](/cli/dns) · [`docs`](/cli/docs)                                                                                                                                                                                                   |
 | Pairing and channels | [`pairing`](/cli/pairing) · [`qr`](/cli/qr) · [`channels`](/cli/channels)                                                                                                                                                                 |
 | Security and plugins | [`security`](/cli/security) · [`secrets`](/cli/secrets) · [`skills`](/cli/skills) · [`plugins`](/cli/plugins) · [`proxy`](/cli/proxy)                                                                                                     |
 | Legacy aliases       | [`daemon`](/cli/daemon) (gateway service) · [`clawbot`](/cli/clawbot) (namespace)                                                                                                                                                         |
-| Plugins (optional)   | [`meeting-notes`](/cli/meeting-notes) · [`path`](/cli/path) · [`policy`](/cli/policy) · [`voicecall`](/cli/voicecall) (if installed)                                                                                                      |
+| Plugins (optional)   | [`path`](/cli/path) · [`policy`](/cli/policy)                                                                                                                                                                                             |
 
 ## Global flags
 
@@ -123,15 +123,10 @@ openclaw [--dev] [--profile <name>] <command>
     enable
     disable
     doctor
-    marketplace list
   memory
     status
     index
     search
-  meeting-notes
-    list
-    show
-    path
   path
     resolve
     find
@@ -141,13 +136,6 @@ openclaw [--dev] [--profile <name>] <command>
   commitments
     list
     dismiss
-  wiki
-    status
-    doctor
-    init
-    ingest
-    compile
-    lint
     search
     get
     apply
@@ -188,7 +176,6 @@ openclaw [--dev] [--profile <name>] <command>
     bind
     unbind
     set-identity
-  acp
   mcp
     serve
     list
@@ -240,7 +227,6 @@ openclaw [--dev] [--profile <name>] <command>
     aliases list|add|remove
     fallbacks list|add|remove|clear
     image-fallbacks list|add|remove|clear
-    scan
   infer (alias: capability)
     list
     inspect
@@ -251,7 +237,7 @@ openclaw [--dev] [--profile <name>] <command>
     video generate|describe|providers
     web search|fetch|providers
     embedding create|providers
-    auth add|login|login-github-copilot|setup-token|paste-token
+    auth add|login
     auth order get|set|clear
   sandbox
     list
@@ -344,8 +330,6 @@ openclaw [--dev] [--profile <name>] <command>
     disable
     install
     update
-  webhooks
-    gmail setup|run
   proxy
     start
     run
@@ -368,7 +352,7 @@ openclaw [--dev] [--profile <name>] <command>
   terminal (alias: tui --local)
 ```
 
-Plugins can add additional top-level commands (for example `openclaw voicecall`).
+Plugins can add additional top-level commands.
 
 </Accordion>
 
@@ -385,11 +369,9 @@ Highlights:
 
 ## Usage tracking
 
-`openclaw status --usage` and the Control UI surface provider usage/quota when
-OAuth/API credentials are available. Data comes directly from provider usage
-endpoints and is normalized to `X% left`. Providers with current usage
-windows: Anthropic, GitHub Copilot, Gemini CLI, OpenAI Codex, MiniMax,
-Xiaomi, and z.ai.
+`openclaw status --usage` and the Control UI surface OpenAI Codex usage/quota
+when subscription credentials are available. Data comes directly from the
+provider usage endpoint and is normalized to `X% left`.
 
 See [Usage tracking](/concepts/usage-tracking) for details.
 

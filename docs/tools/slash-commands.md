@@ -9,8 +9,6 @@ sidebarTitle: "Slash commands"
 
 Commands are handled by the Gateway. Most commands must be sent as a **standalone** message that starts with `/`. The host-only bash chat command uses `! <cmd>` (with `/bash <cmd>` as an alias).
 
-When a conversation or thread is bound to an ACP session, normal follow-up text routes to that ACP harness. Gateway management commands still stay local: `/acp ...` always reaches the OpenClaw ACP command handler, and `/status` plus `/unfocus` stay local whenever command handling is enabled for the surface.
-
 There are two related systems:
 
 <AccordionGroup>
@@ -62,14 +60,14 @@ There are two related systems:
 ```
 
 <ParamField path="commands.text" type="boolean" default="true">
-  Enables parsing `/...` in chat messages. On surfaces without native commands (WhatsApp/WebChat/Signal/iMessage/Google Chat/Microsoft Teams), text commands still work even if you set this to `false`.
+  Enables parsing `/...` in Telegram and Discord chat messages.
 </ParamField>
 <ParamField path="commands.native" type='boolean | "auto"' default='"auto"'>
-  Registers native commands. Auto: on for Discord/Telegram; off for Slack (until you add slash commands); ignored for providers without native support. Set `channels.discord.commands.native`, `channels.telegram.commands.native`, or `channels.slack.commands.native` to override per provider (bool or `"auto"`). On Discord, `false` skips slash-command registration and cleanup during startup; previously registered commands may remain visible until you remove them from the Discord app. Slack commands are managed in the Slack app and are not removed automatically.
+  Registers native commands. Auto is on for Discord and Telegram. Set `channels.discord.commands.native` or `channels.telegram.commands.native` to override per channel (bool or `"auto"`). On Discord, `false` skips slash-command registration and cleanup during startup; previously registered commands may remain visible until you remove them from the Discord app.
 </ParamField>
 On Discord, native command specs may include `descriptionLocalizations`, which OpenClaw publishes as Discord `description_localizations` and includes in reconcile comparisons.
 <ParamField path="commands.nativeSkills" type='boolean | "auto"' default='"auto"'>
-  Registers **skill** commands natively when supported. Auto: on for Discord/Telegram; off for Slack (Slack requires creating a slash command per skill). Set `channels.discord.commands.nativeSkills`, `channels.telegram.commands.nativeSkills`, or `channels.slack.commands.nativeSkills` to override per provider (bool or `"auto"`).
+  Registers **skill** commands natively when supported. Auto is on for Discord and Telegram. Set `channels.discord.commands.nativeSkills` or `channels.telegram.commands.nativeSkills` to override per channel (bool or `"auto"`).
 </ParamField>
 <ParamField path="commands.bash" type="boolean" default="false">
   Enables `! <cmd>` to run host shell commands (`/bash <cmd>` is an alias; requires `tools.elevated` allowlists).
@@ -143,7 +141,7 @@ Current source-of-truth:
     - `/elevated [on|off|ask|full]` toggles elevated mode. Alias: `/elev`.
     - `/exec host=<auto|sandbox|gateway|node> security=<deny|allowlist|full> ask=<off|on-miss|always> node=<id>` shows or sets exec defaults.
     - `/model [name|#|status]` shows or sets the model.
-    - `/models [provider] [page] [limit=<n>|size=<n>|all]` lists configured/auth-available providers or models for a provider; add `all` to browse that provider's full catalog. `provider/*` entries in `agents.defaults.models` make `/model` and `/models` show discovered models only for those providers.
+    - `/models [provider] [page] [limit=<n>|size=<n>|all]` lists configured/auth-available providers or models for a provider; add `all` to browse that provider's full supported catalog. OpenAI provider-wide entries in `agents.defaults.models` make `/model` and `/models` show discovered models only for those supported providers.
     - `/queue <mode>` manages active-run queue behavior (`steer`, `followup`, `collect`, `interrupt`) plus options like `debounce:0.5s cap:25 drop:summarize`; `/queue default` or `/queue reset` clears the session override. Mid-run prompts steer by default without a queue directive. See [Command queue](/concepts/queue) and [Steering queue](/concepts/queue-steering).
     - `/steer <message>` injects guidance into the active run for the current session, independent of `/queue` mode. If steering is unavailable or the session is idle, `<message>` continues as a normal prompt. Alias: `/tell`. See [Steer](/tools/steer).
 
@@ -168,9 +166,8 @@ Current source-of-truth:
     - `/btw <question>` asks a side question without changing future session context. Alias: `/side`. See [BTW](/tools/btw).
 
   </Accordion>
-  <Accordion title="Subagents and ACP">
+  <Accordion title="Subagents">
     - `/subagents list|log|info` inspects sub-agent runs for the current session.
-    - `/acp spawn|cancel|steer|close|sessions|status|set-mode|set|cwd|permissions|timeout|model|reset-options|doctor|install|help` manages ACP sessions and runtime options.
     - `/focus <target>` binds the current Discord thread or Telegram topic/conversation to a session target.
     - `/unfocus` removes the current binding.
     - `/agents` lists thread-bound agents for the current session.
@@ -204,32 +201,19 @@ examples, and troubleshooting.
 Dock commands are generated from channel plugins with native-command support. Current bundled set:
 
 - `/dock-discord` (alias: `/dock_discord`)
-- `/dock-mattermost` (alias: `/dock_mattermost`)
-- `/dock-slack` (alias: `/dock_slack`)
 - `/dock-telegram` (alias: `/dock_telegram`)
 
 Use dock commands from a direct chat to switch the current session's reply route to another linked channel. The agent keeps the same session context, but future replies for that session are delivered to the selected channel peer.
 
 Dock commands require `session.identityLinks`. The source sender and target peer must be in the same identity group, for example `["telegram:123", "discord:456"]`. If a Telegram user with id `123` sends `/dock_discord`, OpenClaw stores `lastChannel: "discord"` and `lastTo: "456"` on the active session. If the sender is not linked to a Discord peer, the command replies with a setup hint instead of falling through to normal chat.
 
-Docking changes the active session route only. It does not create channel accounts, grant access, bypass channel allowlists, or move transcript history to another session. Use `/dock-telegram`, `/dock-slack`, `/dock-mattermost`, or another generated dock command to switch the route again.
+Docking changes the active session route only. It does not create channel accounts, grant access, bypass channel allowlists, or move transcript history to another session. Use `/dock-telegram` or `/dock-discord` to switch the route again.
 
 ### Bundled plugin commands
 
-Bundled plugins can add more slash commands. Current bundled commands in this repo:
+Bundled plugins can add more slash commands. In the simplified setup, the current bundled plugin command is:
 
-- `/dreaming [on|off|status|help]` toggles memory dreaming. See [Dreaming](/concepts/dreaming).
-- `/pair [qr|status|pending|approve|cleanup|notify]` manages device pairing/setup flow. See [Pairing](/channels/pairing).
-- `/phone status|arm <camera|screen|writes|all> [duration]|disarm` temporarily arms high-risk phone node commands.
-- `/voice status|list [limit]|set <voiceId|name>` manages Talk voice config. On Discord, the native command name is `/talkvoice`.
-- `/card ...` sends LINE rich card presets. See [LINE](/channels/line).
 - `/codex status|models|threads|resume|compact|review|diagnostics|account|mcp|skills` inspects and controls the bundled Codex app-server harness. See [Codex harness](/plugins/codex-harness).
-- QQBot-only commands:
-  - `/bot-ping`
-  - `/bot-version`
-  - `/bot-help`
-  - `/bot-upgrade`
-  - `/bot-logs`
 
 ### Dynamic skill commands
 
@@ -256,14 +240,13 @@ User-invocable skills are also exposed as slash commands:
   <Accordion title="Channel-specific behavior">
     - Discord-only native command: `/vc join|leave|status` controls voice channels (not available as text). `join` requires a guild and selected voice/stage channel. Requires `channels.discord.voice` and native commands.
     - Discord thread-binding commands (`/focus`, `/unfocus`, `/agents`, `/session idle`, `/session max-age`) require effective thread bindings to be enabled (`session.threadBindings.enabled` and/or `channels.discord.threadBindings.enabled`).
-    - ACP command reference and runtime behavior: [ACP agents](/tools/acp-agents).
 
   </Accordion>
   <Accordion title="Verbose / trace / fast / reasoning safety">
     - `/verbose` is meant for debugging and extra visibility; keep it **off** in normal use.
     - `/trace` is narrower than `/verbose`: it only reveals plugin-owned trace/debug lines and keeps normal verbose tool chatter off.
     - `/fast on|off` persists a session override. Use the Sessions UI `inherit` option to clear it and fall back to config defaults.
-    - `/fast` is provider-specific: OpenAI/OpenAI Codex map it to `service_tier=priority` on native Responses endpoints, while direct public Anthropic requests, including OAuth-authenticated traffic sent to `api.anthropic.com`, map it to `service_tier=auto` or `standard_only`. See [OpenAI](/providers/openai) and [Anthropic](/providers/anthropic).
+    - `/fast` is provider-specific: OpenAI/OpenAI Codex map it to `service_tier=priority` on native Responses endpoints. See [OpenAI](/providers/openai).
     - Tool failure summaries are still shown when relevant, but detailed failure text is only included when `/verbose full` is enabled.
     - `/reasoning`, `/verbose`, and `/trace` are risky in group settings: they may reveal internal reasoning, tool output, or plugin diagnostics you did not intend to expose. Prefer leaving them off, especially in group chats.
 
@@ -291,7 +274,7 @@ User-invocable skills are also exposed as slash commands:
       - By default, skill commands are forwarded to the model as a normal request.
       - Skills may optionally declare `command-dispatch: tool` to route the command directly to a tool (deterministic, no model).
       - Example: `/prose` (OpenProse plugin) — see [OpenProse](/prose).
-    - **Native command arguments:** Discord uses autocomplete for dynamic options (and button menus when you omit required args). Telegram and Slack show a button menu when a command supports choices and you omit the arg. Dynamic choices are resolved against the target session model, so model-specific options such as `/think` levels follow that session's `/model` override.
+    - **Native command arguments:** Discord uses autocomplete for dynamic options (and button menus when you omit required args). Telegram shows a button menu when a command supports choices and you omit the arg. Dynamic choices are resolved against the target session model, so model-specific options such as `/think` levels follow that session's `/model` override.
 
   </Accordion>
 </AccordionGroup>
@@ -310,9 +293,9 @@ For profile and override editing, use the Control UI Tools panel or config/catal
 
 ## Usage surfaces (what shows where)
 
-- **Provider usage/quota** (example: "Claude 80% left") shows up in `/status` for the current model provider when usage tracking is enabled. OpenClaw normalizes provider windows to `% left`; for MiniMax, remaining-only percent fields are inverted before display, and `model_remains` responses prefer the chat-model entry plus a model-tagged plan label.
+- **Provider usage/quota** shows up in `/status` for the current OpenAI subscription-backed model provider when usage tracking is enabled. OpenClaw normalizes provider windows to `% left`.
 - **Token/cache lines** in `/status` can fall back to the latest transcript usage entry when the live session snapshot is sparse. Existing nonzero live values still win, and transcript fallback can also recover the active runtime model label plus a larger prompt-oriented total when stored totals are missing or smaller.
-- **Execution vs runtime:** `/status` reports `Execution` for the effective sandbox path and `Runtime` for who is actually running the session: `OpenClaw Pi Default`, `OpenAI Codex`, a CLI backend, or an ACP backend.
+- **Execution vs runtime:** `/status` reports `Execution` for the effective sandbox path and `Runtime` for who is actually running the session, such as `OpenClaw Pi Default` or `OpenAI Codex`.
 - **Per-response tokens/cost** is controlled by `/usage off|tokens|full` (appended to normal replies).
 - `/model status` is about **models/auth/endpoints**, not usage.
 
@@ -327,7 +310,6 @@ Examples:
 /model list
 /model 3
 /model openai/gpt-5.4
-/model opus@anthropic:default
 /model status
 ```
 
@@ -441,15 +423,8 @@ Examples:
     - **Text commands** run in the normal chat session (DMs share `main`, groups have their own session).
     - **Native commands** use isolated sessions:
       - Discord: `agent:<agentId>:discord:slash:<userId>`
-      - Slack: `agent:<agentId>:slack:slash:<userId>` (prefix configurable via `channels.slack.slashCommand.sessionPrefix`)
       - Telegram: `telegram:slash:<userId>` (targets the chat session via `CommandTargetSessionKey`)
     - **`/stop`** targets the active chat session so it can abort the current run.
-
-  </Accordion>
-  <Accordion title="Slack specifics">
-    `channels.slack.slashCommand` is still supported for a single `/openclaw`-style command. If you enable `commands.native`, you must create one Slack slash command per built-in command (same names as `/help`). Command argument menus for Slack are delivered as ephemeral Block Kit buttons.
-
-    Slack native exception: register `/agentstatus` (not `/status`) because Slack reserves `/status`. Text `/status` still works in Slack messages.
 
   </Accordion>
 </AccordionGroup>

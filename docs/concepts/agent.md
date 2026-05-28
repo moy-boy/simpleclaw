@@ -111,7 +111,7 @@ More details: [Streaming + chunking](/concepts/streaming).
 Model refs in config (for example `agents.defaults.model` and `agents.defaults.models`) are parsed by splitting on the **first** `/`.
 
 - Use `provider/model` when configuring models.
-- If the model ID itself contains `/` (OpenRouter-style), include the provider prefix (example: `openrouter/moonshotai/kimi-k2`).
+- Use OpenAI model refs such as `openai/gpt-5.5` for the simplified setup.
 - If you omit the provider, OpenClaw tries an alias first, then a unique
   configured-provider match for that exact model id, and only then falls back
   to the configured default provider. If that provider no longer exposes the

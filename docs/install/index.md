@@ -179,14 +179,11 @@ Deploy OpenClaw on a cloud server or VPS:
   <Card title="Northflank" href="/install/northflank">Northflank</Card>
 </CardGroup>
 
-## Update, migrate, or uninstall
+## Update Or Uninstall
 
-<CardGroup cols={3}>
+<CardGroup cols={2}>
   <Card title="Updating" href="/install/updating" icon="refresh-cw">
     Keep OpenClaw up to date.
-  </Card>
-  <Card title="Migrating" href="/install/migrating" icon="arrow-right">
-    Move to a new machine.
   </Card>
   <Card title="Uninstall" href="/install/uninstall" icon="trash-2">
     Remove OpenClaw completely.

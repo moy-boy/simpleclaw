@@ -246,7 +246,7 @@ More grammar examples:
 
 ```bash
 # Quote keys containing / or .
-openclaw path resolve 'oc://config.jsonc/agents.defaults.models/"anthropic/claude-opus-4-7"/alias'
+openclaw path resolve 'oc://config.jsonc/agents.defaults.models/"openai/gpt-5.5"/alias'
 
 # Deep JSON/JSONC paths can use slash segments; they normalize to dotted subsegments
 openclaw path set 'oc://openclaw.json/agents/list/0/tools/exec/security' 'allowlist' --dry-run
@@ -333,7 +333,7 @@ even when the source uses underscores (`send_email` → `send-email`).
 {
   "plugins": {
     "github": {"enabled": true, "role": "vcs"},
-    "slack":  {"enabled": false, "role": "chat"}
+    "discord":  {"enabled": false, "role": "chat"}
   }
 }
 ```
@@ -342,12 +342,12 @@ even when the source uses underscores (`send_email` → `send-email`).
 $ openclaw path resolve 'oc://config.jsonc/plugins/github/enabled' --file config.jsonc --human
 leaf @ L4: "true" (boolean)
 
-$ openclaw path set 'oc://config.jsonc/plugins/slack/enabled' 'true' --file config.jsonc --dry-run
+$ openclaw path set 'oc://config.jsonc/plugins/discord/enabled' 'true' --file config.jsonc --dry-run
 --dry-run: would write 142 bytes to /…/config.jsonc
 {
   "plugins": {
     "github": {"enabled": true, "role": "vcs"},
-    "slack":  {"enabled": true, "role": "chat"}
+    "discord":  {"enabled": true, "role": "chat"}
   }
 }
 ```
@@ -429,7 +429,7 @@ globbing is a follow-up feature).
 ```bash
 openclaw path find 'oc://AGENTS.md/tools/**/risk'
 openclaw path find 'oc://session.jsonl/[event=action]/userId'
-openclaw path find 'oc://config.jsonc/plugins/{github,slack}/enabled'
+openclaw path find 'oc://config.jsonc/plugins/{github,discord}/enabled'
 ```
 
 ### `set <oc-path> <value>`

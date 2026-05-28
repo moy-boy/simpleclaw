@@ -41,12 +41,13 @@ programmatic delivery.
 
   <Step title="Deliver the reply to a channel">
     ```bash
-    # Deliver to WhatsApp (default channel)
-    openclaw agent --to +15555550123 --message "Report ready" --deliver
+    # Deliver to Telegram
+    openclaw agent --agent ops --message "Report ready" \
+      --deliver --reply-channel telegram --reply-to "<chat-id>"
 
-    # Deliver to Slack
+    # Deliver to Discord
     openclaw agent --agent ops --message "Generate report" \
-      --deliver --reply-channel slack --reply-to "#reports"
+      --deliver --reply-channel discord --reply-to "<channel-id>"
     ```
 
   </Step>

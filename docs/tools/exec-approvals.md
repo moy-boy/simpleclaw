@@ -40,8 +40,7 @@ normally prompt is resolved by the **ask fallback** (default: `deny`).
 
 <Tip>
 Native chat approval clients can seed channel-specific affordances on the
-pending approval message. For example, Matrix seeds reaction shortcuts
-(`✅` allow once, `❌` deny, `♾️` allow always) while still leaving
+pending approval message. For example, Discord and Telegram can keep
 `/approve ...` commands in the message as a fallback.
 </Tip>
 
@@ -205,15 +204,9 @@ YOLO is the default host behavior unless you tighten it explicitly:
 
 </Warning>
 
-CLI-backed providers that expose their own noninteractive permission mode
-can follow this policy. Claude CLI adds
-`--permission-mode bypassPermissions` when OpenClaw's effective exec
-policy is YOLO. For OpenClaw-managed Claude live sessions, OpenClaw's
-effective exec policy is authoritative over Claude's native permission mode:
-YOLO normalizes live launches to `--permission-mode bypassPermissions`, and
-restrictive effective exec policy normalizes live launches to
-`--permission-mode default`, even if raw Claude backend args specify another
-mode.
+Codex harness sessions follow the same OpenClaw exec policy. YOLO mode removes
+OpenClaw approval prompts for host exec; restrictive policy keeps approval
+prompts in place for matching tool calls.
 
 If you want a more conservative setup, tighten OpenClaw exec policy back to
 `allowlist` / `on-miss` or `deny`.
@@ -380,7 +373,7 @@ skill bin list. Disable this if you want strict manual allowlists.
 ## Safe bins and approval forwarding
 
 For safe bins (the stdin-only fast-path), interpreter binding details, and
-how to forward approval prompts to Slack/Discord/Telegram (or run them as
+how to forward approval prompts to Discord/Telegram (or run them as
 native approval clients), see
 [Exec approvals - advanced](/tools/exec-approvals-advanced).
 

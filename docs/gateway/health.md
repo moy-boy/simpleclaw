@@ -16,7 +16,7 @@ Short guide to verify channel connectivity without guessing.
 - `openclaw health` — asks the running gateway for its health snapshot (WS-only; no direct channel sockets from the CLI).
 - `openclaw health --verbose` — forces a live health probe and prints gateway connection details.
 - `openclaw health --json` — machine-readable health snapshot output.
-- Send `/status` as a standalone message in WhatsApp/WebChat to get a status reply without invoking the agent.
+- Send `/status` as a standalone message in Discord, Telegram, or WebChat to get a status reply without invoking the agent.
 - Logs: tail `/tmp/openclaw/openclaw-*.log` and filter for `web-heartbeat`, `web-reconnect`, `web-auto-reply`, `web-inbound`.
 
 For Discord and other chat providers, session rows are not socket liveness.
@@ -27,7 +27,7 @@ health commands above for live connectivity checks.
 
 ## Deep diagnostics
 
-- Creds on disk: `ls -l ~/.openclaw/credentials/whatsapp/<accountId>/creds.json` (mtime should be recent).
+- Creds on disk: inspect the matching account under `~/.openclaw/credentials/` when a channel reports stale auth.
 - Session store: `ls -l ~/.openclaw/agents/<agentId>/sessions/sessions.json` (path can be overridden in config). Count and recent recipients are surfaced via `status`.
 - Relink flow: `openclaw channels logout && openclaw channels login --verbose` when status codes 409–515 or `loggedOut` appear in logs. (Note: the QR login flow auto-restarts once for status 515 after pairing.)
 - Diagnostics are enabled by default. The gateway records operational facts unless `diagnostics.enabled: false` is set. Memory events record RSS/heap byte counts, threshold pressure, and growth pressure. Critical memory pressure logs through the gateway logger. When `diagnostics.memoryPressureSnapshot: true` is set, critical memory pressure also writes a pre-OOM stability bundle with V8 heap stats, Linux cgroup counters when available, active resource counts, and the largest session/transcript files by redacted relative path. Liveness warnings record event-loop delay, event-loop utilization, CPU-core ratio, and active/waiting/queued session counts when the process is running but saturated. Oversized-payload events record what was rejected, truncated, or chunked, plus sizes and limits when available. They do not record the message text, attachment contents, webhook body, raw request or response body, tokens, cookies, or secret values. The same heartbeat starts the bounded stability recorder, which is available through `openclaw gateway stability` or the `diagnostics.stability` Gateway RPC. Fatal Gateway exits, shutdown timeouts, and restart startup failures persist the latest recorder snapshot under `~/.openclaw/logs/stability/` when events exist; critical memory pressure does too only when `diagnostics.memoryPressureSnapshot: true` is set. Inspect the newest saved bundle with `openclaw gateway stability --bundle latest`.
@@ -40,7 +40,7 @@ health commands above for live connectivity checks.
 - `gateway.channelMaxRestartsPerHour`: rolling one-hour cap for health-monitor restarts per channel/account. Default: `10`.
 - `channels.<provider>.healthMonitor.enabled`: disable health-monitor restarts for a specific channel while leaving global monitoring enabled.
 - `channels.<provider>.accounts.<accountId>.healthMonitor.enabled`: multi-account override that wins over the channel-level setting.
-- These per-channel overrides apply to the built-in channel monitors that expose them today: Discord, Google Chat, iMessage, Microsoft Teams, Signal, Slack, Telegram, and WhatsApp.
+- These per-channel overrides apply to the supported Discord and Telegram channel monitors.
 
 ## When something fails
 

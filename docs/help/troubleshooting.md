@@ -59,12 +59,6 @@ Change the root or per-agent tool profile, then restart or reload the Gateway
 and run `openclaw status --all` again. See [Tools](/tools) for the profile
 model and allow/deny overrides.
 
-## Anthropic long context 429
-
-If you see:
-`HTTP 429: rate_limit_error: Extra usage is required for long context requests`,
-go to [/gateway/troubleshooting#anthropic-429-extra-usage-required-for-long-context](/gateway/troubleshooting#anthropic-429-extra-usage-required-for-long-context).
-
 ## Local OpenAI-compatible backend works directly but fails in OpenClaw
 
 If your local or self-hosted `/v1` backend answers small direct

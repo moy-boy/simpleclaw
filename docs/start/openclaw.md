@@ -1,12 +1,12 @@
 ---
-summary: "End-to-end guide for running OpenClaw as a personal assistant with safety cautions"
+summary: "End-to-end guide for running OpenClaw as a Telegram or Discord assistant with safety cautions"
 read_when:
   - Onboarding a new assistant instance
   - Reviewing safety/permission implications
-title: "Personal assistant setup"
+title: "Telegram/Discord assistant setup"
 ---
 
-OpenClaw is a self-hosted gateway that connects Discord, Google Chat, iMessage, Matrix, Microsoft Teams, Signal, Slack, Telegram, WhatsApp, Zalo, and more to AI agents. This guide covers the "personal assistant" setup: a dedicated WhatsApp number that behaves like your always-on AI assistant.
+OpenClaw is a self-hosted gateway that connects Telegram and Discord to AI agents. This guide covers a personal assistant setup: a private bot or Discord server that behaves like your always-on AI assistant.
 
 ## ⚠️ Safety first
 
@@ -14,55 +14,68 @@ You're putting an agent in a position to:
 
 - run commands on your machine (depending on your tool policy)
 - read/write files in your workspace
-- send messages back out via WhatsApp/Telegram/Discord/Mattermost and other bundled channels
+- send messages back out via Telegram or Discord
 
 Start conservative:
 
-- Always set `channels.whatsapp.allowFrom` (never run open-to-the-world on your personal Mac).
-- Use a dedicated WhatsApp number for the assistant.
+- Use pairing or explicit allowlists before you trust the assistant with private chats.
+- Use a private Telegram bot or private Discord server for the assistant.
 - Heartbeats now default to every 30 minutes. Disable until you trust the setup by setting `agents.defaults.heartbeat.every: "0m"`.
 
 ## Prerequisites
 
 - OpenClaw installed and onboarded - see [Getting Started](/start/getting-started) if you haven't done this yet
-- A second phone number (SIM/eSIM/prepaid) for the assistant
+- A Telegram bot token or Discord bot token
 
-## The two-phone setup (recommended)
+## Private bot setup
 
 You want this:
 
 ```mermaid
 flowchart TB
-    A["<b>Your Phone (personal)<br></b><br>Your WhatsApp<br>+1-555-YOU"] -- message --> B["<b>Second Phone (assistant)<br></b><br>Assistant WA<br>+1-555-ASSIST"]
-    B -- linked via QR --> C["<b>Your Mac (openclaw)<br></b><br>AI agent"]
+    A["<b>Your chat app<br></b><br>Telegram or Discord"] -- message --> B["<b>Private bot/server<br></b><br>OpenClaw channel"]
+    B -- Gateway --> C["<b>Your Mac (openclaw)<br></b><br>AI agent"]
 ```
 
-If you link your personal WhatsApp to OpenClaw, every message to you becomes "agent input". That's rarely what you want.
+Keep the bot or server private until pairing, allowlists, and tool approvals are configured.
 
 ## 5-minute quick start
 
-1. Pair WhatsApp Web (shows QR; scan with the assistant phone):
+1. Run onboarding:
 
 ```bash
-openclaw channels login
+openclaw onboard
 ```
 
-2. Start the Gateway (leave it running):
+2. Add Telegram or Discord:
+
+```bash
+openclaw channels add --channel telegram --token <bot-token>
+openclaw channels add --channel discord --token <bot-token>
+```
+
+3. Start the Gateway (leave it running):
 
 ```bash
 openclaw gateway --port 18789
 ```
 
-3. Put a minimal config in `~/.openclaw/openclaw.json`:
+4. For file-based Telegram setup, the minimal channel config is:
 
 ```json5
 {
   gateway: { mode: "local" },
-  channels: { whatsapp: { allowFrom: ["+15555550123"] } },
+  channels: {
+    telegram: {
+      enabled: true,
+      botToken: "123:abc",
+      dmPolicy: "pairing",
+    },
+  },
 }
 ```
 
-Now message the assistant number from your allowlisted phone.
+Now message the bot and complete pairing or allowlist setup.
 
 When onboarding finishes, OpenClaw auto-opens the dashboard and prints a clean (non-tokenized) link. If the dashboard prompts for auth, paste the configured shared secret into Control UI settings. Onboarding uses a token by default (`gateway.auth.token`), but password auth works too if you switched `gateway.auth.mode` to `password`. To reopen later: `openclaw dashboard`.
 
@@ -122,7 +135,7 @@ Example:
   logging: { level: "info" },
   agents: {
     defaults: {
-      model: { primary: "anthropic/claude-opus-4-6" },
+      model: { primary: "openai/gpt-5.5" },
       workspace: "~/.openclaw/workspace",
       thinkingDefault: "high",
       timeoutSeconds: 1800,
@@ -140,8 +153,9 @@ Example:
     ],
   },
   channels: {
-    whatsapp: {
-      allowFrom: ["+15555550123"],
+    telegram: {
+      enabled: true,
+      dmPolicy: "pairing",
       groups: {
         "*": { requireMention: true },
       },
@@ -235,7 +249,6 @@ Logs live under `/tmp/openclaw/` (default: `openclaw-YYYY-MM-DD.log`).
 
 ## Next steps
 
-- WebChat: [WebChat](/web/webchat)
 - Gateway ops: [Gateway runbook](/gateway)
 - Cron + wakeups: [Cron jobs](/automation/cron-jobs)
 - macOS menu bar companion: [OpenClaw macOS app](/platforms/macos)

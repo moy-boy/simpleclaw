@@ -157,13 +157,11 @@ order and tells you what it chose:
 
 - existing explicit model, if already configured
 - `OPENAI_API_KEY` -> `openai/gpt-5.5`
-- `ANTHROPIC_API_KEY` -> `anthropic/claude-opus-4-7`
-- Claude Code CLI -> `claude-cli/claude-opus-4-7`
 - Codex -> `openai/gpt-5.5` through the Codex app-server harness
 
 If none are available, setup still writes the default workspace and leaves the
-model unset. Install or log into Codex/Claude Code, or expose
-`OPENAI_API_KEY`/`ANTHROPIC_API_KEY`, then run setup again.
+model unset. Install or log into Codex, or expose `OPENAI_API_KEY`, then run
+setup again.
 
 ## Model-Assisted Planner
 
@@ -173,7 +171,6 @@ planner turn through OpenClaw's normal runtime paths. It first uses the
 configured OpenClaw model. If no configured model is usable yet, it can fall
 back to local runtimes already present on the machine:
 
-- Claude Code CLI: `claude-cli/claude-opus-4-7`
 - Codex app-server harness: `openai/gpt-5.5`
 
 The model-assisted planner cannot mutate config directly. It must translate the
@@ -318,15 +315,10 @@ Configless setup through explicit Crestodian commands is covered by:
 pnpm test:docker:crestodian-first-run
 ```
 
-That lane starts with an empty state dir, verifies the modern onboard Crestodian
-entrypoint, sets the default model, creates an additional agent, configures
-Discord through a plugin enablement plus token SecretRef, validates config, and
-checks the audit log. QA Lab also has a repo-backed scenario for the same Ring 0
-flow:
-
-```bash
-pnpm openclaw qa suite --scenario crestodian-ring-zero-setup
-```
+That lane starts with an empty state dir, verifies the modern onboard
+Crestodian entrypoint, sets the default model, creates an additional agent,
+configures Discord through a plugin enablement plus token SecretRef, validates
+config, and checks the audit log.
 
 ## Related
 

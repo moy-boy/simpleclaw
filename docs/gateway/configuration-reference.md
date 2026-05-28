@@ -34,9 +34,8 @@ Config format is **JSON5** (comments + trailing commas allowed). All fields are 
 ## Channels
 
 Per-channel config keys moved to a dedicated page - see
-[Configuration - channels](/gateway/config-channels) for `channels.*`,
-including Slack, Discord, Telegram, WhatsApp, Matrix, iMessage, and other
-bundled channels (auth, access control, multi-account, mention gating).
+[Configuration - channels](/gateway/config-channels) for Discord and Telegram
+auth, access control, multi-account routing, and mention gating.
 
 ## Agent defaults, multi-agent, sessions, and messages
 
@@ -77,13 +76,9 @@ The `models` root also owns global model-catalog behavior.
 
 - `models.mode`: provider catalog behavior (`merge` or `replace`).
 - `models.providers`: custom provider map keyed by provider id.
-- `models.providers.*.localService`: optional on-demand process manager for
-  local model servers. OpenClaw probes the configured health endpoint, starts
-  the absolute `command` when needed, waits for readiness, then sends the model
-  request. See [Local model services](/gateway/local-model-services).
 - `models.pricing.enabled`: controls the background pricing bootstrap that
   starts after sidecars and channels reach the Gateway ready path. When `false`,
-  the Gateway skips OpenRouter and LiteLLM pricing-catalog fetches; configured
+  the Gateway skips external pricing-catalog fetches; configured
   `models.providers.*.models[].cost` values still work for local cost estimates.
 
 ## MCP
@@ -127,7 +122,7 @@ target server during config edits.
   `openclaw doctor --fix` normalize into the canonical `transport` field.
 - `mcp.servers.<name>.codex`: optional Codex app-server projection controls.
   This block is OpenClaw metadata for Codex app-server threads only; it does not
-  affect ACP sessions, generic Codex harness config, or other runtime adapters.
+  affect other runtime adapters.
   Non-empty `codex.agents` limits the server to the listed OpenClaw agent ids.
   Empty, blank, or invalid scoped agent lists are rejected by config validation
   and omitted by the runtime projection path instead of becoming global.
@@ -143,15 +138,14 @@ target server during config edits.
   The next tool discovery/use recreates them from the new config, so removed
   `mcp.servers` entries are reaped immediately instead of waiting for idle TTL.
 
-See [MCP](/cli/mcp#openclaw-as-an-mcp-client-registry) and
-[CLI backends](/gateway/cli-backends#bundle-mcp-overlays) for runtime behavior.
+See [MCP](/cli/mcp#openclaw-as-an-mcp-client-registry) for runtime behavior.
 
 ## Skills
 
 ```json5
 {
   skills: {
-    allowBundled: ["gemini", "peekaboo"],
+    allowBundled: ["peekaboo"],
     load: {
       extraDirs: ["~/Projects/agent-scripts/skills"],
       allowSymlinkTargets: ["~/Projects/manager/skills"],
@@ -163,8 +157,8 @@ See [MCP](/cli/mcp#openclaw-as-an-mcp-client-registry) and
     },
     entries: {
       "image-lab": {
-        apiKey: { source: "env", provider: "default", id: "GEMINI_API_KEY" }, // or plaintext string
-        env: { GEMINI_API_KEY: "GEMINI_KEY_HERE" },
+        apiKey: { source: "env", provider: "default", id: "OPENAI_API_KEY" }, // or plaintext string
+        env: { OPENAI_API_KEY: "OPENAI_KEY_HERE" },
       },
       peekaboo: { enabled: true },
       sag: { enabled: false },
@@ -196,19 +190,18 @@ See [MCP](/cli/mcp#openclaw-as-an-mcp-client-registry) and
 {
   plugins: {
     enabled: true,
-    allow: ["voice-call"],
+    allow: ["codex", "discord", "openai", "telegram"],
     bundledDiscovery: "allowlist",
     deny: [],
     load: {
-      paths: ["~/Projects/oss/voice-call-plugin"],
+      paths: ["~/Projects/oss/custom-plugin"],
     },
     entries: {
-      "voice-call": {
+      codex: {
         enabled: true,
         hooks: {
           allowPromptInjection: false,
         },
-        config: { provider: "twilio" },
       },
     },
   },
@@ -216,7 +209,7 @@ See [MCP](/cli/mcp#openclaw-as-an-mcp-client-registry) and
 ```
 
 - Loaded from `~/.openclaw/extensions`, `<workspace>/.openclaw/extensions`, plus `plugins.load.paths`.
-- Discovery accepts native OpenClaw plugins plus compatible Codex bundles and Claude bundles, including manifestless Claude default-layout bundles.
+- Discovery accepts native OpenClaw plugins plus compatible Codex bundles.
 - **Config changes require a gateway restart.**
 - `allow`: optional allowlist (only listed plugins load). `deny` wins.
 - `bundledDiscovery`: defaults to `"allowlist"` for new configs, so a non-empty
@@ -243,8 +236,8 @@ The bundled `codex` plugin owns native Codex app-server harness settings under
 surface and [Codex harness](/plugins/codex-harness) for the runtime model.
 
 `codexPlugins` applies only to sessions that select the native Codex harness.
-It does not enable Codex plugins for Pi, normal OpenAI provider runs, ACP
-conversation bindings, or any non-Codex harness.
+It does not enable Codex plugins for Pi, normal OpenAI provider runs, or any
+non-Codex harness.
 
 ```json5
 {
@@ -299,15 +292,6 @@ asynchronously when stale. Codex thread app config is computed at Codex harness
 session establishment, not on every turn; use `/new`, `/reset`, or a gateway
 restart after changing native plugin config.
 
-- `plugins.entries.firecrawl.config.webFetch`: Firecrawl web-fetch provider settings.
-  - `apiKey`: Firecrawl API key (accepts SecretRef). Falls back to `plugins.entries.firecrawl.config.webSearch.apiKey`, legacy `tools.web.fetch.firecrawl.apiKey`, or `FIRECRAWL_API_KEY` env var.
-  - `baseUrl`: Firecrawl API base URL (default: `https://api.firecrawl.dev`; self-hosted overrides must target private/internal endpoints).
-  - `onlyMainContent`: extract only the main content from pages (default: `true`).
-  - `maxAgeMs`: maximum cache age in milliseconds (default: `172800000` / 2 days).
-  - `timeoutSeconds`: scrape request timeout in seconds (default: `60`).
-- `plugins.entries.xai.config.xSearch`: xAI X Search (Grok web search) settings.
-  - `enabled`: enable the X Search provider.
-  - `model`: Grok model to use for search (e.g. `"grok-4-1-fast"`).
 - `plugins.entries.memory-core.config.dreaming`: memory dreaming settings. See [Dreaming](/concepts/dreaming) for phases and thresholds.
   - `enabled`: master dreaming switch (default `false`).
   - `frequency`: cron cadence for each full dreaming sweep (`"0 3 * * *"` by default).
@@ -319,7 +303,7 @@ restart after changing native plugin config.
   - `memory.citations`
   - `memory.qmd.*`
   - `plugins.entries.memory-core.config.dreaming`
-- Enabled Claude bundle plugins can also contribute embedded Pi defaults from `settings.json`; OpenClaw applies those as sanitized agent settings, not as raw OpenClaw config patches.
+- Enabled compatible bundle plugins can also contribute embedded Pi defaults from `settings.json`; OpenClaw applies those as sanitized agent settings, not as raw OpenClaw config patches.
 - `plugins.slots.memory`: pick the active memory plugin id, or `"none"` to disable memory plugins.
 - `plugins.slots.contextEngine`: pick the active context engine plugin id; defaults to `"legacy"` unless you install and select another engine.
 
@@ -576,7 +560,6 @@ See [Inferred commitments](/concepts/commitments).
 
 ### OpenAI-compatible endpoints
 
-- Admin HTTP RPC: off by default as the `admin-http-rpc` plugin. Enable the plugin to register `POST /api/v1/admin/rpc`. See [Admin HTTP RPC](/plugins/admin-http-rpc).
 - Chat Completions: disabled by default. Enable with `gateway.http.endpoints.chatCompletions.enabled: true`.
 - Responses API: `gateway.http.endpoints.responses.enabled`.
 - Responses URL-input hardening:
@@ -739,7 +722,7 @@ Validation and safety notes:
       renewEveryMinutes: 720,
       serve: { bind: "127.0.0.1", port: 8788, path: "/" },
       tailscale: { mode: "funnel", path: "/gmail-pubsub" },
-      model: "openrouter/meta-llama/llama-3.3-70b-instruct:free",
+      model: "openai/gpt-5.4",
       thinking: "off",
     },
   },
@@ -982,8 +965,7 @@ Notes:
 - `billingBackoffHours`: base backoff in hours when a profile fails due to true
   billing/insufficient-credit errors (default: `5`). Explicit billing text can
   still land here even on `401`/`403` responses, but provider-specific text
-  matchers stay scoped to the provider that owns them (for example OpenRouter
-  `Key limit exceeded`). Retryable HTTP `402` usage-window or
+  matchers stay scoped to the provider that owns them. Retryable HTTP `402` usage-window or
   organization/workspace spend-limit messages stay in the `rate_limit` path
   instead.
 - `billingBackoffHoursByProvider`: optional per-provider overrides for billing backoff hours.
@@ -1114,55 +1096,6 @@ Notes:
 - `auto.stableDelayHours`: minimum delay in hours before stable-channel auto-apply (default: `6`; max: `168`).
 - `auto.stableJitterHours`: extra stable-channel rollout spread window in hours (default: `12`; max: `168`).
 - `auto.betaCheckIntervalHours`: how often beta-channel checks run in hours (default: `1`; max: `24`).
-
----
-
-## ACP
-
-```json5
-{
-  acp: {
-    enabled: true,
-    dispatch: { enabled: true },
-    backend: "acpx",
-    defaultAgent: "main",
-    allowedAgents: ["main", "ops"],
-    maxConcurrentSessions: 10,
-
-    stream: {
-      coalesceIdleMs: 50,
-      maxChunkChars: 1000,
-      repeatSuppression: true,
-      deliveryMode: "live", // live | final_only
-      hiddenBoundarySeparator: "paragraph", // none | space | newline | paragraph
-      maxOutputChars: 50000,
-      maxSessionUpdateChars: 500,
-    },
-
-    runtime: {
-      ttlMinutes: 30,
-    },
-  },
-}
-```
-
-- `enabled`: global ACP feature gate (default: `true`; set `false` to hide ACP dispatch and spawn affordances).
-- `dispatch.enabled`: independent gate for ACP session turn dispatch (default: `true`). Set `false` to keep ACP commands available while blocking execution.
-- `backend`: default ACP runtime backend id (must match a registered ACP runtime plugin).
-  Install the backend plugin first, and if `plugins.allow` is set, include the backend plugin id (for example `acpx`) or the ACP backend will not load.
-- `defaultAgent`: fallback ACP target agent id when spawns do not specify an explicit target.
-- `allowedAgents`: allowlist of agent ids permitted for ACP runtime sessions; empty means no additional restriction.
-- `maxConcurrentSessions`: maximum concurrently active ACP sessions.
-- `stream.coalesceIdleMs`: idle flush window in ms for streamed text.
-- `stream.maxChunkChars`: maximum chunk size before splitting streamed block projection.
-- `stream.repeatSuppression`: suppress repeated status/tool lines per turn (default: `true`).
-- `stream.deliveryMode`: `"live"` streams incrementally; `"final_only"` buffers until turn terminal events.
-- `stream.hiddenBoundarySeparator`: separator before visible text after hidden tool events (default: `"paragraph"`).
-- `stream.maxOutputChars`: maximum assistant output characters projected per ACP turn.
-- `stream.maxSessionUpdateChars`: maximum characters for projected ACP status/update lines.
-- `stream.tagVisibility`: record of tag names to boolean visibility overrides for streamed events.
-- `runtime.ttlMinutes`: idle TTL in minutes for ACP session workers before eligible cleanup.
-- `runtime.installCommand`: optional install command to run when bootstrapping an ACP runtime environment.
 
 ---
 

@@ -13,25 +13,20 @@ chunks and searching them using embeddings, keywords, or both.
 
 ## Quick start
 
-If you have a GitHub Copilot subscription, OpenAI, Gemini, Voyage, or Mistral
-API key configured, memory search works automatically. To set a provider
-explicitly:
+If OpenAI auth is configured, memory search can use OpenAI embeddings. To set
+the provider explicitly:
 
 ```json5
 {
   agents: {
     defaults: {
       memorySearch: {
-        provider: "openai", // or "gemini", "local", "ollama", etc.
+        provider: "openai",
       },
     },
   },
 }
 ```
-
-For multi-endpoint setups, `provider` can also be a custom
-`models.providers.<id>` entry, such as `ollama-5080`, when that provider sets
-`api: "ollama"` or another embedding adapter owner.
 
 For local embeddings with no API key, set `provider: "local"`. Source checkouts
 may still require native build approval: `pnpm approve-builds` then
@@ -44,16 +39,10 @@ for indexed chunks. Configure those with `memorySearch.queryInputType` and
 
 ## Supported providers
 
-| Provider       | ID               | Needs API key | Notes                                                |
-| -------------- | ---------------- | ------------- | ---------------------------------------------------- |
-| Bedrock        | `bedrock`        | No            | Auto-detected when the AWS credential chain resolves |
-| Gemini         | `gemini`         | Yes           | Supports image/audio indexing                        |
-| GitHub Copilot | `github-copilot` | No            | Auto-detected, uses Copilot subscription             |
-| Local          | `local`          | No            | GGUF model, ~0.6 GB download                         |
-| Mistral        | `mistral`        | Yes           | Auto-detected                                        |
-| Ollama         | `ollama`         | No            | Local, must set explicitly                           |
-| OpenAI         | `openai`         | Yes           | Auto-detected, fast                                  |
-| Voyage         | `voyage`         | Yes           | Auto-detected                                        |
+| Provider | ID       | Needs API key | Notes                     |
+| -------- | -------- | ------------- | ------------------------- |
+| OpenAI   | `openai` | Yes           | Supported remote provider |
+| Local    | `local`  | No            | Local embedding fallback  |
 
 ## How search works
 
@@ -123,13 +112,6 @@ different daily notes.
 }
 ```
 
-## Multimodal memory
-
-With Gemini Embedding 2, you can index images and audio files alongside
-Markdown. Search queries remain text, but they match against visual and audio
-content. See the [Memory configuration reference](/reference/memory-config) for
-setup.
-
 ## Session memory search
 
 You can optionally index session transcripts so `memory_search` can recall
@@ -145,8 +127,7 @@ earlier conversations. This is opt-in via
 **Only keyword matches?** Your embedding provider may not be configured. Check
 `openclaw memory status --deep`.
 
-**Local embeddings time out?** `ollama`, `lmstudio`, and `local` use a longer
-inline batch timeout by default. If the host is simply slow, set
+**Local embeddings time out?** `local` uses a longer inline batch timeout by default. If the host is simply slow, set
 `agents.defaults.memorySearch.sync.embeddingBatchTimeoutSeconds` and rerun
 `openclaw memory index --force`.
 

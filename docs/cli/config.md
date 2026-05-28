@@ -94,7 +94,7 @@ Values are parsed as JSON5 when possible; otherwise they are treated as strings.
 ```bash
 openclaw config set agents.defaults.heartbeat.every "0m"
 openclaw config set gateway.port 19001 --strict-json
-openclaw config set channels.whatsapp.groups '["*"]' --strict-json
+openclaw config set channels.telegram.groups '{"*":{"requireMention":true}}' --strict-json
 ```
 
 `config get <path> --json` prints the raw value as JSON instead of terminal-formatted text.
@@ -107,7 +107,7 @@ Use `--merge` when adding entries to those maps:
 
 ```bash
 openclaw config set agents.defaults.models '{"openai/gpt-5.4":{}}' --strict-json --merge
-openclaw config set models.providers.ollama.models '[{"id":"llama3.2","name":"Llama 3.2"}]' --strict-json --merge
+openclaw config set agents.defaults.models '{"openai/gpt-5.5":{}}' --strict-json --merge
 ```
 
 Use `--replace` only when you intentionally want the provided value to become the complete target value.
@@ -165,7 +165,7 @@ Use `--replace` only when you intentionally want the provided value to become th
 </Tabs>
 
 <Warning>
-SecretRef assignments are rejected on unsupported runtime-mutable surfaces (for example `hooks.token`, `commands.ownerDisplaySecret`, Discord thread-binding webhook tokens, and WhatsApp creds JSON). See [SecretRef Credential Surface](/reference/secretref-credential-surface).
+SecretRef assignments are rejected on unsupported runtime-mutable surfaces (for example `hooks.token`, `commands.ownerDisplaySecret`, Discord thread-binding webhook tokens, and channel-owned session files). See [SecretRef Credential Surface](/reference/secretref-credential-surface).
 </Warning>
 
 Batch parsing always uses the batch payload (`--batch-json`/`--batch-file`) as the source of truth. `--strict-json` / `--json` do not change batch parsing behavior.
@@ -191,14 +191,6 @@ Example patch:
 ```json5
 {
   channels: {
-    slack: {
-      enabled: true,
-      mode: "socket",
-      botToken: { source: "env", provider: "default", id: "SLACK_BOT_TOKEN" },
-      appToken: { source: "env", provider: "default", id: "SLACK_APP_TOKEN" },
-      groupPolicy: "open",
-      requireMention: false,
-    },
     discord: {
       enabled: true,
       token: { source: "env", provider: "default", id: "DISCORD_BOT_TOKEN" },

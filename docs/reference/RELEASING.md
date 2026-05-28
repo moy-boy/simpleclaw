@@ -65,7 +65,7 @@ the maintainer-only release runbook.
    exports, and plugin SDK API baseline in the right order. Commit any generated
    drift before tagging. Then run the local deterministic preflight:
    `pnpm check:test-types`, `pnpm check:architecture`,
-   `pnpm build && pnpm ui:build`, and `pnpm release:check`.
+   `pnpm build:ci-artifacts`, and `pnpm release:check`.
 6. Run `OpenClaw NPM Release` with `preflight_only=true`. Before a tag exists,
    a full 40-character release-branch SHA is allowed for validation-only
    preflight. The preflight generates dependency release evidence for the
@@ -73,7 +73,8 @@ the maintainer-only release runbook.
    artifact. Save the successful `preflight_run_id`.
 7. Kick off all pre-release tests with `Full Release Validation` for the
    release branch, tag, or full commit SHA. This is the one manual entrypoint
-   for the four big release test boxes: Vitest, Docker, QA Lab, and Package.
+   for the release test boxes: Vitest, Docker, Package, supported channels,
+   and package Telegram RTT.
 8. If validation fails, fix on the release branch and rerun the smallest failed
    file, lane, workflow job, package profile, provider, or model allowlist that
    proves the fix. Rerun the full umbrella only when the changed surface makes
@@ -130,9 +131,9 @@ vYYYY.M.D-beta.N` from the matching `release/YYYY.M.D` branch. The helper runs
   covered outside the faster local `pnpm check` gate
 - Run `pnpm check:architecture` before release preflight so the broader import
   cycle and architecture boundary checks are green outside the faster local gate
-- Run `pnpm build && pnpm ui:build` before `pnpm release:check` so the expected
-  `dist/*` release artifacts and Control UI bundle exist for the pack
-  validation step
+- Run `pnpm build:ci-artifacts` before `pnpm release:check` so the expected
+  `dist/*` release artifacts, plugin SDK package artifacts, and Control UI
+  bundle exist for the pack validation step
 - Run `pnpm release:prep` after the root version bump and before tagging. It
   runs every deterministic release generator that commonly drifts after a
   version/config/API change: plugin versions, plugin inventory, base config
@@ -144,7 +145,7 @@ vYYYY.M.D-beta.N` from the matching `release/YYYY.M.D` branch. The helper runs
   kick off all pre-release test boxes from one entrypoint. It accepts a branch,
   tag, or full commit SHA, dispatches manual `CI`, and dispatches
   `OpenClaw Release Checks` for install smoke, package acceptance, cross-OS
-  package checks, QA Lab parity, Matrix, and Telegram lanes. Stable/default runs
+  package checks, and supported channel lanes. Stable/default runs
   keep exhaustive live/E2E and Docker release-path soak behind
   `run_release_soak=true`; `release_profile=full` forces soak on. With
   `release_profile=full` and `rerun_group=all`, it also runs package Telegram
@@ -192,16 +193,6 @@ vYYYY.M.D-beta.N` from the matching `release/YYYY.M.D` branch. The helper runs
   built-artifact smoke checks, docs checks, Python skills, Windows, macOS,
   Android, and Control UI i18n lanes.
   Example: `gh workflow run ci.yml --ref release/YYYY.M.D`
-- Run `pnpm qa:otel:smoke` when validating release telemetry. It exercises
-  QA-lab through a local OTLP/HTTP receiver and verifies trace, metric, and log
-  export plus bounded trace attributes and content/identifier redaction without
-  requiring Opik, Langfuse, or another external collector.
-- Run `pnpm qa:prometheus:smoke` when validating protected Prometheus scraping.
-  It exercises QA-lab, rejects unauthenticated scrapes, and verifies
-  release-critical metric families stay free of prompt content, raw identifiers,
-  auth tokens, and local paths.
-- Run `pnpm qa:observability:smoke` when you want the source-checkout
-  OpenTelemetry and Prometheus smoke lanes back to back.
 - Run `pnpm release:check` before every tagged release
 - `OpenClaw NPM Release` preflight generates dependency release evidence before
   it packs the npm tarball. The npm advisory vulnerability gate is
@@ -224,12 +215,8 @@ vYYYY.M.D-beta.N` from the matching `release/YYYY.M.D` branch. The helper runs
   plugins.
 - Release checks now run in a separate manual workflow:
   `OpenClaw Release Checks`
-- `OpenClaw Release Checks` also runs the QA Lab mock parity lane plus the fast
-  live Matrix profile and Telegram QA lane before release approval. The live
-  lanes use the `qa-live-shared` environment; Telegram also uses Convex CI
-  credential leases. Run the manual `QA-Lab - All Lanes` workflow with
-  `matrix_profile=all` and `matrix_shards=true` when you want full Matrix
-  transport, media, and E2EE inventory in parallel.
+- `OpenClaw Release Checks` also runs supported channel lanes before release
+  approval. Telegram package proof can use Convex CI credential leases.
 - Cross-OS install and upgrade runtime validation is part of public
   `OpenClaw Release Checks` and `Full Release Validation`, which call the
   reusable workflow
@@ -356,7 +343,7 @@ dispatches standalone package Telegram E2E when `release_profile=full` with
 `npm_telegram_package_spec` is set. `OpenClaw Release
 Checks` then fans out install smoke, cross-OS release checks, live/E2E Docker
 release-path coverage when soak is enabled, Package Acceptance with Telegram
-package QA, QA Lab parity, live Matrix, and live Telegram. A full run is only acceptable when the
+package proof, and supported live channel checks. A full run is only acceptable when the
 `Full Release Validation`
 summary shows `normal_ci` and `release_checks` as successful. In full/all mode,
 the `npm_telegram` child must also be successful; outside full/all it is skipped
@@ -445,15 +432,12 @@ For bounded recovery, pass `rerun_group` to the umbrella. `all` is the real
 release-candidate run, `ci` runs only the normal CI child, `plugin-prerelease`
 runs only the release-only plugin child, `release-checks` runs every release
 box, and the narrower release groups are `install-smoke`, `cross-os`,
-`live-e2e`, `package`, `qa`, `qa-parity`, `qa-live`, and `npm-telegram`.
+`live-e2e`, `package`, and `npm-telegram`.
 Focused `npm-telegram` reruns require `release_package_spec` or
 `npm_telegram_package_spec`; full/all runs with `release_profile=full` use the
 release-checks package artifact. Focused
 cross-OS reruns can add `cross_os_suite_filter=windows/packaged-upgrade` or
-another OS/suite filter. QA release-check failures are advisory except the
-standard runtime tool coverage gate, which blocks release validation when
-required OpenClaw dynamic tools drift or disappear from the standard tier
-summary.
+another OS/suite filter.
 
 ### Vitest
 
@@ -474,7 +458,7 @@ It is not the same as release-path product validation. Evidence to keep:
   a run needs performance analysis
 
 Run manual CI directly only when the release needs deterministic normal CI but
-not the Docker, QA Lab, live, cross-OS, or package boxes:
+not the Docker, live, cross-OS, package, or channel boxes:
 
 ```bash
 gh workflow run ci.yml --ref main -f target_ref=release/YYYY.M.D
@@ -495,8 +479,7 @@ Release Docker coverage includes:
   shards
 - repository E2E lanes
 - release-path Docker chunks: `core`, `package-update-openai`,
-  `package-update-anthropic`, `package-update-core`, `plugins-runtime-plugins`,
-  `plugins-runtime-services`,
+  `package-update-core`, `plugins-runtime-plugins`, `plugins-runtime-services`,
   `plugins-runtime-install-a`, `plugins-runtime-install-b`,
   `plugins-runtime-install-c`, `plugins-runtime-install-d`,
   `plugins-runtime-install-e`, `plugins-runtime-install-f`,
@@ -515,27 +498,6 @@ use `docker_lanes=<lane[,lane]>` on the reusable live/E2E workflow instead of
 rerunning all release chunks. Generated rerun commands include prior
 `package_artifact_run_id` and prepared Docker image inputs when available, so a
 failed lane can reuse the same tarball and GHCR images.
-
-### QA Lab
-
-The QA Lab box is also part of `OpenClaw Release Checks`. It is the agentic
-behavior and channel-level release gate, separate from Vitest and Docker
-package mechanics.
-
-Release QA Lab coverage includes:
-
-- mock parity lane comparing the OpenAI candidate lane against the Opus 4.6
-  baseline using the agentic parity pack
-- fast live Matrix QA profile using the `qa-live-shared` environment
-- live Telegram QA lane using Convex CI credential leases
-- `pnpm qa:otel:smoke`, `pnpm qa:prometheus:smoke`, or
-  `pnpm qa:observability:smoke` when release telemetry needs explicit local
-  proof
-
-Use this box to answer "does the release behave correctly in QA scenarios and
-live channel flows?" Keep the artifact URLs for parity, Matrix, and Telegram
-lanes when approving the release. Full Matrix coverage remains available as a
-manual sharded QA-Lab run rather than the default release-critical lane.
 
 ### Package
 
@@ -567,7 +529,7 @@ prepared release package artifact, `suite_profile=custom`,
 `docker_lanes=doctor-switch update-channel-switch skill-install update-corrupt-plugin upgrade-survivor published-upgrade-survivor update-restart-auth plugins-offline plugin-update`,
 `telegram_mode=mock-openai`. Package Acceptance keeps migration, update,
 configured-auth update restart, live ClawHub skill install, stale plugin dependency cleanup, offline plugin
-fixtures, plugin update, and Telegram package QA against the same resolved
+fixtures, plugin update, and Telegram package proof against the same resolved
 tarball. Blocking release checks use the default latest published package
 baseline; `run_release_soak=true` or
 `release_profile=full` expands to every stable npm-published baseline from
@@ -738,8 +700,8 @@ When cutting a stable npm release:
 2. Choose `npm_dist_tag=beta` for the normal beta-first flow, or `latest` only
    when you intentionally want a direct stable publish
 3. Run `Full Release Validation` on the release branch, release tag, or full
-   commit SHA when you want normal CI plus live prompt cache, Docker, QA Lab,
-   Matrix, and Telegram coverage from one manual workflow
+   commit SHA when you want normal CI plus live prompt cache, Docker, package,
+   and supported-channel coverage from one manual workflow
 4. If you intentionally only need the deterministic normal test graph, run the
    manual `CI` workflow on the release ref instead
 5. Save the successful `preflight_run_id`

@@ -47,11 +47,9 @@ openclaw agents add <name>
 </Note>
 
 <Tip>
-CLI onboarding includes a web search step where you can pick a provider
-such as Brave, DuckDuckGo, Exa, Firecrawl, Gemini, Grok, Kimi, MiniMax Search,
-Ollama Web Search, Perplexity, SearXNG, or Tavily. Some providers require an
-API key, while others are key-free. You can also configure this later with
-`openclaw configure --section web`. Docs: [Web tools](/tools/web).
+CLI onboarding includes an optional web tools step. You can keep it disabled for
+the smallest setup and configure it later with `openclaw configure --section web`.
+Docs: [Web tools](/tools/web).
 </Tip>
 
 ## QuickStart vs Advanced
@@ -67,7 +65,7 @@ Onboarding starts with **QuickStart** (defaults) vs **Advanced** (full control).
     - Tool policy default for new local setups: `tools.profile: "coding"` (existing explicit profile is preserved)
     - DM isolation default: local onboarding writes `session.dmScope: "per-channel-peer"` when unset. Details: [CLI Setup Reference](/start/wizard-cli-reference#outputs-and-internals)
     - Tailscale exposure **Off**
-    - Telegram + WhatsApp DMs default to **allowlist** (you'll be prompted for your phone number)
+    - Telegram and Discord DMs default to pairing/allowlist safety controls
 
   </Tab>
   <Tab title="Advanced (full control)">
@@ -80,18 +78,14 @@ Onboarding starts with **QuickStart** (defaults) vs **Advanced** (full control).
 
 **Local mode (default)** walks you through these steps:
 
-1. **Model/Auth** — choose any supported provider/auth flow (API key, OAuth, or provider-specific manual auth), including Custom Provider
-   (OpenAI-compatible, Anthropic-compatible, or Unknown auto-detect). Pick a default model.
+1. **Model/Auth** — choose OpenAI subscription browser login, OpenAI subscription device pairing, or skip auth for now. Pick a default model.
    Security note: if this agent will run tools or process webhook/hooks content, prefer the strongest latest-generation model available and keep tool policy strict. Weaker/older tiers are easier to prompt-inject.
-   For non-interactive runs, `--secret-input-mode ref` stores env-backed refs in auth profiles instead of plaintext API key values.
-   In non-interactive `ref` mode, the provider env var must be set; passing inline key flags without that env var fails fast.
-   In interactive runs, choosing secret reference mode lets you point at either an environment variable or a configured provider ref (`file` or `exec`), with a fast preflight validation before saving.
-   For Anthropic, interactive onboarding/configure offers **Anthropic Claude CLI** as the preferred local path and **Anthropic API key** as the recommended production path. Anthropic setup-token also remains available as a supported token-auth path.
+   Onboarding rejects API-key, token-provider, custom-provider, and unsupported provider flags.
 2. **Workspace** — Location for agent files (default `~/.openclaw/workspace`). Seeds bootstrap files.
 3. **Gateway** — Port, bind address, auth mode, Tailscale exposure.
    In interactive token mode, choose default plaintext token storage or opt into SecretRef.
    Non-interactive token SecretRef path: `--gateway-token-ref-env <ENV_VAR>`.
-4. **Channels** — built-in and official plugin chat channels such as iMessage, Discord, Feishu, Google Chat, Mattermost, Microsoft Teams, QQ Bot, Signal, Slack, Telegram, WhatsApp, and more.
+4. **Channels** — Telegram and Discord.
 5. **Daemon** — Installs a LaunchAgent (macOS), systemd user unit (Linux/WSL2), or native Windows Scheduled Task with per-user Startup-folder fallback.
    If token auth requires a token and `gateway.auth.token` is SecretRef-managed, daemon install validates it but does not persist the resolved token into supervisor service environment metadata.
    If token auth requires a token and the configured token SecretRef is unresolved, daemon install is blocked with actionable guidance.

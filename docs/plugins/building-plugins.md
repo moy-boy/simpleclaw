@@ -40,9 +40,6 @@ Bare package specs still install from npm during the launch cutover. Use the
   <Card title="Provider plugin" icon="cpu" href="/plugins/sdk-provider-plugins">
     Add a model, media, search, fetch, speech, or realtime provider.
   </Card>
-  <Card title="CLI backend plugin" icon="terminal" href="/plugins/cli-backend-plugins">
-    Run a local AI CLI through OpenClaw model fallback.
-  </Card>
   <Card title="Tool plugin" icon="wrench" href="/plugins/tool-plugins">
     Register agent tools.
   </Card>
@@ -311,9 +308,6 @@ For the full import map, see [Plugin SDK overview](/plugins/sdk-overview).
   </Card>
   <Card title="Provider Plugins" icon="cpu" href="/plugins/sdk-provider-plugins">
     Build a model provider plugin
-  </Card>
-  <Card title="CLI Backend Plugins" icon="terminal" href="/plugins/cli-backend-plugins">
-    Register a local AI CLI backend
   </Card>
   <Card title="SDK Overview" icon="book-open" href="/plugins/sdk-overview">
     Import map and registration API reference

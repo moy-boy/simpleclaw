@@ -53,7 +53,7 @@ field map and defaults.
     ```bash
     openclaw config get agents.defaults.workspace
     openclaw config set agents.defaults.heartbeat.every "2h"
-    openclaw config unset plugins.entries.brave.config.webSearch.apiKey
+    openclaw config set tools.web.search.provider openai
     ```
   </Tab>
   <Tab title="Control UI">
@@ -100,19 +100,11 @@ candidate contains redacted secret placeholders such as `***`.
 ## Common tasks
 
 <AccordionGroup>
-  <Accordion title="Set up a channel (WhatsApp, Telegram, Discord, etc.)">
+  <Accordion title="Set up a channel (Telegram or Discord)">
     Each channel has its own config section under `channels.<provider>`. See the dedicated channel page for setup steps:
 
-    - [WhatsApp](/channels/whatsapp) - `channels.whatsapp`
     - [Telegram](/channels/telegram) - `channels.telegram`
     - [Discord](/channels/discord) - `channels.discord`
-    - [Feishu](/channels/feishu) - `channels.feishu`
-    - [Google Chat](/channels/googlechat) - `channels.googlechat`
-    - [Microsoft Teams](/channels/msteams) - `channels.msteams`
-    - [Slack](/channels/slack) - `channels.slack`
-    - [Signal](/channels/signal) - `channels.signal`
-    - [iMessage](/channels/imessage) - `channels.imessage`
-    - [Mattermost](/channels/mattermost) - `channels.mattermost`
 
     All channels share the same DM policy pattern:
 
@@ -139,11 +131,11 @@ candidate contains redacted secret placeholders such as `***`.
       agents: {
         defaults: {
           model: {
-            primary: "anthropic/claude-sonnet-4-6",
+            primary: "openai/gpt-5.4",
             fallbacks: ["openai/gpt-5.4"],
           },
           models: {
-            "anthropic/claude-sonnet-4-6": { alias: "Sonnet" },
+            "openai/gpt-5.4": { alias: "Sonnet" },
             "openai/gpt-5.4": { alias: "GPT" },
           },
         },
@@ -153,7 +145,7 @@ candidate contains redacted secret placeholders such as `***`.
 
     - `agents.defaults.models` defines the model catalog and acts as the allowlist for `/model`; `provider/*` entries filter `/model`, `/models`, and model pickers to selected providers while still using dynamic model discovery.
     - Use `openclaw config set agents.defaults.models '<json>' --strict-json --merge` to add allowlist entries without removing existing models. Plain replacements that would remove entries are rejected unless you pass `--replace`.
-    - Model refs use `provider/model` format (e.g. `anthropic/claude-opus-4-6`).
+    - Model refs use `provider/model` format (e.g. `openai/gpt-5.5`).
     - `agents.defaults.imageMaxDimensionPx` controls transcript/tool image downscaling (default `1200`); lower values usually reduce vision-token usage on screenshot-heavy runs.
     - See [Models CLI](/concepts/models) for switching models in chat and [Model Failover](/concepts/model-failover) for auth rotation and fallback behavior.
     - For custom/self-hosted providers, see [Custom providers](/gateway/config-tools#custom-providers-and-base-urls) in the reference.
@@ -204,7 +196,7 @@ candidate contains redacted secret placeholders such as `***`.
     }
     ```
 
-    - **Metadata mentions**: native @-mentions (WhatsApp tap-to-mention, Telegram @bot, etc.)
+    - **Metadata mentions**: native platform @-mentions
     - **Text patterns**: safe regex patterns in `mentionPatterns`
     - **Visible replies**: `messages.visibleReplies` can require message-tool sends globally; `messages.groupChat.visibleReplies` overrides that for groups/channels.
     - See [full reference](/gateway/config-channels#group-chat-mention-gating) for visible reply modes, per-channel overrides, and self-chat mode.
@@ -408,7 +400,7 @@ candidate contains redacted secret placeholders such as `***`.
     ```
 
     - `every`: duration string (`30m`, `2h`). Set `0m` to disable.
-    - `target`: `last` | `none` | `<channel-id>` (for example `discord`, `matrix`, `telegram`, or `whatsapp`)
+    - `target`: `last` | `none` | `<channel-id>` (for example `discord` or `telegram`)
     - `directPolicy`: `allow` (default) or `block` for DM-style heartbeat targets
     - See [Heartbeat](/gateway/heartbeat) for the full guide.
 
@@ -568,16 +560,16 @@ for the checklist.
 
 Most fields hot-apply without downtime. In `hybrid` mode, restart-required changes are handled automatically.
 
-| Category            | Fields                                                            | Restart needed? |
-| ------------------- | ----------------------------------------------------------------- | --------------- |
-| Channels            | `channels.*`, `web` (WhatsApp) - all built-in and plugin channels | No              |
-| Agent & models      | `agent`, `agents`, `models`, `routing`                            | No              |
-| Automation          | `hooks`, `cron`, `agent.heartbeat`                                | No              |
-| Sessions & messages | `session`, `messages`                                             | No              |
-| Tools & media       | `tools`, `browser`, `skills`, `mcp`, `audio`, `talk`              | No              |
-| UI & misc           | `ui`, `logging`, `identity`, `bindings`                           | No              |
-| Gateway server      | `gateway.*` (port, bind, auth, tailscale, TLS, HTTP)              | **Yes**         |
-| Infrastructure      | `discovery`, `plugins`                                            | **Yes**         |
+| Category            | Fields                                               | Restart needed? |
+| ------------------- | ---------------------------------------------------- | --------------- |
+| Channels            | `channels.discord`, `channels.telegram`              | No              |
+| Agent & models      | `agent`, `agents`, `models`, `routing`               | No              |
+| Automation          | `hooks`, `cron`, `agent.heartbeat`                   | No              |
+| Sessions & messages | `session`, `messages`                                | No              |
+| Tools & media       | `tools`, `browser`, `skills`, `mcp`, `audio`, `talk` | No              |
+| UI & misc           | `ui`, `logging`, `identity`, `bindings`              | No              |
+| Gateway server      | `gateway.*` (port, bind, auth, tailscale, TLS, HTTP) | **Yes**         |
+| Infrastructure      | `discovery`, `plugins`                               | **Yes**         |
 
 <Note>
 `gateway.reload` and `gateway.remote` are exceptions - changing them does **not** trigger a restart.

@@ -9,8 +9,8 @@ title: "BTW side questions"
 `/btw` lets you ask a quick side question about the **current session** without
 turning that question into normal conversation history. `/side` is an alias.
 
-It is modeled after Claude Code's `/btw` behavior, but adapted to OpenClaw's
-Gateway and multi-channel architecture.
+It is modeled after Codex side-thread behavior, but adapted to OpenClaw's
+Gateway and chat-channel architecture.
 
 ## What it does
 
@@ -100,7 +100,7 @@ ephemeral:
 
 ### External channels
 
-On channels like Telegram, WhatsApp, and Discord, BTW is delivered as a
+On Telegram and Discord, BTW is delivered as a
 clearly labeled one-off reply because those surfaces do not have a local
 ephemeral overlay concept.
 

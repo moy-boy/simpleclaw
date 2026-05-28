@@ -88,7 +88,7 @@ Docker is **optional**. Use it only if you want a containerized gateway or to va
     docker compose run --rm openclaw-cli channels add --channel discord --token "<token>"
     ```
 
-    Docs: [WhatsApp](/channels/whatsapp), [Telegram](/channels/telegram), [Discord](/channels/discord)
+    Docs: WhatsApp, [Telegram](/channels/telegram), [Discord](/channels/discord)
 
   </Step>
 </Steps>

@@ -138,7 +138,7 @@ Behavior:
 - **`logRaw()`** for QR/UX output (no prefix, no formatting)
 - **Console styles** (e.g. `pretty | compact | json`)
 - **Console log level** separate from file log level (file keeps full detail when `logging.level` is set to `debug`/`trace`)
-- **WhatsApp message bodies** are logged at `debug` (use `--verbose` to see them)
+- **Channel message bodies** can be logged at `debug` for supported channels (use `--verbose` to see them)
 
 This keeps existing file logs stable while making interactive output scannable.
 

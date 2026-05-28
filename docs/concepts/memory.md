@@ -131,10 +131,7 @@ just raw notes, use the bundled `memory-wiki` plugin.
 - wiki-native tools like `wiki_search`, `wiki_get`, `wiki_apply`, and `wiki_lint`
 
 It does not replace the active memory plugin. The active memory plugin still
-owns recall, promotion, and dreaming. `memory-wiki` adds a provenance-rich
-knowledge layer beside it.
-
-See [Memory Wiki](/plugins/memory-wiki).
+owns recall, promotion, and dreaming.
 
 ## Memory search
 
@@ -144,9 +141,8 @@ search** — combining vector similarity (semantic meaning) with keyword matchin
 an API key for any supported provider.
 
 <Info>
-OpenClaw auto-detects your embedding provider from available API keys. If you
-have an OpenAI, Gemini, Voyage, or Mistral key configured, memory search is
-enabled automatically.
+OpenClaw can use OpenAI embeddings when OpenAI auth is configured. Local
+keyword search still works without remote embedding auth.
 </Info>
 
 For details on how search works, tuning options, and provider setup, see
@@ -167,19 +163,6 @@ directories outside the workspace.
 AI-native cross-session memory with user modeling, semantic search, and
 multi-agent awareness. Plugin install.
 </Card>
-<Card title="LanceDB" icon="layers" href="/plugins/memory-lancedb">
-Bundled LanceDB-backed memory with OpenAI-compatible embeddings, auto-recall,
-auto-capture, and local Ollama embedding support.
-</Card>
-</CardGroup>
-
-## Knowledge wiki layer
-
-<CardGroup cols={1}>
-<Card title="Memory Wiki" icon="book" href="/plugins/memory-wiki">
-Compiles durable memory into a provenance-rich wiki vault with claims,
-dashboards, bridge mode, and Obsidian-friendly workflows.
-</Card>
 </CardGroup>
 
 ## Automatic memory flush
@@ -197,7 +180,7 @@ override:
     "defaults": {
       "compaction": {
         "memoryFlush": {
-          "model": "ollama/qwen3:8b"
+          "model": "openai/gpt-5.4-mini"
         }
       }
     }
@@ -281,8 +264,6 @@ openclaw memory index --force   # Rebuild the index
 - [Builtin memory engine](/concepts/memory-builtin): default SQLite backend.
 - [QMD memory engine](/concepts/memory-qmd): advanced local-first sidecar.
 - [Honcho memory](/concepts/memory-honcho): AI-native cross-session memory.
-- [Memory LanceDB](/plugins/memory-lancedb): LanceDB-backed plugin with OpenAI-compatible embeddings.
-- [Memory Wiki](/plugins/memory-wiki): compiled knowledge vault and wiki-native tools.
 - [Memory search](/concepts/memory-search): search pipeline, providers, and tuning.
 - [Dreaming](/concepts/dreaming): background promotion from short-term recall to long-term memory.
 - [Memory configuration reference](/reference/memory-config): all config knobs.
@@ -294,5 +275,4 @@ openclaw memory index --force   # Rebuild the index
 - [Memory search](/concepts/memory-search)
 - [Builtin memory engine](/concepts/memory-builtin)
 - [Honcho memory](/concepts/memory-honcho)
-- [Memory LanceDB](/plugins/memory-lancedb)
 - [Commitments](/concepts/commitments)

@@ -34,7 +34,7 @@ when available:
           enabled: true,
           agents: ["main"],
           allowedChatTypes: ["direct"],
-          modelFallback: "google/gemini-3-flash",
+          modelFallback: "openai/gpt-5.4",
           queryMode: "recent",
           promptStyle: "balanced",
           timeoutMs: 15000,
@@ -84,11 +84,8 @@ is narrow (it only calls available memory recall tools).
 
 Good fast-model options:
 
-- `cerebras/gpt-oss-120b` for a dedicated low-latency recall model
-- `google/gemini-3-flash` as a low-latency fallback without changing your primary chat model
+- `openai/gpt-5.4` as a low-latency fallback without changing your primary chat model
 - your normal session model, by leaving `config.model` unset
-
-### Cerebras setup
 
 Add a Cerebras provider and point Active Memory at it:
 
@@ -270,11 +267,10 @@ the group/channel rollout you are testing.
 `allowedChatTypes` and `allowedChatIds`, so a matching conversation is skipped
 even when its session type is otherwise allowed.
 
-The ids come from the persistent channel session key: for example Feishu
-`chat_id` / `open_id`, Telegram chat id, or Slack channel id. Matching is
-case-insensitive. If `allowedChatIds` is non-empty and OpenClaw cannot resolve a
-conversation id for the session, Active Memory skips the turn instead of
-guessing.
+The ids come from the persistent channel session key: for example a Telegram
+chat id or Discord channel id. Matching is case-insensitive. If
+`allowedChatIds` is non-empty and OpenClaw cannot resolve a conversation id for
+the session, Active Memory skips the turn instead of guessing.
 
 Example:
 
@@ -457,7 +453,7 @@ explicit plugin model
 Optional custom fallback:
 
 ```json5
-modelFallback: "google/gemini-3-flash"
+modelFallback: "openai/gpt-5.4"
 ```
 
 If no explicit, inherited, or configured fallback model resolves, Active Memory

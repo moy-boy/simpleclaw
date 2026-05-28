@@ -273,4 +273,3 @@ schemas and ambiguous plugin identity still fail closed.
 - [Codex harness reference](/plugins/codex-harness-reference)
 - [Codex harness runtime](/plugins/codex-harness-runtime)
 - [Configuration reference](/gateway/configuration-reference#codex-harness-plugin-config)
-- [Migrate CLI](/cli/migrate)

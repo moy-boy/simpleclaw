@@ -90,23 +90,23 @@ Not every agent run creates a task. Heartbeat turns and normal interactive chat 
 
 ## What creates a task
 
-| Source                 | Runtime type | When a task record is created                                          | Default notify policy |
-| ---------------------- | ------------ | ---------------------------------------------------------------------- | --------------------- |
-| ACP background runs    | `acp`        | Spawning a child ACP session                                           | `done_only`           |
-| Subagent orchestration | `subagent`   | Spawning a subagent via `sessions_spawn`                               | `done_only`           |
-| Cron jobs (all types)  | `cron`       | Every cron execution (main-session and isolated)                       | `silent`              |
-| CLI operations         | `cli`        | `openclaw agent` commands that run through the gateway                 | `silent`              |
-| Agent media jobs       | `cli`        | Session-backed `image_generate`/`music_generate`/`video_generate` runs | `silent`              |
+| Source                 | Runtime type | When a task record is created                          | Default notify policy |
+| ---------------------- | ------------ | ------------------------------------------------------ | --------------------- |
+| ACP background runs    | `acp`        | Spawning a child ACP session                           | `done_only`           |
+| Subagent orchestration | `subagent`   | Spawning a subagent via `sessions_spawn`               | `done_only`           |
+| Cron jobs (all types)  | `cron`       | Every cron execution (main-session and isolated)       | `silent`              |
+| CLI operations         | `cli`        | `openclaw agent` commands that run through the gateway | `silent`              |
+| Agent media jobs       | `cli`        | Session-backed `image_generate`/`video_generate` runs  | `silent`              |
 
 <AccordionGroup>
   <Accordion title="Notify defaults for cron and media">
     Main-session cron tasks use `silent` notify policy by default - they create records for tracking but do not generate notifications. Isolated cron tasks also default to `silent` but are more visible because they run in their own session.
 
-    Session-backed `image_generate`, `music_generate`, and `video_generate` runs also use `silent` notify policy. They still create task records, but completion is handed back to the original agent session as an internal wake so the agent can write the follow-up message and attach the finished media itself. Generated-media completion events require message-tool delivery: the agent must send the finished media with the `message` tool, then reply `NO_REPLY`. If the requester session is no longer active and the completion agent misses some or all generated media, OpenClaw sends an idempotent direct fallback with only the missing media to the original channel target.
+    Session-backed `image_generate` and `video_generate` runs also use `silent` notify policy. They still create task records, but completion is handed back to the original agent session as an internal wake so the agent can write the follow-up message and attach the finished media itself. Generated-media completion events require message-tool delivery: the agent must send the finished media with the `message` tool, then reply `NO_REPLY`. If the requester session is no longer active and the completion agent misses some or all generated media, OpenClaw sends an idempotent direct fallback with only the missing media to the original channel target.
 
   </Accordion>
   <Accordion title="Concurrent media-generation guardrail">
-    While a session-backed media-generation task is still active, media tools also act as guardrails for accidental retries. Repeated `image_generate` calls for the same prompt return the matching active task status, while a distinct image prompt can start its own task. `music_generate` and `video_generate` calls still return the active task status for that session instead of starting a second concurrent generation. Use `action: "status"` when you want an explicit progress/status lookup from the agent side.
+    While a session-backed media-generation task is still active, media tools also act as guardrails for accidental retries. Repeated `image_generate` calls for the same prompt return the matching active task status, while a distinct image prompt can start its own task. `video_generate` calls still return the active task status for that session instead of starting a second concurrent generation. Use `action: "status"` when you want an explicit progress/status lookup from the agent side.
   </Accordion>
   <Accordion title="What does not create tasks">
     - Heartbeat turns - main-session; see [Heartbeat](/gateway/heartbeat)

@@ -2,7 +2,7 @@
 summary: "Advanced exec approvals: safe bins, interpreter binding, approval forwarding, native delivery"
 read_when:
   - Configuring safe bins or custom safe-bin profiles
-  - Forwarding approvals to Slack/Discord/Telegram or other chat channels
+  - Forwarding approvals to Discord/Telegram or other chat channels
   - Implementing a native approval client for a channel
 title: "Exec approvals — advanced"
 ---
@@ -189,7 +189,7 @@ Config:
       agentFilter: ["main"],
       sessionFilter: ["discord"], // substring or regex
       targets: [
-        { channel: "slack", to: "U12345678" },
+        { channel: "discord", to: "123456789012345678" },
         { channel: "telegram", to: "123456789" },
       ],
     },
@@ -222,7 +222,7 @@ For plugin-authoring behavior, request fields, and decision semantics, see
       mode: "targets",
       agentFilter: ["main"],
       targets: [
-        { channel: "slack", to: "U12345678" },
+        { channel: "discord", to: "123456789012345678" },
         { channel: "telegram", to: "123456789" },
       ],
     },
@@ -242,8 +242,8 @@ declared decision set, and the Gateway rejects attempts to submit a decision tha
 ### Same-chat approvals on any channel
 
 When an exec or plugin approval request originates from a deliverable chat surface, the same chat
-can now approve it with `/approve` by default. This applies to channels such as Slack, Matrix, and
-Microsoft Teams in addition to the existing Web UI and terminal UI flows.
+can now approve it with `/approve` by default. This applies to Discord and
+Telegram in addition to the existing Web UI and terminal UI flows.
 
 This shared text-command path uses the normal channel auth model for that conversation. If the
 originating chat can already send commands and receive replies, approval requests no longer need a
@@ -278,11 +278,9 @@ Generic model:
 - host exec policy still decides whether exec approval is required
 - `approvals.exec` controls forwarding approval prompts to other chat destinations
 - `channels.<channel>.execApprovals` controls whether that channel acts as a native approval client
-- Slack plugin approvals can use Slack's native approval client when the request comes from Slack
-  and Slack plugin approvers resolve; `approvals.plugin` can also route plugin approvals to Slack
-  sessions or targets even when Slack exec approvals are disabled
-- WhatsApp emoji approval delivery is gated by `approvals.exec` and `approvals.plugin`, while
-  approval reactions require explicit WhatsApp approvers from `channels.whatsapp.allowFrom` or `"*"`
+- Discord and Telegram native approval clients can resolve explicit approvers
+  from channel config and keep same-chat `/approve` as the deterministic
+  fallback.
 
 Native approval clients auto-enable DM-first delivery when all of these are true:
 
@@ -298,34 +296,18 @@ it on when approvers resolve. Public origin-chat delivery stays explicit through
 FAQ: [Why are there two exec approval configs for chat approvals?](/help/faq-first-run#why-are-there-two-exec-approval-configs-for-chat-approvals)
 
 - Discord: `channels.discord.execApprovals.*`
-- Slack: `channels.slack.execApprovals.*`
 - Telegram: `channels.telegram.execApprovals.*`
-- WhatsApp: use `approvals.exec` and `approvals.plugin` to route approval prompts to WhatsApp
 
 These native approval clients add DM routing and optional channel fanout on top of the shared
 same-chat `/approve` flow and shared approval buttons.
 
 Shared behavior:
 
-- Slack, Matrix, Microsoft Teams, and similar deliverable chats use the normal channel auth model
-  for same-chat `/approve`
+- deliverable chats use the normal channel auth model for same-chat `/approve`
 - when a native approval client auto-enables, the default native delivery target is approver DMs
 - for Discord and Telegram, only resolved approvers can approve or deny
 - Discord approvers can be explicit (`execApprovals.approvers`) or inferred from `commands.ownerAllowFrom`
 - Telegram approvers can be explicit (`execApprovals.approvers`) or inferred from `commands.ownerAllowFrom`
-- Slack approvers can be explicit (`execApprovals.approvers`) or inferred from `commands.ownerAllowFrom`
-- Slack plugin approval DMs use Slack plugin approvers from `allowFrom` and account default
-  routing, not Slack exec approvers
-- Slack native buttons preserve approval id kind, so `plugin:` ids can resolve plugin approvals
-  without a second Slack-local fallback layer
-- WhatsApp emoji approvals handle both exec and plugin prompts only when the matching top-level
-  forwarding family is enabled and routes to WhatsApp; target-only WhatsApp forwarding stays on
-  the shared forwarding path unless it matches the same native origin target
-- Matrix native DM/channel routing and reaction shortcuts handle both exec and plugin approvals;
-  plugin authorization still comes from `channels.matrix.dm.allowFrom`
-- Matrix native prompts include `com.openclaw.approval` custom event content on the first prompt
-  event so OpenClaw-aware Matrix clients can read structured approval state while stock clients
-  keep the plain-text `/approve` fallback
 - the requester does not need to be an approver
 - the originating chat can approve directly with `/approve` when that chat already supports commands and replies
 - native Discord approval buttons route by approval id kind: `plugin:` ids go
@@ -424,8 +406,8 @@ For generic same-chat `/approve`, the sender must already be authorized for comm
 channel session. If the channel exposes explicit approval approvers, those approvers can authorize
 the `/approve` action even when they are not otherwise command-authorized in that session.
 
-Some channels are stricter. Discord, Telegram, Matrix, Slack native approval DMs, and similar
-native approval clients use their resolved approver lists for approval authorization. For example,
+Some channels are stricter. Discord, Telegram, and similar native approval
+clients use their resolved approver lists for approval authorization. For example,
 a Telegram forum-topic approval prompt can be visible to everyone in the topic, but only numeric
 Telegram user IDs resolved from `channels.telegram.execApprovals.approvers` or
 `commands.ownerAllowFrom` can approve or deny it.

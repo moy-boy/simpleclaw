@@ -1,77 +1,53 @@
 ---
-summary: "Image and media handling rules for send, gateway, and agent replies"
+summary: "Inbound image and media attachment handling for the supported channels"
 read_when:
-  - Modifying media pipeline or attachments
-title: "Image and media support"
+  - Understanding media attachment handling
+  - Configuring image understanding or image generation
+title: "Media support"
+sidebarTitle: "Media support"
 ---
 
-The WhatsApp channel runs via **Baileys Web**. This document captures the current media handling rules for send, gateway, and agent replies.
+OpenClaw preserves inbound media attachments from Telegram and Discord and makes
+them available to the reply pipeline. When OpenAI media understanding is
+enabled, OpenClaw can also add a short `[Image]` or `[Audio]` block before the
+agent replies.
 
-## Goals
+## Inbound attachments
 
-- Send media with optional captions via `openclaw message send --media`.
-- Allow auto-replies from the web inbox to include media alongside text.
-- Keep per-type limits sane and predictable.
+- Telegram and Discord attachments are downloaded or referenced according to
+  the channel adapter's normal media handling.
+- Original media remains available to tools and models that can inspect it.
+- Media-understanding summaries are additive context, not a replacement for the
+  original attachment.
 
-## CLI Surface
+## Image understanding
 
-- `openclaw message send --media <path-or-url> [--message <caption>]`
-  - `--media` optional; caption can be empty for media-only sends.
-  - `--dry-run` prints the resolved payload; `--json` emits `{ channel, to, messageId, mediaUrl, caption }`.
+Use OpenAI for image understanding:
 
-## WhatsApp Web channel behavior
+```json5
+{
+  tools: {
+    media: {
+      image: {
+        enabled: true,
+        models: [{ provider: "openai", model: "gpt-5.5" }],
+      },
+    },
+  },
+}
+```
 
-- Input: local file path **or** HTTP(S) URL.
-- Flow: load into a Buffer, detect media kind, and build the correct payload:
-  - **Images:** resize & recompress to JPEG (max side 2048px) targeting `channels.whatsapp.mediaMaxMb` (default: 50 MB).
-  - **Audio/Voice/Video:** pass-through up to 16 MB; audio is sent as a voice note (`ptt: true`).
-  - **Documents:** anything else, up to 100 MB, with filename preserved when available.
-- WhatsApp GIF-style playback: send an MP4 with `gifPlayback: true` (CLI: `--gif-playback`) so mobile clients loop inline.
-- MIME detection prefers magic bytes, then headers, then file extension.
-- Caption comes from `--message` or `reply.text`; empty caption is allowed.
-- Logging: non-verbose shows `↩️`/`✅`; verbose includes size and source path/URL.
+If the active reply model can inspect the image directly, OpenClaw can skip the
+summary block and pass the original image through instead.
 
-## Auto-Reply Pipeline
+## Image generation
 
-- `getReplyFromConfig` returns `{ text?, mediaUrl?, mediaUrls? }`.
-- When media is present, the web sender resolves local paths or URLs using the same pipeline as `openclaw message send`.
-- Multiple media entries are sent sequentially if provided.
-
-## Inbound media to commands (Pi)
-
-- When inbound web messages include media, OpenClaw downloads to a temp file and exposes templating variables:
-  - `{{MediaUrl}}` pseudo-URL for the inbound media.
-  - `{{MediaPath}}` local temp path written before running the command.
-- When a per-session Docker sandbox is enabled, inbound media is copied into the sandbox workspace and `MediaPath`/`MediaUrl` are rewritten to a relative path like `media/inbound/<filename>`.
-- Media understanding (if configured via `tools.media.*` or shared `tools.media.models`) runs before templating and can insert `[Image]`, `[Audio]`, and `[Video]` blocks into `Body`.
-  - Audio sets `{{Transcript}}` and uses the transcript for command parsing so slash commands still work.
-  - Video and image descriptions preserve any caption text for command parsing.
-  - If the active primary image model already supports vision natively, OpenClaw skips the `[Image]` summary block and passes the original image to the model instead.
-- By default only the first matching image/audio/video attachment is processed; set `tools.media.<cap>.attachments` to process multiple attachments.
-
-## Limits and errors
-
-**Outbound send caps (WhatsApp web send)**
-
-- Images: up to `channels.whatsapp.mediaMaxMb` (default: 50 MB) after recompression.
-- Audio/voice/video: 16 MB cap; documents: 100 MB cap.
-- Oversize or unreadable media → clear error in logs and the reply is skipped.
-
-**Media understanding caps (transcription/description)**
-
-- Image default: 10 MB (`tools.media.image.maxBytes`).
-- Audio default: 20 MB (`tools.media.audio.maxBytes`).
-- Video default: 50 MB (`tools.media.video.maxBytes`).
-- Oversize media skips understanding, but replies still go through with the original body.
-
-## Notes for Tests
-
-- Cover send + reply flows for image/audio/document cases.
-- Validate recompression for images (size bound) and voice-note flag for audio.
-- Ensure multi-media replies fan out as sequential sends.
+Generated images use the `image_generate` tool and are delivered through the
+`message` tool when the background task completes. See
+[Image generation](/tools/image-generation).
 
 ## Related
 
-- [Camera capture](/nodes/camera)
 - [Media understanding](/nodes/media-understanding)
 - [Audio and voice notes](/nodes/audio)
+- [Image generation](/tools/image-generation)

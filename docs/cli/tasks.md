@@ -16,7 +16,6 @@ See [Background Tasks](/automation/tasks) for the lifecycle and delivery model.
 ```bash
 openclaw tasks
 openclaw tasks list
-openclaw tasks list --runtime acp
 openclaw tasks list --status running
 openclaw tasks show <lookup>
 openclaw tasks notify <lookup> state_changes
@@ -32,7 +31,7 @@ openclaw tasks flow cancel <lookup>
 ## Root Options
 
 - `--json`: output JSON.
-- `--runtime <name>`: filter by kind: `subagent`, `acp`, `cron`, or `cli`.
+- `--runtime <name>`: filter by kind: `subagent` or `cron`.
 - `--status <name>`: filter by status: `queued`, `running`, `succeeded`, `failed`, `timed_out`, `cancelled`, or `lost`.
 
 ## Subcommands

@@ -347,7 +347,7 @@ Defaults:
 
 Related docs:
 
-- [Anthropic](/providers/anthropic)
+- Anthropic
 - [Token use and costs](/reference/token-use)
 - [Session pruning](/concepts/session-pruning)
 - [Gateway configuration reference](/gateway/configuration-reference)

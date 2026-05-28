@@ -386,5 +386,4 @@ Benefits:
 - [Agent loop](/concepts/agent-loop)
 - [Agent runtimes](/concepts/agent-runtimes)
 - [Background tasks](/automation/tasks)
-- [ACP agents](/tools/acp-agents)
 - [Plugin SDK overview](/plugins/sdk-overview)

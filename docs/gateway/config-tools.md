@@ -31,17 +31,17 @@ Local onboarding defaults new local configs to `tools.profile: "coding"` when un
 
 | Group              | Tools                                                                                                                   |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `group:runtime`    | `exec`, `process`, `code_execution` (`bash` is accepted as an alias for `exec`)                                         |
+| `group:runtime`    | `exec`, `process` (`bash` is accepted as an alias for `exec`)                                                           |
 | `group:fs`         | `read`, `write`, `edit`, `apply_patch`                                                                                  |
 | `group:sessions`   | `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`, `sessions_yield`, `subagents`, `session_status` |
 | `group:memory`     | `memory_search`, `memory_get`                                                                                           |
-| `group:web`        | `web_search`, `x_search`, `web_fetch`                                                                                   |
+| `group:web`        | `web_search`, `web_fetch`                                                                                               |
 | `group:ui`         | `browser`, `canvas`                                                                                                     |
 | `group:automation` | `heartbeat_respond`, `cron`, `gateway`                                                                                  |
 | `group:messaging`  | `message`                                                                                                               |
 | `group:nodes`      | `nodes`                                                                                                                 |
 | `group:agents`     | `agents_list`, `update_plan`                                                                                            |
-| `group:media`      | `image`, `image_generate`, `music_generate`, `video_generate`, `tts`                                                    |
+| `group:media`      | `image`, `image_generate`, `video_generate`, `tts`                                                                      |
 | `group:openclaw`   | All built-in tools (excludes provider plugins)                                                                          |
 | `group:plugins`    | Tools owned by loaded plugins, including configured MCP servers exposed through `bundle-mcp`                            |
 
@@ -74,7 +74,7 @@ Server globs use the provider-safe MCP server prefix, not necessarily the raw `m
 }
 ```
 
-Without that sandbox-layer entry, the MCP server can still load successfully while its tools are filtered before the provider request. Use `openclaw doctor` to catch this shape for OpenClaw-managed servers in `mcp.servers`. MCP servers loaded from bundled plugin manifests or Claude `.mcp.json` use the same sandbox gate, but this diagnostic does not enumerate those sources yet; use the same allowlist entries if their tools disappear in sandboxed turns.
+Without that sandbox-layer entry, the MCP server can still load successfully while its tools are filtered before the provider request. Use `openclaw doctor` to catch this shape for OpenClaw-managed servers in `mcp.servers`. MCP servers loaded from bundled plugin manifests use the same sandbox gate, but this diagnostic does not enumerate those sources yet; use the same allowlist entries if their tools disappear in sandboxed turns.
 
 ### `tools.allow` / `tools.deny`
 
@@ -230,14 +230,13 @@ If `warningThreshold >= criticalThreshold` or `criticalThreshold >= globalCircui
     web: {
       search: {
         enabled: true,
-        apiKey: "brave_api_key", // or BRAVE_API_KEY env
+        provider: "openai", // optional; unset or "auto" uses the supported OpenAI-native path
         maxResults: 5,
         timeoutSeconds: 30,
         cacheTtlMinutes: 15,
       },
       fetch: {
         enabled: true,
-        provider: "firecrawl", // optional; omit for auto-detect
         maxChars: 50000,
         maxCharsCap: 50000,
         maxResponseBytes: 2000000,
@@ -279,12 +278,12 @@ Configures inbound media understanding (image/audio/video):
       image: {
         enabled: true,
         timeoutSeconds: 180,
-        models: [{ provider: "ollama", model: "gemma4:26b", timeoutSeconds: 300 }],
+        models: [{ provider: "openai", model: "gpt-5.4", timeoutSeconds: 300 }],
       },
       video: {
         enabled: true,
         maxBytes: 52428800,
-        models: [{ provider: "google", model: "gemini-3-flash-preview" }],
+        models: [{ provider: "openai", model: "sora-2-pro" }],
       },
     },
   },
@@ -295,7 +294,7 @@ Configures inbound media understanding (image/audio/video):
   <Accordion title="Media model entry fields">
     **Provider entry** (`type: "provider"` or omitted):
 
-    - `provider`: API provider id (`openai`, `anthropic`, `google`/`gemini`, `groq`, etc.)
+    - `provider`: API provider id. The supported bundled provider is `openai`.
     - `model`: model id override
     - `profile` / `preferredProfile`: `auth-profiles.json` profile selection
 
@@ -306,7 +305,7 @@ Configures inbound media understanding (image/audio/video):
 
     **Common fields:**
 
-    - `capabilities`: optional list (`image`, `audio`, `video`). Defaults: `openai`/`anthropic`/`minimax` → image, `google` → image+audio+video, `groq` → audio.
+    - `capabilities`: optional list (`image`, `audio`, `video`). Defaults come from the selected OpenAI model metadata.
     - `prompt`, `maxChars`, `maxBytes`, `timeoutSeconds`, `language`: per-entry overrides.
     - `tools.media.image.timeoutSeconds` and matching image model `timeoutSeconds` entries also apply when the agent calls the explicit `image` tool.
     - Failures fall back to the next entry.
@@ -421,7 +420,7 @@ Experimental built-in tool flags. Default off unless a strict-agentic GPT-5 auto
     defaults: {
       subagents: {
         allowAgents: ["research"],
-        model: "minimax/MiniMax-M2.7",
+        model: "openai/gpt-5.5",
         maxConcurrent: 8,
         runTimeoutSeconds: 900,
         announceTimeoutMs: 120000,
@@ -501,14 +500,14 @@ Configuring a custom/local provider `baseUrl` is also the narrow network trust d
 
   </Accordion>
   <Accordion title="Provider connection and auth">
-    - `models.providers.*.api`: request adapter (`openai-completions`, `openai-responses`, `anthropic-messages`, `google-generative-ai`, etc). For self-hosted `/v1/chat/completions` backends such as MLX, vLLM, SGLang, and most OpenAI-compatible local servers, use `openai-completions`. A custom provider with `baseUrl` but no `api` defaults to `openai-completions`; set `openai-responses` only when the backend supports `/v1/responses`.
+    - `models.providers.*.api`: request adapter (`openai-completions`, `openai-responses`, `openai-codex-responses`). The simplified setup uses OpenAI subscription-backed provider config.
     - `models.providers.*.apiKey`: provider credential (prefer SecretRef/env substitution).
     - `models.providers.*.auth`: auth strategy (`api-key`, `token`, `oauth`, `aws-sdk`).
     - `models.providers.*.contextWindow`: default native context window for models under this provider when the model entry does not set `contextWindow`.
     - `models.providers.*.contextTokens`: default effective runtime context cap for models under this provider when the model entry does not set `contextTokens`.
     - `models.providers.*.maxTokens`: default output-token cap for models under this provider when the model entry does not set `maxTokens`.
     - `models.providers.*.timeoutSeconds`: optional per-provider model HTTP request timeout in seconds, including connect, headers, body, and total request abort handling.
-    - `models.providers.*.injectNumCtxForOpenAICompat`: for Ollama + `openai-completions`, inject `options.num_ctx` into requests (default: `true`).
+    - `models.providers.*.injectNumCtxForOpenAICompat`: compatibility knob for OpenAI-compatible completions endpoints.
     - `models.providers.*.authHeader`: force credential transport in the `Authorization` header when required.
     - `models.providers.*.baseUrl`: upstream API base URL.
     - `models.providers.*.headers`: extra static headers for proxy/tenant routing.
@@ -532,7 +531,7 @@ Configuring a custom/local provider `baseUrl` is also the narrow network trust d
     - `models.providers.*.models.*.compat.supportsDeveloperRole`: optional compatibility hint. For `api: "openai-completions"` with a non-empty non-native `baseUrl` (host not `api.openai.com`), OpenClaw forces this to `false` at runtime. Empty/omitted `baseUrl` keeps default OpenAI behavior.
     - `models.providers.*.models.*.compat.requiresStringContent`: optional compatibility hint for string-only OpenAI-compatible chat endpoints. When `true`, OpenClaw flattens pure text `messages[].content` arrays into plain strings before sending the request.
     - `models.providers.*.models.*.compat.strictMessageKeys`: optional compatibility hint for strict OpenAI-compatible chat endpoints. When `true`, OpenClaw strips outgoing Chat Completions message objects to `role` and `content` before sending the request.
-    - `models.providers.*.models.*.compat.thinkingFormat`: optional thinking payload hint. Use `"together"` for Together-style `reasoning.enabled`, `"qwen"` for top-level `enable_thinking`, or `"qwen-chat-template"` for `chat_template_kwargs.enable_thinking` on Qwen-family OpenAI-compatible servers that support request-level chat-template kwargs, such as vLLM.
+    - `models.providers.*.models.*.compat.thinkingFormat`: optional thinking payload hint for explicitly configured OpenAI-compatible endpoints that need provider-specific request shaping.
 
   </Accordion>
   <Accordion title="Amazon Bedrock discovery">
@@ -547,219 +546,21 @@ Configuring a custom/local provider `baseUrl` is also the narrow network trust d
   </Accordion>
 </AccordionGroup>
 
-Interactive custom-provider onboarding infers image input for common vision model IDs such as GPT-4o, Claude, Gemini, Qwen-VL, LLaVA, Pixtral, InternVL, Mllama, MiniCPM-V, and GLM-4V, and skips the extra question for known text-only families. Unknown model IDs still prompt for image support. Non-interactive onboarding uses the same inference; pass `--custom-image-input` to force image-capable metadata or `--custom-text-input` to force text-only metadata.
+Interactive custom-provider onboarding is outside the simplified supported surface. Use OpenAI subscription auth and `openai/<model>` refs for normal setup.
 
 ### Provider examples
 
-<AccordionGroup>
-  <Accordion title="Cerebras (GLM 4.7 / GPT OSS)">
-    The bundled `cerebras` provider plugin can configure this via `openclaw onboard --auth-choice cerebras-api-key`. Use explicit provider config only when overriding defaults.
+The simplified setup supports OpenAI subscription-backed provider config only. Use `openai/<model>` refs and configure auth through `openclaw onboard --auth-choice openai-codex` or `openclaw models auth login --provider openai`.
 
-    ```json5
-    {
-      env: { CEREBRAS_API_KEY: "sk-..." },
-      agents: {
-        defaults: {
-          model: {
-            primary: "cerebras/zai-glm-4.7",
-            fallbacks: ["cerebras/gpt-oss-120b"],
-          },
-          models: {
-            "cerebras/zai-glm-4.7": { alias: "GLM 4.7 (Cerebras)" },
-            "cerebras/gpt-oss-120b": { alias: "GPT OSS 120B (Cerebras)" },
-          },
-        },
-      },
-      models: {
-        mode: "merge",
-        providers: {
-          cerebras: {
-            baseUrl: "https://api.cerebras.ai/v1",
-            apiKey: "${CEREBRAS_API_KEY}",
-            api: "openai-completions",
-            models: [
-              { id: "zai-glm-4.7", name: "GLM 4.7 (Cerebras)" },
-              { id: "gpt-oss-120b", name: "GPT OSS 120B (Cerebras)" },
-            ],
-          },
-        },
-      },
-    }
-    ```
-
-    Use `cerebras/zai-glm-4.7` for Cerebras; `zai/glm-4.7` for Z.AI direct.
-
-  </Accordion>
-  <Accordion title="Kimi Coding">
-    ```json5
-    {
-      env: { KIMI_API_KEY: "sk-..." },
-      agents: {
-        defaults: {
-          model: { primary: "kimi/kimi-for-coding" },
-          models: { "kimi/kimi-for-coding": { alias: "Kimi Code" } },
-        },
-      },
-    }
-    ```
-
-    Anthropic-compatible, built-in provider. Shortcut: `openclaw onboard --auth-choice kimi-code-api-key`.
-
-  </Accordion>
-  <Accordion title="Local models (LM Studio)">
-    See [Local Models](/gateway/local-models). TL;DR: run a large local model via LM Studio Responses API on serious hardware; keep hosted models merged for fallback.
-  </Accordion>
-  <Accordion title="MiniMax M2.7 (direct)">
-    ```json5
-    {
-      agents: {
-        defaults: {
-          model: { primary: "minimax/MiniMax-M2.7" },
-          models: {
-            "minimax/MiniMax-M2.7": { alias: "Minimax" },
-          },
-        },
-      },
-      models: {
-        mode: "merge",
-        providers: {
-          minimax: {
-            baseUrl: "https://api.minimax.io/anthropic",
-            apiKey: "${MINIMAX_API_KEY}",
-            api: "anthropic-messages",
-            models: [
-              {
-                id: "MiniMax-M2.7",
-                name: "MiniMax M2.7",
-                reasoning: true,
-                input: ["text"],
-                cost: { input: 0.3, output: 1.2, cacheRead: 0.06, cacheWrite: 0.375 },
-                contextWindow: 204800,
-                maxTokens: 131072,
-              },
-            ],
-          },
-        },
-      },
-    }
-    ```
-
-    Set `MINIMAX_API_KEY`. Shortcuts: `openclaw onboard --auth-choice minimax-global-api` or `openclaw onboard --auth-choice minimax-cn-api`. The model catalog defaults to M2.7 only. On the Anthropic-compatible streaming path, OpenClaw disables MiniMax thinking by default unless you explicitly set `thinking` yourself. `/fast on` or `params.fastMode: true` rewrites `MiniMax-M2.7` to `MiniMax-M2.7-highspeed`.
-
-  </Accordion>
-  <Accordion title="Moonshot AI (Kimi)">
-    ```json5
-    {
-      env: { MOONSHOT_API_KEY: "sk-..." },
-      agents: {
-        defaults: {
-          model: { primary: "moonshot/kimi-k2.6" },
-          models: { "moonshot/kimi-k2.6": { alias: "Kimi K2.6" } },
-        },
-      },
-      models: {
-        mode: "merge",
-        providers: {
-          moonshot: {
-            baseUrl: "https://api.moonshot.ai/v1",
-            apiKey: "${MOONSHOT_API_KEY}",
-            api: "openai-completions",
-            models: [
-              {
-                id: "kimi-k2.6",
-                name: "Kimi K2.6",
-                reasoning: false,
-                input: ["text", "image"],
-                cost: { input: 0.95, output: 4, cacheRead: 0.16, cacheWrite: 0 },
-                contextWindow: 262144,
-                maxTokens: 262144,
-              },
-            ],
-          },
-        },
-      },
-    }
-    ```
-
-    For the China endpoint: `baseUrl: "https://api.moonshot.cn/v1"` or `openclaw onboard --auth-choice moonshot-api-key-cn`.
-
-    Native Moonshot endpoints advertise streaming usage compatibility on the shared `openai-completions` transport, and OpenClaw keys that off endpoint capabilities rather than the built-in provider id alone.
-
-  </Accordion>
-  <Accordion title="OpenCode">
-    ```json5
-    {
-      agents: {
-        defaults: {
-          model: { primary: "opencode/claude-opus-4-6" },
-          models: { "opencode/claude-opus-4-6": { alias: "Opus" } },
-        },
-      },
-    }
-    ```
-
-    Set `OPENCODE_API_KEY` (or `OPENCODE_ZEN_API_KEY`). Use `opencode/...` refs for the Zen catalog or `opencode-go/...` refs for the Go catalog. Shortcut: `openclaw onboard --auth-choice opencode-zen` or `openclaw onboard --auth-choice opencode-go`.
-
-  </Accordion>
-  <Accordion title="Synthetic (Anthropic-compatible)">
-    ```json5
-    {
-      env: { SYNTHETIC_API_KEY: "sk-..." },
-      agents: {
-        defaults: {
-          model: { primary: "synthetic/hf:MiniMaxAI/MiniMax-M2.5" },
-          models: { "synthetic/hf:MiniMaxAI/MiniMax-M2.5": { alias: "MiniMax M2.5" } },
-        },
-      },
-      models: {
-        mode: "merge",
-        providers: {
-          synthetic: {
-            baseUrl: "https://api.synthetic.new/anthropic",
-            apiKey: "${SYNTHETIC_API_KEY}",
-            api: "anthropic-messages",
-            models: [
-              {
-                id: "hf:MiniMaxAI/MiniMax-M2.5",
-                name: "MiniMax M2.5",
-                reasoning: true,
-                input: ["text"],
-                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-                contextWindow: 192000,
-                maxTokens: 65536,
-              },
-            ],
-          },
-        },
-      },
-    }
-    ```
-
-    Base URL should omit `/v1` (Anthropic client appends it). Shortcut: `openclaw onboard --auth-choice synthetic-api-key`.
-
-  </Accordion>
-  <Accordion title="Z.AI (GLM-4.7)">
-    ```json5
-    {
-      agents: {
-        defaults: {
-          model: { primary: "zai/glm-4.7" },
-          models: { "zai/glm-4.7": {} },
-        },
-      },
-    }
-    ```
-
-    Set `ZAI_API_KEY`. `z.ai/*` and `z-ai/*` are accepted aliases. Shortcut: `openclaw onboard --auth-choice zai-api-key`.
-
-    - General endpoint: `https://api.z.ai/api/paas/v4`
-    - Coding endpoint (default): `https://api.z.ai/api/coding/paas/v4`
-    - For the general endpoint, define a custom provider with the base URL override.
-
-  </Accordion>
-</AccordionGroup>
-
----
+```json5
+{
+  agents: {
+    defaults: {
+      model: { primary: "openai/gpt-5.5" },
+    },
+  },
+}
+```
 
 ## Related
 

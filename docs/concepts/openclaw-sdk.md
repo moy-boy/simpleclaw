@@ -319,5 +319,4 @@ documented `openclaw/plugin-sdk/*` subpaths. Do not mix the two contracts.
 - [Agent runtimes](/concepts/agent-runtimes)
 - [Sessions](/concepts/session)
 - [Background tasks](/automation/tasks)
-- [ACP agents](/tools/acp-agents)
 - [Plugin SDK overview](/plugins/sdk-overview)

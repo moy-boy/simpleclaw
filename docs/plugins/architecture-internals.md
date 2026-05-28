@@ -942,21 +942,21 @@ Example:
 
 ```json
 {
-  "name": "@openclaw/nextcloud-talk",
+  "name": "@openclaw/discord",
   "openclaw": {
     "extensions": ["./index.ts"],
     "channel": {
-      "id": "nextcloud-talk",
-      "label": "Nextcloud Talk",
-      "selectionLabel": "Nextcloud Talk (self-hosted)",
-      "docsPath": "/channels/nextcloud-talk",
-      "docsLabel": "nextcloud-talk",
-      "blurb": "Self-hosted chat via Nextcloud Talk webhook bots.",
+      "id": "discord",
+      "label": "Discord",
+      "selectionLabel": "Discord (Bot API)",
+      "docsPath": "/channels/discord",
+      "docsLabel": "discord",
+      "blurb": "Discord bot messaging.",
       "order": 65,
-      "aliases": ["nc-talk", "nc"]
+      "aliases": ["discord-bot"]
     },
     "install": {
-      "npmSpec": "@openclaw/nextcloud-talk",
+      "npmSpec": "@openclaw/discord",
       "localPath": "<bundled-plugin-local-path>",
       "defaultChoice": "npm"
     }

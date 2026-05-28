@@ -198,7 +198,7 @@ ssh youruser@192.168.64.X "openclaw status"
 
 ## Bonus: iMessage integration
 
-This is the killer feature of running on macOS. Use [iMessage](/channels/imessage) with `imsg` to add Messages to OpenClaw.
+This is the killer feature of running on macOS. Use iMessage with `imsg` to add Messages to OpenClaw.
 
 Inside the VM:
 
@@ -223,7 +223,7 @@ Add to your OpenClaw config:
 
 Restart the gateway. Now your agent can send and receive iMessages.
 
-Full setup details: [iMessage channel](/channels/imessage)
+Full setup details: iMessage channel
 
 ---
 
@@ -274,7 +274,7 @@ For true always-on, consider a dedicated Mac mini or a small VPS. See [VPS hosti
 - [VPS hosting](/vps)
 - [Nodes](/nodes)
 - [Gateway remote](/gateway/remote)
-- [iMessage channel](/channels/imessage)
+- iMessage channel
 - [Lume Quickstart](https://cua.ai/docs/lume/guide/getting-started/quickstart)
 - [Lume CLI Reference](https://cua.ai/docs/lume/reference/cli-reference)
 - [Unattended VM Setup](https://cua.ai/docs/lume/guide/fundamentals/unattended-setup) (advanced)

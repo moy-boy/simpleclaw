@@ -49,7 +49,6 @@ openclaw setup --non-interactive --mode remote --remote-url wss://gateway-host:1
 
 - Plain `openclaw setup` initializes config and workspace without running the full onboarding flow.
 - After plain setup, run `openclaw onboard` for the full guided journey, `openclaw configure` for targeted changes, or `openclaw channels add` to add channel accounts.
-- If Hermes state is detected, interactive onboarding can offer migration automatically. Import onboarding requires a fresh setup; use [Migrate](/cli/migrate) for dry-run plans, backups, and overwrite mode outside onboarding.
 
 ## Related
 

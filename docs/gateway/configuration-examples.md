@@ -29,7 +29,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
   agents: {
     defaults: {
       workspace: "~/.openclaw/workspace",
-      model: { primary: "anthropic/claude-sonnet-4-6" },
+      model: { primary: "openai/gpt-5.4" },
     },
     list: [
       {
@@ -239,15 +239,15 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
       workspace: "~/.openclaw/workspace",
       userTimezone: "America/Chicago",
       model: {
-        primary: "anthropic/claude-sonnet-4-6",
-        fallbacks: ["anthropic/claude-opus-4-6", "openai/gpt-5.4"],
+        primary: "openai/gpt-5.4",
+        fallbacks: ["openai/gpt-5.5", "openai/gpt-5.4"],
       },
       imageModel: {
-        primary: "openrouter/anthropic/claude-sonnet-4-6",
+        primary: "openai/gpt-5.5",
       },
       models: {
-        "anthropic/claude-opus-4-6": { alias: "opus" },
-        "anthropic/claude-sonnet-4-6": { alias: "sonnet" },
+        "openai/gpt-5.5": { alias: "opus" },
+        "openai/gpt-5.4": { alias: "sonnet" },
         "openai/gpt-5.4": { alias: "gpt" },
       },
       skills: ["github", "weather"], // inherited by agents that omit list[].skills
@@ -275,7 +275,7 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
       maxConcurrent: 3,
       heartbeat: {
         every: "30m",
-        model: "anthropic/claude-sonnet-4-6",
+        model: "openai/gpt-5.4",
         target: "last",
         directPolicy: "allow", // allow (default) | block
         to: "+15555550123",
@@ -283,10 +283,10 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
         ackMaxChars: 300,
       },
       memorySearch: {
-        provider: "gemini",
-        model: "gemini-embedding-001",
+        provider: "openai",
+        model: "text-embedding-3-small",
         remote: {
-          apiKey: "${GEMINI_API_KEY}",
+          apiKey: "${OPENAI_API_KEY}",
         },
         extraPaths: ["../team-docs", "/srv/shared-notes"],
       },
@@ -466,8 +466,8 @@ Save to `~/.openclaw/openclaw.json` and you can DM the bot from that number.
     entries: {
       "image-lab": {
         enabled: true,
-        apiKey: "GEMINI_KEY_HERE",
-        env: { GEMINI_API_KEY: "GEMINI_KEY_HERE" },
+        apiKey: "OPENAI_KEY_HERE",
+        env: { OPENAI_API_KEY: "OPENAI_KEY_HERE" },
       },
       peekaboo: { enabled: true },
     },
@@ -571,12 +571,6 @@ If more than one person can DM your bot (multiple entries in `allowFrom`, pairin
   session: { dmScope: "per-channel-peer" },
 
   channels: {
-    // Example: WhatsApp multi-user inbox
-    whatsapp: {
-      dmPolicy: "allowlist",
-      allowFrom: ["+15555550123", "+15555550124"],
-    },
-
     // Example: Discord multi-user inbox
     discord: {
       enabled: true,
@@ -587,39 +581,19 @@ If more than one person can DM your bot (multiple entries in `allowFrom`, pairin
 }
 ```
 
-For Discord/Slack/Google Chat/Microsoft Teams/Mattermost/IRC, sender authorization is ID-first by default.
+For Discord, sender authorization is ID-first by default.
 Only enable direct mutable name/email/nick matching with each channel's `dangerouslyAllowNameMatching: true` if you explicitly accept that risk.
 
-### Anthropic API key + MiniMax fallback
+### OpenAI subscription + OpenAI fallback
 
 ```json5
 {
-  auth: {
-    profiles: {
-      "anthropic:api": {
-        provider: "anthropic",
-        mode: "api_key",
-      },
-    },
-    order: {
-      anthropic: ["anthropic:api"],
-    },
-  },
-  models: {
-    providers: {
-      minimax: {
-        baseUrl: "https://api.minimax.io/anthropic",
-        api: "anthropic-messages",
-        apiKey: "${MINIMAX_API_KEY}",
-      },
-    },
-  },
   agents: {
     defaults: {
       workspace: "~/.openclaw/workspace",
       model: {
-        primary: "anthropic/claude-opus-4-6",
-        fallbacks: ["minimax/MiniMax-M2.7"],
+        primary: "openai/gpt-5.5",
+        fallbacks: ["openai/gpt-5.4-mini"],
       },
     },
   },
@@ -646,47 +620,25 @@ Only enable direct mutable name/email/nick matching with each channel's `dangero
     ],
   },
   channels: {
-    slack: {
+    discord: {
       enabled: true,
-      botToken: "xoxb-...",
-      channels: {
-        "#engineering": { allow: true, requireMention: true },
-        "#general": { allow: true, requireMention: true },
+      token: "${DISCORD_BOT_TOKEN}",
+      guilds: {
+        "123456789012345678": { allow: true, requireMention: true },
       },
     },
   },
 }
 ```
 
-### Local models only
+### OpenAI models only
 
 ```json5
 {
   agents: {
     defaults: {
       workspace: "~/.openclaw/workspace",
-      model: { primary: "lmstudio/my-local-model" },
-    },
-  },
-  models: {
-    mode: "merge",
-    providers: {
-      lmstudio: {
-        baseUrl: "http://127.0.0.1:1234/v1",
-        apiKey: "lmstudio",
-        api: "openai-responses",
-        models: [
-          {
-            id: "my-local-model",
-            name: "Local Model",
-            reasoning: false,
-            input: ["text"],
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            contextWindow: 196608,
-            maxTokens: 8192,
-          },
-        ],
-      },
+      model: { primary: "openai/gpt-5.4-mini" },
     },
   },
 }
@@ -696,7 +648,7 @@ Only enable direct mutable name/email/nick matching with each channel's `dangero
 
 - If you set `dmPolicy: "open"`, the matching `allowFrom` list must include `"*"`.
 - Provider IDs differ (phone numbers, user IDs, channel IDs). Use the provider docs to confirm the format.
-- Optional sections to add later: `web`, `browser`, `ui`, `discovery`, `plugins`, `talk`, `signal`, `imessage`.
+- Optional sections to add later: `web`, `browser`, `ui`, `discovery`, `plugins`, and `talk`.
 - See [Providers](/providers) and [Troubleshooting](/gateway/troubleshooting) for deeper setup notes.
 
 ## Related

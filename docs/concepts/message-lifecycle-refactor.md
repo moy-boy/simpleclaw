@@ -1064,8 +1064,8 @@ Validation:
 - `pnpm check:changed` in Testbox for the full changed surface.
 - Broader `pnpm check` in Testbox before landing the complete refactor or after
   public SDK/export changes.
-- Live or qa-channel smoke for at least one edit-capable channel and one
-  simple send-only channel before removing compatibility wrappers.
+- Live Telegram or Discord smoke for the touched channel behavior before
+  removing compatibility wrappers.
 
 ## Open questions
 
