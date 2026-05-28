@@ -2,16 +2,8 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChannelPluginCatalogEntry } from "../channels/plugins/catalog.js";
 import type { ChannelPlugin } from "../channels/plugins/types.plugin.js";
 import { resetPluginRuntimeStateForTest, setActivePluginRegistry } from "../plugins/runtime.js";
-import { createTestRegistry } from "../test-utils/channel-plugins.js";
-import {
-  ensureChannelSetupPluginInstalled,
-  loadChannelSetupPluginRegistrySnapshotForChannel,
-} from "./channel-setup/plugin-install.js";
+import { createChannelTestPluginBase, createTestRegistry } from "../test-utils/channel-plugins.js";
 import { configMocks } from "./channels.mock-harness.js";
-import {
-  createExternalChatCatalogEntry,
-  createExternalChatDeletePlugin,
-} from "./channels.plugin-install.test-helpers.js";
 import { baseConfigSnapshot, createTestRuntime } from "./test-runtime-config-helpers.js";
 
 let channelsRemoveCommand: typeof import("./channels.js").channelsRemoveCommand;
@@ -71,6 +63,33 @@ function firstWrittenChannelsConfig() {
     | undefined;
 }
 
+function createDeletePlugin(channel: "telegram" | "discord", gateway = false): ChannelPlugin {
+  return {
+    ...createChannelTestPluginBase({
+      id: channel,
+      label: channel === "telegram" ? "Telegram" : "Discord",
+    }),
+    config: {
+      listAccountIds: () => ["default"],
+      resolveAccount: () => ({}),
+      deleteAccount: ({ cfg }) => ({
+        ...cfg,
+        channels: {
+          ...cfg.channels,
+          [channel]: undefined,
+        },
+      }),
+    },
+    ...(gateway
+      ? {
+          gateway: {
+            startAccount: vi.fn(),
+          },
+        }
+      : {}),
+  } as ChannelPlugin;
+}
+
 describe("channelsRemoveCommand", () => {
   beforeAll(async () => {
     ({ channelsRemoveCommand } = await import("./channels.js"));
@@ -90,23 +109,13 @@ describe("channelsRemoveCommand", () => {
     runtime.exit.mockClear();
     catalogMocks.listChannelPluginCatalogEntries.mockClear();
     catalogMocks.listChannelPluginCatalogEntries.mockReturnValue([]);
-    vi.mocked(ensureChannelSetupPluginInstalled).mockClear();
-    vi.mocked(ensureChannelSetupPluginInstalled).mockImplementation(async ({ cfg }) => ({
-      cfg,
-      installed: true,
-      status: "installed",
-    }));
-    vi.mocked(loadChannelSetupPluginRegistrySnapshotForChannel).mockClear();
-    vi.mocked(loadChannelSetupPluginRegistrySnapshotForChannel).mockReturnValue(
-      createTestRegistry(),
-    );
     registryRefreshMocks.refreshPluginRegistryAfterConfigMutation.mockClear();
     gatewayMocks.callGateway.mockClear();
     gatewayMocks.callGateway.mockResolvedValue({ stopped: true });
     setActivePluginRegistry(createTestRegistry());
   });
 
-  it("asks users to add an external channel plugin before removing its account", async () => {
+  it("rejects unsupported channel removal before mutation", async () => {
     configMocks.readConfigFileSnapshot.mockResolvedValue({
       ...baseConfigSnapshot,
       config: {
@@ -118,8 +127,6 @@ describe("channelsRemoveCommand", () => {
         },
       },
     });
-    const catalogEntry: ChannelPluginCatalogEntry = createExternalChatCatalogEntry();
-    catalogMocks.listChannelPluginCatalogEntries.mockReturnValue([catalogEntry]);
 
     await channelsRemoveCommand(
       {
@@ -131,35 +138,31 @@ describe("channelsRemoveCommand", () => {
       { hasFlags: true },
     );
 
-    expect(ensureChannelSetupPluginInstalled).not.toHaveBeenCalled();
-    expect(loadChannelSetupPluginRegistrySnapshotForChannel).toHaveBeenCalledTimes(1);
     expect(configMocks.writeConfigFile).not.toHaveBeenCalled();
+    expect(gatewayMocks.callGateway).not.toHaveBeenCalled();
     expect(runtime.error).toHaveBeenCalledWith(
-      'Channel plugin "external-chat" is not installed. Run openclaw channels add --channel external-chat first.',
+      'Unsupported channel "external-chat". This setup supports Telegram and Discord only.',
     );
     expect(runtime.exit).toHaveBeenCalledWith(1);
   });
 
-  it("removes an external channel account when its plugin is already installed", async () => {
+  it("removes a supported channel account when its plugin is loaded", async () => {
     configMocks.readConfigFileSnapshot.mockResolvedValue({
       ...baseConfigSnapshot,
       config: {
         channels: {
-          "external-chat": {
+          telegram: {
             enabled: true,
             token: "token-1",
           },
         },
       },
     });
-    const catalogEntry: ChannelPluginCatalogEntry = createExternalChatCatalogEntry();
-    catalogMocks.listChannelPluginCatalogEntries.mockReturnValue([catalogEntry]);
-    const scopedPlugin = createExternalChatDeletePlugin();
-    vi.mocked(loadChannelSetupPluginRegistrySnapshotForChannel).mockReturnValue(
+    setActivePluginRegistry(
       createTestRegistry([
         {
-          pluginId: "@vendor/external-chat-plugin",
-          plugin: scopedPlugin,
+          pluginId: "telegram",
+          plugin: createDeletePlugin("telegram"),
           source: "test",
         },
       ]),
@@ -167,7 +170,7 @@ describe("channelsRemoveCommand", () => {
 
     await channelsRemoveCommand(
       {
-        channel: "external-chat",
+        channel: "telegram",
         account: "default",
         delete: true,
       },
@@ -175,10 +178,64 @@ describe("channelsRemoveCommand", () => {
       { hasFlags: true },
     );
 
-    expect(ensureChannelSetupPluginInstalled).not.toHaveBeenCalled();
     expect(registryRefreshMocks.refreshPluginRegistryAfterConfigMutation).not.toHaveBeenCalled();
     const writtenConfig = firstWrittenChannelsConfig();
-    expect(writtenConfig?.channels?.["external-chat"]).toBeUndefined();
+    expect(writtenConfig?.channels?.telegram).toBeUndefined();
+    expect(runtime.error).not.toHaveBeenCalled();
+    expect(runtime.exit).not.toHaveBeenCalled();
+  });
+
+  it("canonicalizes supported catalog aliases before enforcing the allowlist", async () => {
+    configMocks.readConfigFileSnapshot.mockResolvedValue({
+      ...baseConfigSnapshot,
+      config: {
+        channels: {
+          telegram: {
+            enabled: true,
+            token: "token-1",
+          },
+        },
+      },
+    });
+    catalogMocks.listChannelPluginCatalogEntries.mockReturnValue([
+      {
+        id: "telegram",
+        pluginId: "telegram",
+        meta: {
+          id: "telegram",
+          label: "Telegram",
+          selectionLabel: "Telegram",
+          docsPath: "/channels/telegram",
+          blurb: "Telegram channel.",
+          aliases: ["tg"],
+        },
+        install: {
+          npmSpec: "@openclaw/telegram",
+        },
+      },
+    ]);
+    setActivePluginRegistry(
+      createTestRegistry([
+        {
+          pluginId: "telegram",
+          plugin: createDeletePlugin("telegram"),
+          source: "test",
+        },
+      ]),
+    );
+
+    await channelsRemoveCommand(
+      {
+        channel: "tg",
+        account: "default",
+        delete: true,
+      },
+      runtime,
+      { hasFlags: true },
+    );
+
+    const writtenConfig = firstWrittenChannelsConfig();
+    expect(writtenConfig?.channels?.telegram).toBeUndefined();
     expect(runtime.error).not.toHaveBeenCalled();
     expect(runtime.exit).not.toHaveBeenCalled();
   });
@@ -188,26 +245,18 @@ describe("channelsRemoveCommand", () => {
       ...baseConfigSnapshot,
       config: {
         channels: {
-          "external-chat": {
+          discord: {
             enabled: true,
             token: "token-1",
           },
         },
       },
     });
-    const catalogEntry: ChannelPluginCatalogEntry = createExternalChatCatalogEntry();
-    catalogMocks.listChannelPluginCatalogEntries.mockReturnValue([catalogEntry]);
-    const scopedPlugin = {
-      ...createExternalChatDeletePlugin(),
-      gateway: {
-        startAccount: vi.fn(),
-      },
-    } as ChannelPlugin;
-    vi.mocked(loadChannelSetupPluginRegistrySnapshotForChannel).mockReturnValue(
+    setActivePluginRegistry(
       createTestRegistry([
         {
-          pluginId: "@vendor/external-chat-plugin",
-          plugin: scopedPlugin,
+          pluginId: "discord",
+          plugin: createDeletePlugin("discord", true),
           source: "test",
         },
       ]),
@@ -215,7 +264,7 @@ describe("channelsRemoveCommand", () => {
 
     await channelsRemoveCommand(
       {
-        channel: "external-chat",
+        channel: "discord",
         account: "default",
         delete: true,
       },
@@ -226,7 +275,7 @@ describe("channelsRemoveCommand", () => {
     expect(gatewayMocks.callGateway).toHaveBeenCalledWith({
       config: {
         channels: {
-          "external-chat": {
+          discord: {
             enabled: true,
             token: "token-1",
           },
@@ -234,7 +283,7 @@ describe("channelsRemoveCommand", () => {
       },
       method: "channels.stop",
       params: {
-        channel: "external-chat",
+        channel: "discord",
         accountId: "default",
       },
       mode: "backend",
@@ -242,6 +291,6 @@ describe("channelsRemoveCommand", () => {
       deviceIdentity: null,
     });
     const writtenConfig = firstWrittenChannelsConfig();
-    expect(writtenConfig?.channels?.["external-chat"]).toBeUndefined();
+    expect(writtenConfig?.channels?.discord).toBeUndefined();
   });
 });

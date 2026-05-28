@@ -22,6 +22,12 @@ import { createClackPrompter } from "../../wizard/clack-prompter.js";
 import { WizardCancelledError } from "../../wizard/prompts.js";
 import { applyAgentBindings, describeBinding } from "../agents.bindings.js";
 import type { ChannelChoice } from "../onboard-types.js";
+import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  listSupportedChannelIds,
+  shouldEnforceSupportedChannelIds,
+} from "../supported-surface.js";
 import { applyAccountName, applyChannelAccountConfig } from "./add-mutators.js";
 import { channelLabel } from "./runtime-label.js";
 import { requireValidConfigFileSnapshot, shouldUseWizard } from "./shared.js";
@@ -50,7 +56,6 @@ export type ChannelsAddOptions = {
 } & Record<string, unknown>;
 
 const CHANNEL_ADD_CONTROL_OPTION_KEYS = new Set(["channel", "account"]);
-const NEXTCLOUD_TALK_CLI_ALIASES = new Set(["nextcloud-talk", "nc-talk", "nc"]);
 
 async function resolveCatalogChannelEntry(raw: string, cfg: OpenClawConfig | null) {
   const trimmed = normalizeOptionalLowercaseString(raw);
@@ -79,6 +84,14 @@ async function resolveCatalogChannelEntry(raw: string, cfg: OpenClawConfig | nul
   });
 }
 
+type ResolvedCatalogChannelEntry = NonNullable<
+  Awaited<ReturnType<typeof resolveCatalogChannelEntry>>
+>;
+
+function resolveCatalogChannelId(entry: ResolvedCatalogChannelEntry): ChannelId {
+  return normalizeChannelId(entry.id) ?? (entry.id as ChannelId);
+}
+
 function parseOptionalInt(value: unknown): number | undefined {
   if (typeof value === "number") {
     return value;
@@ -96,10 +109,6 @@ function parseOptionalDelimitedInput(value: unknown): string[] | undefined {
   return parseOptionalDelimitedEntries(typeof value === "string" ? value : undefined);
 }
 
-function readOptionalString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
 function buildChannelSetupInput(opts: ChannelsAddOptions): ChannelSetupInput {
   const input: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(opts)) {
@@ -107,13 +116,6 @@ function buildChannelSetupInput(opts: ChannelsAddOptions): ChannelSetupInput {
       continue;
     }
     input[key] = value;
-  }
-
-  const rawChannel = readOptionalString(opts.channel)?.trim().toLowerCase();
-  if (rawChannel && NEXTCLOUD_TALK_CLI_ALIASES.has(rawChannel)) {
-    input.baseUrl ??= readOptionalString(input.url);
-    input.secret ??= readOptionalString(input.token) ?? readOptionalString(input.password);
-    input.secretFile ??= readOptionalString(input.tokenFile);
   }
 
   input.initialSyncLimit = parseOptionalInt(opts.initialSyncLimit);
@@ -182,6 +184,7 @@ async function channelsAddCommandImpl(
       onResolvedPlugin: (channel, plugin) => {
         resolvedPlugins.set(channel, plugin);
       },
+      channelIds: listSupportedChannelIds(),
     });
     if (selection.length === 0) {
       await prompter.outro("No channel changes made.");
@@ -304,6 +307,10 @@ async function channelsAddCommandImpl(
   const rawChannel = opts.channel ?? "";
   let channel = normalizeChannelId(rawChannel);
   let catalogEntry = await resolveCatalogChannelEntry(rawChannel, nextConfig);
+  const enforceSupportedChannelIds = shouldEnforceSupportedChannelIds(nextConfig);
+  const catalogChannel = catalogEntry ? resolveCatalogChannelId(catalogEntry) : undefined;
+  const requestedChannel =
+    catalogChannel ?? channel ?? normalizeOptionalLowercaseString(rawChannel);
   const resolveWorkspaceDir = () =>
     resolveAgentWorkspaceDir(nextConfig, resolveDefaultAgentId(nextConfig));
   // May load a scoped plugin when the channel is not already registered.
@@ -333,7 +340,14 @@ async function channelsAddCommandImpl(
     );
   };
 
+  if (requestedChannel && enforceSupportedChannelIds && !isSupportedChannelId(requestedChannel)) {
+    runtime.error(formatUnsupportedChannelMessage(requestedChannel));
+    runtime.exit(1);
+    return;
+  }
+
   if (catalogEntry) {
+    channel ??= resolveCatalogChannelId(catalogEntry);
     const workspaceDir = resolveWorkspaceDir();
     const { isCatalogChannelInstalled } = await import("../channel-setup/discovery.js");
     const registeredPlugin = channel ? getLoadedChannelPlugin(channel) : undefined;
@@ -367,7 +381,6 @@ async function channelsAddCommandImpl(
         ...(result.pluginId ? { pluginId: result.pluginId } : {}),
       };
     }
-    channel ??= normalizeChannelId(catalogEntry.id) ?? (catalogEntry.id as ChannelId);
   }
 
   if (!channel) {

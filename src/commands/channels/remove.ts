@@ -17,6 +17,11 @@ import { defaultRuntime, type RuntimeEnv } from "../../runtime.js";
 import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../../utils/message-channel.js";
 import { createClackPrompter } from "../../wizard/clack-prompter.js";
+import {
+  formatUnsupportedChannelMessage,
+  isSupportedChannelId,
+  shouldEnforceSupportedChannelIds,
+} from "../supported-surface.js";
 import { channelLabel } from "./runtime-label.js";
 import { type ChatChannel, requireValidConfigFileSnapshot, shouldUseWizard } from "./shared.js";
 
@@ -86,12 +91,18 @@ export async function channelsRemoveCommand(
   let channel: ChatChannel | null = normalizeChannelId(rawChannel);
   let accountId = normalizeAccountId(opts.account);
   const deleteConfig = Boolean(opts.delete);
+  const enforceSupportedChannels = shouldEnforceSupportedChannelIds(cfg);
 
   if (useWizard && prompter) {
     await prompter.intro("Remove channel account");
     const readOnlyPlugins = listReadOnlyChannelPluginsForConfig(cfg, {
       includeSetupFallbackPlugins: true,
-    });
+    }).filter((plugin) => !enforceSupportedChannels || isSupportedChannelId(plugin.id));
+    if (readOnlyPlugins.length === 0) {
+      runtime.error("No removable Telegram or Discord channel accounts were found.");
+      runtime.exit(1);
+      return;
+    }
     const selectedChannel = await prompter.select({
       message: "Channel",
       options: readOnlyPlugins.map((plugin) => ({
@@ -132,17 +143,6 @@ export async function channelsRemoveCommand(
       runtime.exit(1);
       return;
     }
-    if (!deleteConfig) {
-      const confirm = createClackPrompter();
-      const channelPromptLabel = channel ? channelLabel(channel) : rawChannel;
-      const ok = await confirm.confirm({
-        message: `Disable ${channelPromptLabel} account "${accountId}"? (keeps config)`,
-        initialValue: true,
-      });
-      if (!ok) {
-        return;
-      }
-    }
   }
 
   const shouldResolveInstallablePlugin = Boolean(lookupChannel || channel);
@@ -162,6 +162,12 @@ export async function channelsRemoveCommand(
     cfg = resolvedPluginState.cfg;
   }
   const resolvedChannel = resolvedPluginState?.channelId ?? channel;
+  const supportedChannelCheck = resolvedChannel ?? rawChannel;
+  if (enforceSupportedChannels && !isSupportedChannelId(supportedChannelCheck)) {
+    runtime.error(formatUnsupportedChannelMessage(supportedChannelCheck));
+    runtime.exit(1);
+    return;
+  }
   if (!resolvedChannel) {
     runtime.error(formatUnknownChannelMessage({ channel: rawChannel }));
     runtime.exit(1);
@@ -185,6 +191,17 @@ export async function channelsRemoveCommand(
   const resolvedAccountId =
     normalizeAccountId(accountId) ?? resolveChannelDefaultAccountId({ plugin, cfg });
   const accountKey = resolvedAccountId || DEFAULT_ACCOUNT_ID;
+
+  if (!useWizard && !deleteConfig) {
+    const confirm = createClackPrompter();
+    const ok = await confirm.confirm({
+      message: `Disable ${channelLabel(resolvedChannelId)} account "${accountKey}"? (keeps config)`,
+      initialValue: true,
+    });
+    if (!ok) {
+      return;
+    }
+  }
 
   await stopGatewayRuntimeBeforeRemove({
     cfg,
