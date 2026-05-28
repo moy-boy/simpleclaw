@@ -741,6 +741,9 @@ export function findUnmatchedExplicitTestTargets(args, cwd = process.cwd()) {
       continue;
     }
     const kind = classifyTarget(targetArg, cwd);
+    if (kind === "unsupportedExtension") {
+      continue;
+    }
     if (shouldUseWholeConfigTarget(kind, targetArg, cwd)) {
       continue;
     }
@@ -1499,12 +1502,25 @@ export function parseTestProjectsArgs(args, cwd = process.cwd()) {
   const targetArgs = [];
   let watchMode = false;
 
-  for (const arg of args) {
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
     if (arg === "--") {
       continue;
     }
     if (arg === "--watch") {
       watchMode = true;
+      continue;
+    }
+    const changedMatch = arg.match(CHANGED_ARGS_PATTERN);
+    if (changedMatch) {
+      forwardedArgs.push(arg);
+      if (!changedMatch[1]) {
+        const nextArg = args[index + 1];
+        if (nextArg && nextArg !== "--" && !nextArg.startsWith("-")) {
+          forwardedArgs.push(nextArg);
+          index += 1;
+        }
+      }
       continue;
     }
     if (isPathLikeTargetArg(arg, cwd)) {
@@ -1514,6 +1530,14 @@ export function parseTestProjectsArgs(args, cwd = process.cwd()) {
   }
 
   return { forwardedArgs, targetArgs, watchMode };
+}
+
+export function isUnsupportedExtensionOnlyTargetArgs(args, cwd) {
+  const meaningfulArgs = args.filter((arg) => arg !== "--");
+  if (meaningfulArgs.length !== 1) {
+    return false;
+  }
+  return isUnsupportedExtensionTarget(toRepoRelativeTarget(meaningfulArgs[0], cwd));
 }
 
 export function buildVitestRunPlans(
@@ -1529,6 +1553,13 @@ export function buildVitestRunPlans(
   const activeForwardedArgs =
     changedTargetArgs !== null ? stripChangedArgs(forwardedArgs) : forwardedArgs;
   if (changedTargetArgs !== null && activeTargetArgs.length === 0) {
+    return [];
+  }
+  if (
+    targetArgs.length === 0 &&
+    changedTargetArgs === null &&
+    isUnsupportedExtensionOnlyTargetArgs(args, cwd)
+  ) {
     return [];
   }
   if (activeTargetArgs.length === 0) {

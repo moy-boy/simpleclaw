@@ -12,6 +12,7 @@ import {
   buildVitestArgs,
   buildVitestRunPlans,
   findUnmatchedExplicitTestTargets,
+  isUnsupportedExtensionOnlyTargetArgs,
   listFullExtensionVitestProjectConfigs,
   orderFullSuiteSpecsForParallelRun,
   shouldAcquireLocalHeavyCheckLock,
@@ -312,7 +313,13 @@ describe("scripts/test-projects changed-target routing", () => {
   it("ignores unsupported extension targets", () => {
     const plans = buildVitestRunPlans(["extensions/thread-ownership"], process.cwd());
 
+    expect(
+      isUnsupportedExtensionOnlyTargetArgs(["extensions/thread-ownership"], process.cwd()),
+    ).toBe(true);
     expect(plans).toEqual([]);
+    expect(
+      findUnmatchedExplicitTestTargets(["extensions/thread-ownership"], process.cwd()),
+    ).toEqual([]);
   });
 
   it("ignores unsupported extension changes", () => {
@@ -321,6 +328,53 @@ describe("scripts/test-projects changed-target routing", () => {
     ]);
 
     expect(plans).toEqual([]);
+  });
+
+  it("does not treat changed refs as unsupported extension targets", () => {
+    const plans = buildVitestRunPlans(
+      ["--changed", "extensions/thread-ownership"],
+      process.cwd(),
+      () => ["test/scripts/test-projects.test.ts"],
+    );
+
+    expect(plans).toEqual([
+      {
+        config: "test/vitest/vitest.tooling.config.ts",
+        forwardedArgs: [],
+        includePatterns: ["test/scripts/test-projects.test.ts"],
+        watchMode: false,
+      },
+    ]);
+  });
+
+  it("does not treat Vitest option values as unsupported extension targets", () => {
+    const args = ["-t", "extensions/thread-ownership"];
+
+    expect(isUnsupportedExtensionOnlyTargetArgs(args, process.cwd())).toBe(false);
+    expect(findUnmatchedExplicitTestTargets(args, process.cwd())).toEqual([]);
+    expect(buildVitestRunPlans(args, process.cwd())).toEqual([
+      {
+        config: "test/vitest/vitest.unit.config.ts",
+        forwardedArgs: args,
+        includePatterns: null,
+        watchMode: false,
+      },
+    ]);
+  });
+
+  it("does not treat dotted Vitest option values as unsupported extension targets", () => {
+    const args = ["--coverage.changed", "extensions/thread-ownership"];
+
+    expect(isUnsupportedExtensionOnlyTargetArgs(args, process.cwd())).toBe(false);
+    expect(findUnmatchedExplicitTestTargets(args, process.cwd())).toEqual([]);
+    expect(buildVitestRunPlans(args, process.cwd())).toEqual([
+      {
+        config: "test/vitest/vitest.unit.config.ts",
+        forwardedArgs: args,
+        includePatterns: null,
+        watchMode: false,
+      },
+    ]);
   });
 
   it("keeps shared test helpers cheap by default when no precise target exists", () => {

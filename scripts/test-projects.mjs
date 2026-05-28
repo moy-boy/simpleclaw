@@ -25,6 +25,7 @@ import {
   buildFullSuiteVitestRunPlans,
   createVitestRunSpecs,
   findUnmatchedExplicitTestTargets,
+  isUnsupportedExtensionOnlyTargetArgs,
   listFullExtensionVitestProjectConfigs,
   orderFullSuiteSpecsForParallelRun,
   parseTestProjectsArgs,
@@ -188,7 +189,9 @@ async function main() {
   if (unmatchedExplicitTargets.length > 0) {
     for (const unmatched of unmatchedExplicitTargets) {
       const suffix = unmatched.includePattern ? ` (${unmatched.includePattern})` : "";
-      console.error(`[test] explicit test target matched no test files: ${unmatched.target}${suffix}`);
+      console.error(
+        `[test] explicit test target matched no test files: ${unmatched.target}${suffix}`,
+      );
     }
     printTestSummary("failed", 1, performance.now() - suiteStartedAt);
     process.exitCode = 1;
@@ -198,8 +201,13 @@ async function main() {
     targetArgs.length === 0
       ? resolveChangedTargetArgs(args, process.cwd(), undefined, { env: baseEnv })
       : null;
-  const rawRunSpecs =
-    targetArgs.length === 0 && changedTargetArgs === null
+  const unsupportedExtensionOnlyTarget =
+    targetArgs.length === 0 &&
+    changedTargetArgs === null &&
+    isUnsupportedExtensionOnlyTargetArgs(args, process.cwd());
+  const rawRunSpecs = unsupportedExtensionOnlyTarget
+    ? []
+    : targetArgs.length === 0 && changedTargetArgs === null
       ? buildFullSuiteVitestRunPlans(args, process.cwd()).map((plan) => ({
           config: plan.config,
           continueOnFailure: true,
