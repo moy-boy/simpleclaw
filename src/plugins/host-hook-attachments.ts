@@ -313,7 +313,7 @@ export async function sendPluginSessionAttachment(
   } catch (error) {
     return { ok: false, error: `attachment delivery failed: ${formatErrorMessage(error)}` };
   }
-  if (!result.result) {
+  if (!result?.result) {
     return { ok: false, error: "attachment delivery failed: no delivery result returned" };
   }
   return {

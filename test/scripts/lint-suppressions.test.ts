@@ -111,14 +111,8 @@ describe("production lint suppressions", () => {
 
   it("keeps the intentional production suppression tail on an explicit allowlist", () => {
     expect(summarizeSuppressions(collectProductionLintSuppressions())).toEqual([
-      "extensions/browser/src/browser/pw-tools-core.interactions.ts|@typescript-eslint/no-implied-eval|2",
-      "extensions/browser/src/cli/browser-cli-actions-input/register.files-downloads.ts|typescript/no-unnecessary-type-parameters|1",
-      "extensions/browser/src/node-host/invoke-browser.ts|typescript/no-unnecessary-type-parameters|1",
       "extensions/discord/src/outbound-adapter.test-harness.ts|typescript/no-unnecessary-type-parameters|1",
       "extensions/discord/src/test-support/provider.test-support.ts|typescript/no-unnecessary-type-parameters|1",
-      "extensions/feishu/src/bitable.ts|typescript/no-unnecessary-type-parameters|1",
-      "extensions/matrix/src/onboarding.test-harness.ts|typescript/no-unnecessary-type-parameters|1",
-      "extensions/slack/src/monitor/provider-support.ts|typescript/no-unnecessary-type-parameters|1",
       "extensions/telegram/src/telegram-ingress-worker.runtime.ts|unicorn/require-post-message-target-origin|1",
       "extensions/telegram/src/telegram-ingress-worker.ts|unicorn/require-post-message-target-origin|1",
       "scripts/e2e/mcp-channels-harness.ts|unicorn/prefer-add-event-listener|1",

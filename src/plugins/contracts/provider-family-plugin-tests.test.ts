@@ -35,13 +35,6 @@ const PROVIDER_BOUNDARY_TEST_SIGNALS = [
   /\bexpectPassthroughReplayPolicy\s*\(/u,
 ] as const;
 const EXPECTED_SENTINEL_SHARED_FAMILY_ASSIGNMENTS: Record<string, ExpectedSharedFamilyContract> = {
-  google: {
-    replayFamilies: ["google-gemini"],
-    toolCompatFamilies: ["gemini"],
-  },
-  minimax: {
-    replayFamilies: ["hybrid-anthropic-openai"],
-  },
   openai: {
     toolCompatFamilies: ["openai"],
   },

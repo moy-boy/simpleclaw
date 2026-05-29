@@ -46,13 +46,8 @@ describe("channel registry helpers", () => {
     ]);
   }
 
-  it("keeps Feishu first in the current default order", () => {
-    const channels = listChatChannels();
-    expect(channels[0]?.id).toBe("feishu");
-  });
-
-  it("includes MS Teams in the bundled channel list", () => {
-    expect(channelIds()).toContain("msteams");
+  it("keeps supported channels in the configured default order", () => {
+    expect(channelIds()).toEqual(["telegram", "discord"]);
   });
 
   it("formats Telegram selection lines without a docs prefix and with website extras", () => {

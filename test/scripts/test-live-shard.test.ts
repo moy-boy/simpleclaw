@@ -93,25 +93,16 @@ describe("scripts/test-live-shard", () => {
       "test/image-generation.runtime.live.test.ts",
     ]);
     expect(selectLiveShardFiles("native-live-extensions-media", allFiles)).toEqual([
-      "extensions/minimax/minimax.live.test.ts",
       "extensions/music-generation-providers.live.test.ts",
       "extensions/openai/openai-tts.live.test.ts",
       "extensions/video-generation-providers.live.test.ts",
-      "extensions/volcengine/tts.live.test.ts",
-      "extensions/vydra/vydra.live.test.ts",
     ]);
     expect(selectLiveShardFiles("native-live-extensions-openai", allFiles)).toEqual([
       "extensions/openai/openai-provider.live.test.ts",
       "extensions/openai/openai.live.test.ts",
     ]);
-    expect(selectLiveShardFiles("native-live-extensions-l-n", allFiles)).toEqual([
-      "extensions/memory-lancedb/memory-lancedb.live.test.ts",
-      "extensions/microsoft/microsoft.live.test.ts",
-      "extensions/mistral/mistral.live.test.ts",
-    ]);
-    expect(selectLiveShardFiles("native-live-extensions-moonshot", allFiles)).toEqual([
-      "extensions/moonshot/moonshot.live.test.ts",
-    ]);
+    expect(selectLiveShardFiles("native-live-extensions-l-n", allFiles)).toEqual([]);
+    expect(selectLiveShardFiles("native-live-extensions-moonshot", allFiles)).toEqual([]);
   });
 
   it("rejects unknown shard names", () => {

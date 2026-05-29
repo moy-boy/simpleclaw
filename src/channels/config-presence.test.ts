@@ -13,12 +13,12 @@ import {
 
 const tempDirs: string[] = [];
 
-const matrixPresenceOptions = {
-  channelIds: ["matrix"],
+const telegramPresenceOptions = {
+  channelIds: ["telegram"],
   persistedAuthStateProbe: {
-    listChannelIds: () => ["matrix"],
+    listChannelIds: () => ["telegram"],
     hasState: ({ channelId, env }: { channelId: string; env?: NodeJS.ProcessEnv }) =>
-      channelId === "matrix" && Boolean(env?.OPENCLAW_STATE_DIR?.includes("persisted-matrix")),
+      channelId === "telegram" && Boolean(env?.OPENCLAW_STATE_DIR?.includes("persisted-telegram")),
   },
 };
 
@@ -35,7 +35,7 @@ function expectPotentialConfiguredChannelCase(params: {
   expectedConfigured: boolean;
   options?: Parameters<typeof listPotentialConfiguredChannelIds>[2];
 }) {
-  const options = params.options ?? matrixPresenceOptions;
+  const options = params.options ?? telegramPresenceOptions;
   expect(listPotentialConfiguredChannelIds(params.cfg, params.env, options)).toEqual(
     params.expectedIds,
   );
@@ -58,12 +58,12 @@ describe("config presence", () => {
     expect(hasMeaningfulChannelConfig({ enabled: false })).toBe(false);
     expect(hasMeaningfulChannelConfig({ enabled: true })).toBe(false);
     expect(hasMeaningfulChannelConfig({})).toBe(false);
-    expect(hasMeaningfulChannelConfig({ homeserver: "https://matrix.example.org" })).toBe(true);
+    expect(hasMeaningfulChannelConfig({ botToken: "token" })).toBe(true);
   });
 
-  it("ignores enabled-only matrix config when listing configured channels", () => {
+  it("ignores enabled-only Telegram config when listing configured channels", () => {
     const env = {} as NodeJS.ProcessEnv;
-    const cfg = { channels: { matrix: { enabled: false } } };
+    const cfg = { channels: { telegram: { enabled: false } } };
 
     expectPotentialConfiguredChannelCase({
       cfg,
@@ -77,25 +77,23 @@ describe("config presence", () => {
   it("lists explicitly disabled channel ids case-insensitively", () => {
     const cfg = {
       channels: {
-        Matrix: { enabled: false },
-        telegram: { enabled: true },
-        slack: { botToken: "token" },
-        discord: false,
+        Telegram: { enabled: false },
+        discord: { enabled: true },
       },
     } as unknown as OpenClawConfig;
 
-    expect(listExplicitlyDisabledChannelIdsForConfig(cfg)).toEqual(["matrix"]);
+    expect(listExplicitlyDisabledChannelIdsForConfig(cfg)).toEqual(["telegram"]);
   });
 
   it("detects env-only channel config", () => {
     const env = {
-      MATRIX_ACCESS_TOKEN: "token",
+      TELEGRAM_BOT_TOKEN: "token",
     } as NodeJS.ProcessEnv;
 
     expectPotentialConfiguredChannelCase({
       cfg: {},
       env,
-      expectedIds: ["matrix"],
+      expectedIds: ["telegram"],
       expectedConfigured: true,
       options: { includePersistedAuthState: false },
     });
@@ -103,13 +101,13 @@ describe("config presence", () => {
       listPotentialConfiguredChannelPresenceSignals({}, env, {
         includePersistedAuthState: false,
       }),
-    ).toEqual([{ channelId: "matrix", source: "env" }]);
+    ).toEqual([{ channelId: "telegram", source: "env" }]);
   });
 
-  it("detects persisted Matrix credentials without config or env", () => {
+  it("detects persisted Telegram credentials without config or env", () => {
     const stateDir = makeTempStateDir().replace(
       "openclaw-channel-config-presence-",
-      "persisted-matrix-",
+      "persisted-telegram-",
     );
     fs.mkdirSync(stateDir, { recursive: true });
     tempDirs.push(stateDir);
@@ -118,11 +116,11 @@ describe("config presence", () => {
     expectPotentialConfiguredChannelCase({
       cfg: {},
       env,
-      expectedIds: ["matrix"],
+      expectedIds: ["telegram"],
       expectedConfigured: true,
       options: {
         persistedAuthStateProbe: {
-          listChannelIds: () => ["matrix"],
+          listChannelIds: () => ["telegram"],
           hasState: () => true,
         },
       },

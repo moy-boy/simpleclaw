@@ -15,32 +15,6 @@ const BUNDLED_EXTENSION_CONFIG_IMPORT_GUARDS = [
     path: "extensions/discord/src/config-schema.ts",
     allowedSpecifier: "../config-api.js",
   },
-  {
-    path: "extensions/slack/src/config-schema.ts",
-    allowedSpecifier: "../config-api.js",
-  },
-  {
-    path: "extensions/signal/src/config-schema.ts",
-    allowedSpecifier: "../config-api.js",
-  },
-  {
-    path: "extensions/imessage/src/config-schema.ts",
-    allowedSpecifier: "../config-api.js",
-  },
-  {
-    path: "extensions/whatsapp/src/config-schema.ts",
-    allowedSpecifier: "../config-api.js",
-  },
-  {
-    path: "extensions/googlechat/src/config-schema.ts",
-    allowedSpecifier: "../config-api.js",
-  },
-  // Teams keeps a package-local config barrel so production code does not
-  // reach through a public plugin-sdk helper seam from inside the same extension.
-  {
-    path: "extensions/msteams/src/config-schema.ts",
-    allowedSpecifier: "../config-api.js",
-  },
 ] as const;
 
 describe("bundled extension config api guardrails", () => {

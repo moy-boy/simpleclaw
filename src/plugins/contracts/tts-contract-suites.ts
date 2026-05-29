@@ -8,16 +8,10 @@ import {
 import type { ResolvedTtsConfig, SpeechProviderPlugin } from "openclaw/plugin-sdk/speech-core";
 import { withEnv, withEnvAsync } from "openclaw/plugin-sdk/test-env";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveWorkspacePackagePublicModuleUrl } from "../../plugin-sdk/test-helpers/public-surface-loader.js";
 
 type TtsRuntimeModule = typeof import("openclaw/plugin-sdk/tts-runtime");
 type TtsCoreModule = typeof import("openclaw/plugin-sdk/speech-core");
 type SummarizeTextDeps = NonNullable<Parameters<TtsCoreModule["summarizeText"]>[1]>;
-
-const speechCoreRuntimeApiModuleId = resolveWorkspacePackagePublicModuleUrl({
-  packageName: "@openclaw/speech-core",
-  artifactBasename: "runtime-api.js",
-});
 
 let ttsRuntime: TtsRuntimeModule;
 let ttsRuntimePromise: Promise<TtsRuntimeModule> | null = null;
@@ -427,7 +421,7 @@ function buildTestGoogleSpeechProvider(): SpeechProviderPlugin {
 }
 
 async function loadTtsRuntime(): Promise<TtsRuntimeModule> {
-  ttsRuntimePromise ??= import(speechCoreRuntimeApiModuleId) as Promise<TtsRuntimeModule>;
+  ttsRuntimePromise ??= import("openclaw/plugin-sdk/tts-runtime");
   return await ttsRuntimePromise;
 }
 

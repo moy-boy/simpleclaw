@@ -99,60 +99,6 @@ describe("plugin contract registry", () => {
     });
   });
 
-  it("keeps video-only provider auth choices out of text onboarding", () => {
-    const registry = loadPluginManifestRegistry({});
-
-    for (const pluginId of ["alibaba", "runway"]) {
-      const plugin = registry.plugins.find(
-        (entry) => entry.origin === "bundled" && entry.id === pluginId,
-      );
-      expect(plugin?.providerAuthChoices).toEqual([
-        {
-          provider: pluginId,
-          method: "api-key",
-          choiceId: pluginId === "alibaba" ? "alibaba-model-studio-api-key" : "runway-api-key",
-          choiceLabel: pluginId === "alibaba" ? "Alibaba Model Studio API key" : "Runway API key",
-          groupId: pluginId,
-          groupLabel: pluginId === "alibaba" ? "Alibaba Model Studio" : "Runway",
-          groupHint: pluginId === "alibaba" ? "DashScope / Model Studio API key" : "API key",
-          onboardingScopes: ["image-generation"],
-          optionKey: pluginId === "alibaba" ? "alibabaModelStudioApiKey" : "runwayApiKey",
-          cliFlag: pluginId === "alibaba" ? "--alibaba-model-studio-api-key" : "--runway-api-key",
-          cliOption:
-            pluginId === "alibaba"
-              ? "--alibaba-model-studio-api-key <key>"
-              : "--runway-api-key <key>",
-          cliDescription:
-            pluginId === "alibaba" ? "Alibaba Model Studio API key" : "Runway API key",
-        },
-      ]);
-    }
-  });
-
-  it("exposes the GitHub Copilot non-interactive onboarding token flag from manifest metadata", () => {
-    const registry = loadPluginManifestRegistry({});
-    const plugin = registry.plugins.find(
-      (entry) => entry.origin === "bundled" && entry.id === "github-copilot",
-    );
-
-    expect(plugin?.providerAuthChoices).toEqual([
-      {
-        provider: "github-copilot",
-        method: "device",
-        choiceId: "github-copilot",
-        choiceLabel: "GitHub Copilot",
-        choiceHint: "Device login with your GitHub account",
-        groupId: "copilot",
-        groupLabel: "Copilot",
-        groupHint: "GitHub + local proxy",
-        optionKey: "githubCopilotToken",
-        cliFlag: "--github-copilot-token",
-        cliOption: "--github-copilot-token <token>",
-        cliDescription: "GitHub Copilot OAuth token",
-      },
-    ]);
-  });
-
   it("covers every bundled speech plugin discovered from manifests", () => {
     expectRegistryPluginIds({
       actualPluginIds: pluginRegistrationContractRegistry

@@ -54,13 +54,6 @@ const DEPRECATED_TEST_BARREL_ALLOWED_REFERENCE_FILES = new Set([
   "src/plugins/contracts/plugin-entry-guardrails.test.ts",
   "src/plugins/contracts/plugin-sdk-package-contract-guardrails.test.ts",
 ]);
-const MATRIX_RUNTIME_DEPS = [
-  "@matrix-org/matrix-sdk-crypto-wasm",
-  "@matrix-org/matrix-sdk-crypto-nodejs",
-  "fake-indexeddb",
-  "matrix-js-sdk",
-  "music-metadata",
-] as const;
 const trackedFilesByRoot = new Map<string, readonly string[] | null>();
 
 function toRepoRelativePath(filePath: string): string {
@@ -237,40 +230,6 @@ function collectGenericCoreOwnerNameLeaks(): Array<{ file: string; match: string
     }
   }
   return leaks;
-}
-
-function readRootPackageJson(): {
-  dependencies?: Record<string, string>;
-  optionalDependencies?: Record<string, string>;
-  files?: string[];
-} {
-  return JSON.parse(fs.readFileSync(resolve(REPO_ROOT, "package.json"), "utf8")) as {
-    dependencies?: Record<string, string>;
-    optionalDependencies?: Record<string, string>;
-    files?: string[];
-  };
-}
-
-function readMatrixPackageJson(): {
-  dependencies?: Record<string, string>;
-  optionalDependencies?: Record<string, string>;
-} {
-  return JSON.parse(
-    fs.readFileSync(resolve(REPO_ROOT, "extensions/matrix/package.json"), "utf8"),
-  ) as {
-    dependencies?: Record<string, string>;
-    optionalDependencies?: Record<string, string>;
-  };
-}
-
-function collectRuntimeDependencySpecs(packageJson: {
-  dependencies?: Record<string, string>;
-  optionalDependencies?: Record<string, string>;
-}): Map<string, string> {
-  return new Map([
-    ...Object.entries(packageJson.dependencies ?? {}),
-    ...Object.entries(packageJson.optionalDependencies ?? {}),
-  ]);
 }
 
 function collectExtensionFiles(dir: string): string[] {
@@ -828,21 +787,6 @@ describe("plugin-sdk package contract guardrails", () => {
       unknownDeprecatedBarrels: [],
       nonBarrels: [],
     });
-  });
-
-  it("keeps Matrix dependencies local to the Matrix plugin", () => {
-    const rootPackageJson = readRootPackageJson();
-    const rootRuntimeDeps = collectRuntimeDependencySpecs(rootPackageJson);
-    const matrixPackageJson = readMatrixPackageJson();
-    const matrixRuntimeDeps = collectRuntimeDependencySpecs(matrixPackageJson);
-
-    expect(rootPackageJson.files).toContain("!dist/extensions/matrix/**");
-    for (const dep of MATRIX_RUNTIME_DEPS) {
-      expect(matrixRuntimeDeps.get(dep)).toBeTypeOf("string");
-      expect(matrixRuntimeDeps.get(dep)).not.toBe("");
-      expect(rootRuntimeDeps.has(dep)).toBe(false);
-    }
-    expect(rootRuntimeDeps.has("@openclaw/plugin-package-contract")).toBe(false);
   });
 
   it("keeps extension sources on public sdk or local package seams", () => {

@@ -236,7 +236,7 @@ describe("bundled channel entry shape guards", () => {
         }) =>
           actual
             .listBundledChannelPluginMetadata(params)
-            .filter((metadata) => metadata.manifest.id === "slack"),
+            .filter((metadata) => metadata.manifest.id === "discord"),
       };
     });
 
@@ -245,8 +245,8 @@ describe("bundled channel entry shape guards", () => {
       "./bundled.js?scope=real-bundled-source-tree",
     );
 
-    expect(bundled.listBundledChannelPluginIds()).toEqual(["slack"]);
-    expect(bundled.hasBundledChannelEntryFeature("slack", "accountInspect")).toBe(true);
+    expect(bundled.listBundledChannelPluginIds()).toEqual(["discord"]);
+    expect(bundled.hasBundledChannelEntryFeature("discord", "accountInspect")).toBe(true);
   });
 
   it("fills sparse bundled channel plugin metadata from package metadata", async () => {
@@ -929,13 +929,11 @@ describe("bundled channel entry shape guards", () => {
   });
 
   it("keeps bundled hot runtime barrels off the broad core SDK surface", () => {
-    const offenders = [
-      "extensions/googlechat/runtime-api.ts",
-      "extensions/irc/src/runtime-api.ts",
-      "extensions/matrix/src/runtime-api.ts",
-    ].filter((filePath) =>
-      fs.readFileSync(path.resolve(filePath), "utf8").includes("openclaw/plugin-sdk/core"),
-    );
+    const offenders = ["extensions/discord/runtime-api.ts", "extensions/telegram/runtime-api.ts"]
+      .filter((filePath) => fs.existsSync(path.resolve(filePath)))
+      .filter((filePath) =>
+        fs.readFileSync(path.resolve(filePath), "utf8").includes("openclaw/plugin-sdk/core"),
+      );
 
     expect(offenders).toStrictEqual([]);
   });
@@ -960,17 +958,13 @@ describe("bundled channel entry shape guards", () => {
   });
 
   it("keeps bundled doctor surfaces off the broad runtime barrel", () => {
-    const offenders = [
-      "extensions/discord/src/doctor.ts",
-      "extensions/matrix/src/doctor.ts",
-      "extensions/slack/src/doctor.ts",
-      "extensions/telegram/src/doctor.ts",
-      "extensions/zalouser/src/doctor.ts",
-    ].filter((filePath) =>
-      fs
-        .readFileSync(path.resolve(filePath), "utf8")
-        .includes('from "openclaw/plugin-sdk/runtime"'),
-    );
+    const offenders = ["extensions/discord/src/doctor.ts", "extensions/telegram/src/doctor.ts"]
+      .filter((filePath) => fs.existsSync(path.resolve(filePath)))
+      .filter((filePath) =>
+        fs
+          .readFileSync(path.resolve(filePath), "utf8")
+          .includes('from "openclaw/plugin-sdk/runtime"'),
+      );
 
     expect(offenders).toStrictEqual([]);
   });

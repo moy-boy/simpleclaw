@@ -32,11 +32,10 @@ function collectChatChannelAliases(): Record<string, ChatChannelId> {
 
 describe("channel ids", () => {
   it("normalizes built-in aliases + trims whitespace", () => {
-    expect(normalizeChatChannelId(" imsg ")).toBe("imessage");
-    expect(normalizeChatChannelId("gchat")).toBe("googlechat");
-    expect(normalizeChatChannelId("google-chat")).toBe("googlechat");
-    expect(normalizeChatChannelId("internet-relay-chat")).toBe("irc");
-    expect(normalizeChatChannelId("telegram")).toBe("telegram");
+    expect(normalizeChatChannelId(" telegram ")).toBe("telegram");
+    expect(normalizeChatChannelId("discord")).toBe("discord");
+    expect(normalizeChatChannelId("imsg")).toBeNull();
+    expect(normalizeChatChannelId("google-chat")).toBeNull();
     expect(normalizeChatChannelId("web")).toBeNull();
     expect(normalizeChatChannelId("nope")).toBeNull();
   });

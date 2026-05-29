@@ -28,6 +28,7 @@
       "label": "Telegram",
       "selectionLabel": "Telegram (Bot API)",
       "detailLabel": "Telegram Bot",
+      "order": 10,
       "docsPath": "/channels/telegram",
       "docsLabel": "telegram",
       "blurb": "simplest way to get started — register a bot with @BotFather and get going.",

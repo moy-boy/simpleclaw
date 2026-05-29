@@ -231,6 +231,7 @@ export function buildOpenAIProvider(): ProviderPlugin {
           choiceLabel: OPENAI_API_KEY_LABEL,
           choiceHint: "Use your OpenAI API key directly",
           assistantPriority: 5,
+          assistantVisibility: "manual-only",
           ...OPENAI_ACCOUNT_WIZARD_GROUP,
         },
       }),

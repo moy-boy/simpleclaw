@@ -543,14 +543,14 @@ describe("plugin session attachments", () => {
     await withSessionStore(async ({ storePath, filePath }) => {
       await writeSessionEntry(storePath, {
         deliveryContext: {
-          channel: "whatsapp",
-          to: "+15551234567",
+          channel: "telegram",
+          to: "12345",
         },
       });
       setActivePluginRegistry(createEmptyPluginRegistry());
       workflowMocks.getChannelPlugin.mockReturnValue(
         createOutboundTestPlugin({
-          id: "whatsapp",
+          id: "telegram",
           outbound: { deliveryMode: "gateway" },
         }),
       );
@@ -562,7 +562,7 @@ describe("plugin session attachments", () => {
       ).resolves.toEqual({
         ok: false,
         error:
-          "session attachments require direct outbound delivery for channel whatsapp; " +
+          "session attachments require direct outbound delivery for channel telegram; " +
           "channel uses gateway delivery",
       });
       expect(workflowMocks.sendMessage).not.toHaveBeenCalled();

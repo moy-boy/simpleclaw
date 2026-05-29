@@ -38,13 +38,13 @@ describe("plugin gateway gauntlet helpers", () => {
 
   it("discovers bundled plugin manifests into lifecycle matrix rows", async () => {
     await writeManifest(
-      "alpha",
+      "openai",
       "openclaw.plugin.json",
       JSON.stringify({
-        id: "alpha",
+        id: "openai",
         enabledByDefault: true,
         providers: ["openai"],
-        commandAliases: [{ name: "alpha", kind: "runtime-slash", cliCommand: "plugins" }],
+        commandAliases: [{ name: "openai", kind: "runtime-slash", cliCommand: "plugins" }],
         auth: [{ method: "oauth", onboardingScopes: ["models"] }],
         configSchema: {
           type: "object",
@@ -58,33 +58,35 @@ describe("plugin gateway gauntlet helpers", () => {
       }),
     );
     await writeManifest(
-      "beta",
+      "codex",
       "openclaw.plugin.json",
-      JSON.stringify({ id: "beta", commandAliases: ["dreaming"], onboardingScopes: ["memory"] }),
+      JSON.stringify({ id: "codex", commandAliases: ["dreaming"], onboardingScopes: ["memory"] }),
     );
 
     const matrix = discoverBundledPluginManifests(repoRoot);
+    const openai = matrix.find((entry) => entry.id === "openai");
+    const codex = matrix.find((entry) => entry.id === "codex");
 
-    expect(matrix.map((entry) => entry.id)).toEqual(["alpha", "beta"]);
-    expect(matrix[0]).toEqual({
+    expect(matrix.map((entry) => entry.id)).toEqual(["codex", "openai"]);
+    expect(openai).toEqual({
       activation: {},
       authMethods: ["oauth"],
       channels: [],
-      cliCommandAliases: [{ name: "alpha", kind: "runtime-slash", cliCommand: "plugins" }],
-      commandAliases: [{ name: "alpha", kind: "runtime-slash", cliCommand: "plugins" }],
-      dir: path.join("extensions", "alpha"),
+      cliCommandAliases: [{ name: "openai", kind: "runtime-slash", cliCommand: "plugins" }],
+      commandAliases: [{ name: "openai", kind: "runtime-slash", cliCommand: "plugins" }],
+      dir: path.join("extensions", "openai"),
       enabledByDefault: true,
       hasConfigSchema: true,
       hasRequiredConfigFields: true,
-      id: "alpha",
-      manifestPath: path.join("extensions", "alpha", "openclaw.plugin.json"),
-      name: "alpha",
+      id: "openai",
+      manifestPath: path.join("extensions", "openai", "openclaw.plugin.json"),
+      name: "openai",
       onboardingScopes: ["models"],
       providers: ["openai"],
-      runtimeSlashAliases: [{ name: "alpha", kind: "runtime-slash", cliCommand: "plugins" }],
+      runtimeSlashAliases: [{ name: "openai", kind: "runtime-slash", cliCommand: "plugins" }],
       skills: [],
     });
-    expect(matrix[1].runtimeSlashAliases).toEqual([
+    expect(codex?.runtimeSlashAliases).toEqual([
       { name: "dreaming", kind: "runtime-slash", cliCommand: null },
     ]);
   });

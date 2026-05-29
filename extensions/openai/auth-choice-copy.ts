@@ -12,7 +12,7 @@ export const OPENAI_CODEX_LOGIN_HINT = "Sign in with OpenAI in your browser";
 export const OPENAI_CODEX_DEVICE_PAIRING_LABEL = "ChatGPT/Codex Device Pairing";
 export const OPENAI_CODEX_DEVICE_PAIRING_HINT = "Pair in browser with a device code";
 
-const OPENAI_UNIFIED_GROUP_HINT = "ChatGPT/Codex sign-in or API key";
+const OPENAI_UNIFIED_GROUP_HINT = "ChatGPT/Codex subscription sign-in";
 
 export const OPENAI_API_KEY_WIZARD_GROUP = {
   groupId: "openai",
