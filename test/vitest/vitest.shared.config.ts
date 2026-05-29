@@ -159,20 +159,8 @@ export const sharedVitestConfig = {
         replacement: path.join(repoRoot, "src", "extensionAPI.ts"),
       },
       {
-        find: "@openclaw/qa-channel/api.js",
-        replacement: path.join(repoRoot, "extensions", "qa-channel", "api.ts"),
-      },
-      {
         find: "@openclaw/discord/api.js",
         replacement: path.join(repoRoot, "extensions", "discord", "api.ts"),
-      },
-      {
-        find: "@openclaw/slack/api.js",
-        replacement: path.join(repoRoot, "extensions", "slack", "api.ts"),
-      },
-      {
-        find: "@openclaw/whatsapp/api.js",
-        replacement: path.join(repoRoot, "extensions", "whatsapp", "api.ts"),
       },
       ...sourcePluginSdkSubpaths.map((subpath) => ({
         find: `openclaw/plugin-sdk/${subpath}`,

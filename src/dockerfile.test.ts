@@ -108,13 +108,22 @@ describe("Dockerfile", () => {
     expect(dockerfile.split("--config.supportedArchitectures.libc=glibc").length - 1).toBe(2);
   });
 
-  it("verifies matrix-sdk-crypto native addons without hardcoded pnpm virtual-store paths", async () => {
+  it("verifies matrix-sdk-crypto native addons only when Matrix is selected", async () => {
     const dockerfile = await readFile(dockerfilePath, "utf8");
-    expect(dockerfile).toContain("Verifying critical native addons");
-    expect(dockerfile).toContain('find /app/node_modules -name "matrix-sdk-crypto*.node"');
-    expect(dockerfile).toContain(
+    const selectorIndex = dockerfile.indexOf(
+      `case " $(printf '%s\\n' "$OPENCLAW_EXTENSIONS" | tr ',' ' ') " in`,
+    );
+    const downloaderIndex = dockerfile.indexOf(
       "node /app/node_modules/@matrix-org/matrix-sdk-crypto-nodejs/download-lib.js",
     );
+
+    expect(selectorIndex).toBeGreaterThan(-1);
+    expect(downloaderIndex).toBeGreaterThan(selectorIndex);
+    expect(dockerfile).toContain("Verifying critical native addons for matrix");
+    expect(dockerfile).toContain(
+      "Skipping matrix-sdk-crypto native addon verification (matrix not selected)",
+    );
+    expect(dockerfile).toContain('find /app/node_modules -name "matrix-sdk-crypto*.node"');
     expect(dockerfile).toContain("matrix-sdk-crypto native addon missing after retries");
     expect(dockerfile).not.toMatch(
       /ADDON_DIR=.*node_modules\/\.pnpm\/@matrix-org\+matrix-sdk-crypto-nodejs@/,
@@ -200,7 +209,7 @@ describe("Dockerfile", () => {
       "Opt-in plugin dependencies at build time (space- or comma-separated directory names).",
     );
     expect(dockerfile).toContain(
-      'Example: docker build --build-arg OPENCLAW_EXTENSIONS="diagnostics-otel,matrix" .',
+      'Example: docker build --build-arg OPENCLAW_EXTENSIONS="discord,telegram" .',
     );
     expect(dockerfile).toContain(
       "RUN --mount=type=cache,id=openclaw-pnpm-store,target=/root/.local/share/pnpm/store,sharing=locked \\",

@@ -676,7 +676,7 @@ describe("test-projects args", () => {
       "extensions/voice-call/src/runtime.test.ts",
       "extensions/mattermost/src/channel.test.ts",
       "extensions/zalo/src/channel.test.ts",
-      "extensions/matrix/src/channel.test.ts",
+      "extensions/unsupported-channel/src/channel.test.ts",
       "extensions/feishu/src/channel.test.ts",
       "extensions/irc/src/channel.test.ts",
       "extensions/acpx/src/runtime.test.ts",
@@ -747,7 +747,7 @@ describe("test-projects args", () => {
     for (const target of [
       "extensions/browser/index.test.ts",
       "extensions/line/src/send.test.ts",
-      "extensions/matrix/src/channel.test.ts",
+      "extensions/unsupported-channel/src/channel.test.ts",
     ]) {
       expect(buildVitestRunPlans([target])).toEqual([]);
     }

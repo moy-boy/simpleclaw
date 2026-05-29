@@ -29,10 +29,6 @@ describe("scripts/test-live-shard", () => {
     const duplicateFiles = selectedFiles.filter(
       (file, index) => selectedFiles.indexOf(file) !== index,
     );
-    const musicProviderFanout = selected
-      .filter(({ file }) => file === "extensions/music-generation-providers.live.test.ts")
-      .map(({ shard }) => shard)
-      .toSorted();
     const runnableFiles = allFiles.filter(
       (file) => file !== "src/gateway/gateway-cli-backend.live.test.ts",
     );
@@ -41,11 +37,7 @@ describe("scripts/test-live-shard", () => {
     expect([...new Set(selectedFiles)].toSorted((a, b) => a.localeCompare(b))).toEqual(
       runnableFiles,
     );
-    expect(duplicateFiles).toEqual(["extensions/music-generation-providers.live.test.ts"]);
-    expect(musicProviderFanout).toEqual([
-      "native-live-extensions-media-music-google",
-      "native-live-extensions-media-music-minimax",
-    ]);
+    expect(duplicateFiles).toEqual([]);
   });
 
   it("keeps aggregate shard aliases available outside the release partition", () => {
@@ -58,10 +50,16 @@ describe("scripts/test-live-shard", () => {
 
     const oToZAlias = selectLiveShardFiles("native-live-extensions-o-z", allFiles);
     expect(oToZAlias).toEqual(
-      [
-        ...selectLiveShardFiles("native-live-extensions-o-z-other", allFiles),
-        ...selectLiveShardFiles("native-live-extensions-xai", allFiles),
-      ].toSorted((a, b) => a.localeCompare(b)),
+      allFiles
+        .filter(
+          (file) =>
+            file.startsWith("extensions/") &&
+            !file.startsWith("extensions/openai/") &&
+            !file.startsWith("extensions/discord/") &&
+            !file.startsWith("extensions/music-generation-providers.live.test.ts") &&
+            !file.startsWith("extensions/video-generation-providers.live.test.ts"),
+        )
+        .toSorted((a, b) => a.localeCompare(b)),
     );
 
     const mediaAlias = selectLiveShardFiles("native-live-extensions-media", allFiles);
@@ -101,8 +99,6 @@ describe("scripts/test-live-shard", () => {
       "extensions/openai/openai-provider.live.test.ts",
       "extensions/openai/openai.live.test.ts",
     ]);
-    expect(selectLiveShardFiles("native-live-extensions-l-n", allFiles)).toEqual([]);
-    expect(selectLiveShardFiles("native-live-extensions-moonshot", allFiles)).toEqual([]);
   });
 
   it("rejects unknown shard names", () => {

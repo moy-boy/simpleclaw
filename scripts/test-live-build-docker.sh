@@ -9,13 +9,15 @@ IMAGE_NAME="${OPENCLAW_IMAGE:-openclaw:local}"
 LIVE_IMAGE_NAME="${OPENCLAW_LIVE_IMAGE:-${IMAGE_NAME}-live}"
 DOCKER_BUILD_EXTENSIONS="${OPENCLAW_DOCKER_BUILD_EXTENSIONS:-${OPENCLAW_EXTENSIONS:-}}"
 
-case " ${DOCKER_BUILD_EXTENSIONS} " in
-  *" matrix "*)
-    ;;
-  *)
-    DOCKER_BUILD_EXTENSIONS="${DOCKER_BUILD_EXTENSIONS:+${DOCKER_BUILD_EXTENSIONS} }matrix"
-    ;;
-esac
+for extension in discord telegram; do
+  case " $(printf '%s' "$DOCKER_BUILD_EXTENSIONS" | tr ',' ' ') " in
+    *" $extension "*)
+      ;;
+    *)
+      DOCKER_BUILD_EXTENSIONS="${DOCKER_BUILD_EXTENSIONS:+${DOCKER_BUILD_EXTENSIONS} }$extension"
+      ;;
+  esac
+done
 
 DOCKER_BUILD_ARGS=()
 if [[ -n "${DOCKER_BUILD_EXTENSIONS}" ]]; then

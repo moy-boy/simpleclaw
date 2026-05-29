@@ -273,6 +273,8 @@ describe("bun global install smoke", () => {
     expect(workflow).toContain("run_fast_install_smoke=true");
     expect(workflow).toContain("run_full_install_smoke=true");
     expect(workflow).toContain("run_install_smoke=true");
+    expect(workflow).toContain('dockerfile_plugin_variant="discord-telegram"');
+    expect(workflow).toContain("${target_sha}-${dockerfile_plugin_variant}");
     expect(workflow).toContain("install-smoke-fast:");
     expect(workflow).toContain("run_fast_install_smoke");
     expect(workflow).toContain("run_full_install_smoke");
@@ -288,6 +290,12 @@ describe("bun global install smoke", () => {
     expect(workflow).toContain("rockylinux:9@sha256:");
     expect(workflow).toContain("pnpm-workspace.yaml");
     expect(workflow).toContain("workspace.patchedDependencies");
+    expect(workflow).toContain(
+      'const manifestPath = \\"/app/extensions/\\" + pluginId + \\"/package.json\\";',
+    );
+    expect(workflow).not.toContain("`/app/extensions/${pluginId}/package.json`");
+    expect(workflow).not.toContain("`${pluginId} package");
+    expect(workflow).not.toContain("`unexpected ${pluginId} diagnostics: `");
     expect(workflow).not.toContain("pkg.pnpm?.patchedDependencies");
     expect(workflow).not.toContain("--cache-from");
     expect(workflow).not.toContain("--cache-to");

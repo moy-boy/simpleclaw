@@ -107,6 +107,21 @@ describe("docker build helper", () => {
     );
   });
 
+  it("defaults live Docker builds to the supported OpenAI, Codex, Discord, and Telegram surface", () => {
+    const liveBuild = readFileSync(LIVE_BUILD_DOCKER_PATH, "utf8");
+    const scheduler = readFileSync(DOCKER_ALL_SCHEDULER_PATH, "utf8");
+
+    expect(liveBuild).toContain("for extension in discord telegram; do");
+    expect(liveBuild).not.toContain(" matrix");
+    expect(liveBuild).not.toContain(" acpx");
+    expect(scheduler).toContain("current.split(/[\\s,]+/u).filter(Boolean)");
+    for (const extension of ["openai", "discord", "telegram", "codex"]) {
+      expect(scheduler).toContain(`appendExtension(baseEnv, "${extension}");`);
+    }
+    expect(scheduler).not.toContain('appendExtension(baseEnv, "matrix");');
+    expect(scheduler).not.toContain('appendExtension(baseEnv, "acpx");');
+  });
+
   it("includes procps in the shared Docker E2E image for process watchdogs", () => {
     const dockerfile = readFileSync("scripts/e2e/Dockerfile", "utf8");
 

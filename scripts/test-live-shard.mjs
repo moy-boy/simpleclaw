@@ -15,14 +15,9 @@ export const RELEASE_LIVE_TEST_SHARDS = Object.freeze([
   "native-live-src-infra",
   "native-live-test",
   "native-live-extensions-a-k",
-  "native-live-extensions-l-n",
-  "native-live-extensions-moonshot",
   "native-live-extensions-openai",
-  "native-live-extensions-o-z-other",
-  "native-live-extensions-xai",
   "native-live-extensions-media-audio",
-  "native-live-extensions-media-music-google",
-  "native-live-extensions-media-music-minimax",
+  "native-live-extensions-media-music",
   "native-live-extensions-media-video",
 ]);
 
@@ -178,11 +173,8 @@ function isGatewayProfilesLiveTest(file) {
 function isExtensionMediaLiveTest(file) {
   return (
     file === "extensions/music-generation-providers.live.test.ts" ||
-    file === "extensions/minimax/minimax.live.test.ts" ||
     file === "extensions/openai/openai-tts.live.test.ts" ||
-    file === "extensions/video-generation-providers.live.test.ts" ||
-    file === "extensions/volcengine/tts.live.test.ts" ||
-    file === "extensions/vydra/vydra.live.test.ts"
+    file === "extensions/video-generation-providers.live.test.ts"
   );
 }
 
@@ -200,14 +192,6 @@ function isExtensionMediaAudioLiveTest(file) {
     !isExtensionMediaMusicLiveTest(file) &&
     !isExtensionMediaVideoLiveTest(file)
   );
-}
-
-function isXaiLiveTest(file) {
-  return file.startsWith("extensions/xai/");
-}
-
-function isMoonshotLiveTest(file) {
-  return file.startsWith("extensions/moonshot/");
 }
 
 export function selectLiveShardFiles(shard, files = collectAllLiveTestFiles()) {
@@ -236,16 +220,6 @@ export function selectLiveShardFiles(shard, files = collectAllLiveTestFiles()) {
       return runnableFiles.filter((file) => file.startsWith("test/"));
     case "native-live-extensions-a-k":
       return files.filter((file) => isExtensionInRange(file, "a", "k"));
-    case "native-live-extensions-l-n":
-      return files.filter(
-        (file) =>
-          isExtensionInRange(file, "l", "n") &&
-          !file.startsWith("extensions/openai/") &&
-          !isMoonshotLiveTest(file) &&
-          !isExtensionMediaLiveTest(file),
-      );
-    case "native-live-extensions-moonshot":
-      return files.filter(isMoonshotLiveTest);
     case "native-live-extensions-openai":
       return files.filter(
         (file) => file.startsWith("extensions/openai/") && !isExtensionMediaLiveTest(file),
@@ -257,23 +231,11 @@ export function selectLiveShardFiles(shard, files = collectAllLiveTestFiles()) {
           !file.startsWith("extensions/openai/") &&
           !isExtensionMediaLiveTest(file),
       );
-    case "native-live-extensions-o-z-other":
-      return files.filter(
-        (file) =>
-          isExtensionInRange(file, "o", "z") &&
-          !file.startsWith("extensions/openai/") &&
-          !isExtensionMediaLiveTest(file) &&
-          !isXaiLiveTest(file),
-      );
-    case "native-live-extensions-xai":
-      return files.filter(isXaiLiveTest);
     case "native-live-extensions-media":
       return files.filter(isExtensionMediaLiveTest);
     case "native-live-extensions-media-audio":
       return files.filter(isExtensionMediaAudioLiveTest);
     case "native-live-extensions-media-music":
-    case "native-live-extensions-media-music-google":
-    case "native-live-extensions-media-music-minimax":
       return files.filter(isExtensionMediaMusicLiveTest);
     case "native-live-extensions-media-video":
       return files.filter(isExtensionMediaVideoLiveTest);

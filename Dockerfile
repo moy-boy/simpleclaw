@@ -1,5 +1,5 @@
 # Opt-in plugin dependencies at build time (space- or comma-separated directory names).
-# Example: docker build --build-arg OPENCLAW_EXTENSIONS="diagnostics-otel,matrix" .
+# Example: docker build --build-arg OPENCLAW_EXTENSIONS="discord,telegram" .
 #
 # Multi-stage build produces a minimal runtime image without build tools,
 # source code, or Bun. Works with Docker, Buildx, and Podman.
@@ -47,6 +47,7 @@ RUN --mount=type=bind,source=packages,target=/tmp/packages,readonly \
 # ── Stage 2: Build ──────────────────────────────────────────────
 FROM ${OPENCLAW_BUN_IMAGE} AS bun-binary
 FROM ${OPENCLAW_NODE_BOOKWORM_IMAGE} AS build
+ARG OPENCLAW_EXTENSIONS
 ARG OPENCLAW_BUNDLED_PLUGIN_DIR
 
 # Copy pinned Bun binary from the official image instead of fetching via curl.
@@ -76,19 +77,26 @@ RUN --mount=type=cache,id=openclaw-pnpm-store,target=/root/.local/share/pnpm/sto
 
 # pnpm v10+ may append peer-resolution hashes to virtual-store folder names; do not hardcode `.pnpm/...`
 # paths. Matrix's native downloader can hit transient release CDN errors while
-# still exiting successfully, so retry the package downloader before failing.
+# still exiting successfully, so retry the package downloader when Matrix is selected.
 RUN set -eux; \
-    echo "==> Verifying critical native addons..."; \
-    for attempt in 1 2 3 4 5; do \
-      if find /app/node_modules -name "matrix-sdk-crypto*.node" 2>/dev/null | grep -q .; then \
-        exit 0; \
-      fi; \
-      echo "matrix-sdk-crypto native addon missing; retrying download (${attempt}/5)"; \
-      node /app/node_modules/@matrix-org/matrix-sdk-crypto-nodejs/download-lib.js || true; \
-      sleep $((attempt * 2)); \
-    done; \
-    find /app/node_modules -name "matrix-sdk-crypto*.node" 2>/dev/null | grep -q . || \
-      (echo "ERROR: matrix-sdk-crypto native addon missing after retries" >&2 && exit 1)
+    case " $(printf '%s\n' "$OPENCLAW_EXTENSIONS" | tr ',' ' ') " in \
+      *" matrix "*) \
+        echo "==> Verifying critical native addons for matrix..."; \
+        for attempt in 1 2 3 4 5; do \
+          if find /app/node_modules -name "matrix-sdk-crypto*.node" 2>/dev/null | grep -q .; then \
+            exit 0; \
+          fi; \
+          echo "matrix-sdk-crypto native addon missing; retrying download (${attempt}/5)"; \
+          node /app/node_modules/@matrix-org/matrix-sdk-crypto-nodejs/download-lib.js || true; \
+          sleep $((attempt * 2)); \
+        done; \
+        find /app/node_modules -name "matrix-sdk-crypto*.node" 2>/dev/null | grep -q . || \
+          (echo "ERROR: matrix-sdk-crypto native addon missing after retries" >&2 && exit 1); \
+        ;; \
+      *) \
+        echo "==> Skipping matrix-sdk-crypto native addon verification (matrix not selected)"; \
+        ;; \
+    esac
 
 COPY . .
 

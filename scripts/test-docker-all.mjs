@@ -167,7 +167,7 @@ function utcStamp() {
 
 function appendExtension(env, extension) {
   const current = env.OPENCLAW_DOCKER_BUILD_EXTENSIONS ?? env.OPENCLAW_EXTENSIONS ?? "";
-  const tokens = current.split(/\s+/).filter(Boolean);
+  const tokens = current.split(/[\s,]+/u).filter(Boolean);
   if (!tokens.includes(extension)) {
     tokens.push(extension);
   }
@@ -1151,8 +1151,9 @@ async function main() {
   });
   baseEnv.OPENCLAW_DOCKER_E2E_IMAGE =
     process.env.OPENCLAW_DOCKER_E2E_IMAGE || baseEnv.OPENCLAW_DOCKER_E2E_FUNCTIONAL_IMAGE;
-  appendExtension(baseEnv, "matrix");
-  appendExtension(baseEnv, "acpx");
+  appendExtension(baseEnv, "openai");
+  appendExtension(baseEnv, "discord");
+  appendExtension(baseEnv, "telegram");
   appendExtension(baseEnv, "codex");
 
   const timingStore = await loadTimingStore(timingsFile, timingsEnabled);
