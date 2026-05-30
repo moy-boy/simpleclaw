@@ -34,6 +34,7 @@ on:
       - "src/*.ts"
       - "src/**/*.ts"
       - "src/config/**"
+      - "extensions/anthropic/**"
       - "extensions/codex/**"
       - "extensions/discord/src/**"
       - "extensions/openai/**"
@@ -271,7 +272,7 @@ jobs:
               esac
 
               case "${file}" in
-                src/*.ts|src/**/*.ts|extensions/codex/*.ts|extensions/codex/**/*.ts|extensions/discord/*.ts|extensions/discord/**/*.ts|extensions/openai/*.ts|extensions/openai/**/*.ts|extensions/telegram/*.ts|extensions/telegram/**/*.ts)
+                src/*.ts|src/**/*.ts|extensions/anthropic/*.ts|extensions/anthropic/**/*.ts|extensions/codex/*.ts|extensions/codex/**/*.ts|extensions/discord/*.ts|extensions/discord/**/*.ts|extensions/openai/*.ts|extensions/openai/**/*.ts|extensions/telegram/*.ts|extensions/telegram/**/*.ts)
                   network_runtime=true
                   ;;
               esac

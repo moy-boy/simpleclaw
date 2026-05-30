@@ -8,6 +8,7 @@ import { isSupportedBundledPluginId, listSupportedBundledPluginIds } from "./sup
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 export const DEFAULT_EXTENSION_TEST_SHARD_COUNT = 8;
 const EXTENSION_TEST_CONFIG_BY_ID = {
+  anthropic: "test/vitest/vitest.extensions.config.ts",
   codex: "test/vitest/vitest.extensions.config.ts",
   discord: "test/vitest/vitest.extension-discord.config.ts",
   openai: "test/vitest/vitest.extension-provider-openai.config.ts",

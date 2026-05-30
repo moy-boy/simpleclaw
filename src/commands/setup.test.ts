@@ -69,7 +69,7 @@ describe("setupCommand", () => {
           mode: "local",
         },
         plugins: {
-          allow: ["telegram", "discord", "openai", "codex"],
+          allow: ["telegram", "discord", "openai", "codex", "anthropic"],
           bundledDiscovery: "allowlist",
         },
       });

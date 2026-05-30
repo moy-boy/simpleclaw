@@ -51,7 +51,7 @@ describe("bundled plugin build entries", () => {
     expectSomePrefixMatch(keys, "extensions/discord/");
     expectSomePrefixMatch(keys, "extensions/openai/");
     expectSomePrefixMatch(keys, "extensions/codex/");
-    expectNoPrefixMatches(keys, "extensions/anthropic/");
+    expectSomePrefixMatch(keys, "extensions/anthropic/");
     expectNoPrefixMatches(keys, "extensions/google/");
     expectNoPrefixMatches(keys, "extensions/slack/");
     expectNoPrefixMatches(keys, "extensions/image-generation-core/");
@@ -98,7 +98,6 @@ describe("bundled plugin build entries", () => {
 
     for (const pluginId of [
       "acpx",
-      "anthropic",
       "google",
       "image-generation-core",
       "matrix",

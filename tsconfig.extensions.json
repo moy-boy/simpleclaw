@@ -8,6 +8,7 @@
   "include": [
     "src/**/*.d.ts",
     "ui/src/**/*.d.ts",
+    "extensions/anthropic/**/*",
     "extensions/codex/**/*",
     "extensions/discord/**/*",
     "extensions/openai/**/*",

@@ -37,6 +37,7 @@
   "include": [
     "src/**/*",
     "ui/**/*",
+    "extensions/anthropic/**/*",
     "extensions/codex/**/*",
     "extensions/discord/**/*",
     "extensions/openai/**/*",

@@ -1,4 +1,10 @@
-export const SUPPORTED_BUNDLED_PLUGIN_ID_LIST = ["codex", "discord", "openai", "telegram"];
+export const SUPPORTED_BUNDLED_PLUGIN_ID_LIST = [
+  "anthropic",
+  "codex",
+  "discord",
+  "openai",
+  "telegram",
+];
 export const SUPPORTED_BUNDLED_PLUGIN_IDS = new Set(SUPPORTED_BUNDLED_PLUGIN_ID_LIST);
 export const PRIVATE_QA_BUNDLED_PLUGIN_IDS = new Set(["qa-channel", "qa-lab", "qa-matrix"]);
 

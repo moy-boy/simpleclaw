@@ -150,7 +150,7 @@ describe("scripts/test-extension.mjs", () => {
       extensionIds: listSupportedBundledPluginIds(),
     });
 
-    expect(batch.extensionIds).toEqual(["codex", "discord", "openai", "telegram"]);
+    expect(batch.extensionIds).toEqual(["anthropic", "codex", "discord", "openai", "telegram"]);
     const stablePlanGroups = batch.planGroups.map(({ estimatedCost, testFileCount, ...group }) => {
       expectPositiveIntegerMetric(estimatedCost);
       expectPositiveIntegerMetric(testFileCount);
@@ -175,8 +175,8 @@ describe("scripts/test-extension.mjs", () => {
       },
       {
         config: "test/vitest/vitest.extensions.config.ts",
-        extensionIds: ["codex"],
-        roots: [bundledPluginRoot("codex")],
+        extensionIds: ["anthropic", "codex"],
+        roots: [bundledPluginRoot("anthropic"), bundledPluginRoot("codex")],
       },
     ]);
   });
@@ -190,7 +190,7 @@ describe("scripts/test-extension.mjs", () => {
       `
         const { createExtensionTestShards, resolveExtensionBatchPlan } =
           await import("./scripts/lib/extension-test-plan.mjs");
-        const extensionIds = ["codex", "discord", "openai", "telegram"];
+        const extensionIds = ["anthropic", "codex", "discord", "openai", "telegram"];
         const batch = resolveExtensionBatchPlan({ cwd: process.cwd(), extensionIds });
         const shards = createExtensionTestShards({ cwd: process.cwd(), extensionIds, shardCount: 2 });
         return {

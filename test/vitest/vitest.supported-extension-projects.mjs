@@ -5,4 +5,4 @@ export const supportedExtensionVitestProjectConfigs = [
   "test/vitest/vitest.extensions.config.ts",
 ];
 
-export const supportedSharedExtensionTestRoots = ["extensions/codex"];
+export const supportedSharedExtensionTestRoots = ["extensions/anthropic", "extensions/codex"];

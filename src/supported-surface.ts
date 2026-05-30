@@ -2,11 +2,18 @@ import type { OpenClawConfig } from "./config/types.openclaw.js";
 import { normalizeOptionalLowercaseString } from "./shared/string-coerce.js";
 
 export const SUPPORTED_CHANNEL_IDS = ["telegram", "discord"] as const;
-export const SUPPORTED_PLUGIN_IDS = ["telegram", "discord", "openai", "codex"] as const;
-export const SUPPORTED_MODEL_PROVIDER_IDS = ["openai", "openai-codex"] as const;
+export const SUPPORTED_PLUGIN_IDS = [
+  "telegram",
+  "discord",
+  "openai",
+  "codex",
+  "anthropic",
+] as const;
+export const SUPPORTED_MODEL_PROVIDER_IDS = ["openai", "openai-codex", "claude-cli"] as const;
 export const SUPPORTED_SUBSCRIPTION_AUTH_CHOICES = [
   "openai-codex",
   "openai-codex-device-code",
+  "anthropic-cli",
 ] as const;
 
 const supportedAuthChoices = new Set<string>(SUPPORTED_SUBSCRIPTION_AUTH_CHOICES);
@@ -67,7 +74,7 @@ export function isSupportedOnboardAuthChoice(choice: string | undefined): boolea
 export function formatUnsupportedOnboardAuthChoice(choice: string): string {
   return [
     `Unsupported --auth-choice "${choice}".`,
-    "This setup supports OpenAI subscription login only: openai-codex, openai-codex-device-code, or skip.",
+    "This setup supports subscription login only: openai-codex, openai-codex-device-code, anthropic-cli, or skip.",
   ].join("\n");
 }
 
@@ -126,13 +133,13 @@ export function isSupportedModelRef(modelRef: string): boolean {
 export function formatUnsupportedModelProviderMessage(provider: string): string {
   return [
     `Unsupported provider "${provider}".`,
-    "This setup supports OpenAI subscription login only: openai or openai-codex.",
+    "This setup supports subscription-backed providers only: openai, openai-codex, or claude-cli.",
   ].join("\n");
 }
 
 export function formatUnsupportedModelRefMessage(modelRef: string): string {
   return [
     `Unsupported model "${modelRef}".`,
-    "This setup supports OpenAI subscription-backed model refs only, such as openai/gpt-5.4.",
+    "This setup supports subscription-backed model refs only, such as openai/gpt-5.4 or claude-cli/claude-opus-4-7.",
   ].join("\n");
 }

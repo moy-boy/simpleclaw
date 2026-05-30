@@ -4,6 +4,7 @@
     "../../src/**/*",
     "../../ui/src/**/*",
     "../../packages/**/*.ts",
+    "../../extensions/anthropic/**/*",
     "../../extensions/codex/**/*",
     "../../extensions/discord/**/*",
     "../../extensions/openai/**/*",
