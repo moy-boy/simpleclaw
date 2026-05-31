@@ -15,11 +15,47 @@ export {
 // seam through the bundled speech-core runtime surface.
 type FacadeModule = TtsRuntimeFacade;
 
+let cachedFacade: FacadeModule | undefined;
+let warnedAboutMissingSpeechCore = false;
+
+// Stub used when the speech-core plugin is not bundled (this fork ships without
+// it). Returns undefined for every accessor so callers that gate on
+// isTtsEnabled / getTtsProvider / etc. observe TTS as disabled and skip the
+// feature instead of crashing the agent at system-prompt assembly time.
+function createNoOpTtsFacade(): FacadeModule {
+  const noopFn = (): undefined => undefined;
+  const explicit: Partial<FacadeModule> = {
+    testApi: {} as FacadeModule["testApi"],
+  };
+  return new Proxy(explicit, {
+    get(target, prop) {
+      if (prop in target) {
+        return (target as Record<PropertyKey, unknown>)[prop as PropertyKey];
+      }
+      return noopFn;
+    },
+  }) as FacadeModule;
+}
+
 function loadFacadeModule(): FacadeModule {
-  return loadActivatedBundledPluginPublicSurfaceModuleSync<FacadeModule>({
-    dirName: "speech-core",
-    artifactBasename: "runtime-api.js",
-  });
+  if (cachedFacade) {
+    return cachedFacade;
+  }
+  try {
+    cachedFacade = loadActivatedBundledPluginPublicSurfaceModuleSync<FacadeModule>({
+      dirName: "speech-core",
+      artifactBasename: "runtime-api.js",
+    });
+    return cachedFacade;
+  } catch (error) {
+    if (!warnedAboutMissingSpeechCore) {
+      warnedAboutMissingSpeechCore = true;
+      // oxlint-disable-next-line no-console -- surface degraded TTS once
+      console.warn(`[openclaw] speech-core plugin unavailable; TTS disabled (${String(error)})`);
+    }
+    cachedFacade = createNoOpTtsFacade();
+    return cachedFacade;
+  }
 }
 
 export function prewarmTtsRuntimeFacade(): void {
