@@ -65,6 +65,11 @@ When taostats can't resolve a repo/maintainers for a subnet, add it to a JSON fi
 { "5": { "repo": "opentensor/text-prompting", "maintainers": ["alice", "bob"] } }
 ```
 
+## Watchlist (subnets without a channel)
+
+Tracked subnets come from your channels. To also monitor subnets that have **no** channel — their PRs
+post to `#general` — list their netuids in `BT_EXTRA_NETUIDS` (e.g. `BT_EXTRA_NETUIDS=12,64`).
+
 ## Notes
 
 - State lives under `$OPENCLAW_STATE_DIR/bittensor-bot/` (`registration-state.json`, `pr-state.json`, `discovery-cache.json`).

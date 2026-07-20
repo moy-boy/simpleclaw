@@ -8,7 +8,8 @@
 //   node discover-subnets.mjs --cached   # print last cached map without refetching
 //
 // Env: DISCORD_BOT_TOKEN, BT_GUILD_ID, BT_CHANNEL_PATTERN, BT_ANNOUNCE_CHANNEL,
-//      BT_GENERAL_CHANNEL, BT_OVERRIDE_FILE (json: { "<netuid>": {repo, maintainers[]} })
+//      BT_GENERAL_CHANNEL, BT_EXTRA_NETUIDS (no-channel watchlist -> #general),
+//      BT_OVERRIDE_FILE (json: { "<netuid>": {repo, maintainers[]} })
 
 import fs from "node:fs";
 import {
@@ -41,9 +42,16 @@ async function scrapeRepo(netuid) {
     const res = await fetch(url, { headers: { "user-agent": "bittensor-tracker" } });
     if (!res.ok) return null;
     const html = await res.text();
-    const m = /github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)/.exec(html);
-    if (!m) return null;
-    return m[1].replace(/\.git$/, "").replace(/[).,"']+$/, "");
+    // Skip github links that are taostats' own / social / docs chrome, not the subnet repo.
+    // (Best-effort only — set BT_OVERRIDE_FILE for anything this resolves wrong.)
+    const DENY =
+      /^(taostats|taostatsio|about|features|topics|sponsors|orgs|marketplace|pricing|login|explore)$/i;
+    for (const mm of html.matchAll(/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/g)) {
+      const owner = mm[1];
+      if (DENY.test(owner)) continue;
+      return `${owner}/${mm[2]}`.replace(/\.git$/, "").replace(/[).,"']+$/, "");
+    }
+    return null;
   } catch {
     return null;
   }
@@ -61,6 +69,22 @@ function resolveMaintainers(repo) {
   return [owner];
 }
 
+/** Resolve repo + maintainers for a netuid (override wins, else best-effort). */
+async function resolveEntry(netuid, overrides) {
+  const ov = overrides[String(netuid)] ?? {};
+  const repo = ov.repo ?? (await scrapeRepo(netuid));
+  const maintainers = ov.maintainers ?? (repo ? resolveMaintainers(repo) : []);
+  return { repo: repo ?? null, maintainers };
+}
+
+/** Extra subnets to monitor that have no channel (BT_EXTRA_NETUIDS="12,64"). */
+function extraWatchlistNetuids() {
+  return env("BT_EXTRA_NETUIDS", "")
+    .split(",")
+    .map((s) => Number.parseInt(s.trim(), 10))
+    .filter(Number.isFinite);
+}
+
 async function refresh() {
   const overrides = loadOverrides();
   const announce = env("BT_ANNOUNCE_CHANNEL", "announcement");
@@ -68,16 +92,25 @@ async function refresh() {
 
   const channels = await listGuildChannels();
   const map = {};
+
+  // 1) Subnets that HAVE a channel -> route PRs to that channel.
   for (const ch of channels) {
     if (ch.name === announce || ch.name === general) continue;
     const netuid = netuidFromChannelName(ch.name);
     if (netuid == null) continue;
-
-    const ov = overrides[String(netuid)] ?? {};
-    const repo = ov.repo ?? (await scrapeRepo(netuid));
-    const maintainers = ov.maintainers ?? (repo ? resolveMaintainers(repo) : []);
-    map[netuid] = { channelId: ch.id, channelName: ch.name, repo: repo ?? null, maintainers };
+    const { repo, maintainers } = await resolveEntry(netuid, overrides);
+    map[netuid] = { channelId: ch.id, channelName: ch.name, repo, maintainers };
     log(`sn${netuid} -> #${ch.name} repo=${repo ?? "?"} maintainers=${maintainers.length}`);
+  }
+
+  // 2) Watchlist subnets WITHOUT a channel -> route their PRs to #general.
+  for (const netuid of extraWatchlistNetuids()) {
+    if (map[netuid]) continue; // already covered by a channel
+    const { repo, maintainers } = await resolveEntry(netuid, overrides);
+    map[netuid] = { channelId: null, channelName: null, repo, maintainers };
+    log(
+      `sn${netuid} (watchlist -> #general) repo=${repo ?? "?"} maintainers=${maintainers.length}`,
+    );
   }
 
   writeState(CACHE_FILE, { map, refreshedAt: new Date().toISOString() });

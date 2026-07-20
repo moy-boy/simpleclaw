@@ -72,8 +72,12 @@ export async function listGuildChannels() {
   if (!res.ok) {
     throw new Error(`Discord list channels failed: ${res.status} ${await res.text()}`);
   }
-  // type 0 = text channel; keep name + id.
-  return (await res.json()).filter((c) => c.type === 0).map((c) => ({ id: c.id, name: c.name }));
+  // 0 = text, 5 = announcement/news — both are postable text channels (a server's
+  // #announcement is frequently a News channel, which would be missed if we only kept 0).
+  const POSTABLE = new Set([0, 5]);
+  return (await res.json())
+    .filter((c) => POSTABLE.has(c.type))
+    .map((c) => ({ id: c.id, name: c.name }));
 }
 
 let _channelCache = null;
@@ -143,8 +147,8 @@ export function gh(args) {
     const token = tokens.length ? tokens[(ghTokenIndex + i) % tokens.length] : undefined;
     const gexecEnv = token ? { ...process.env, GH_TOKEN: token, GITHUB_TOKEN: token } : process.env;
     const r = run(env("GH_BIN", "gh"), args, { env: gexecEnv });
-    const rateLimited =
-      /rate limit|API rate limit exceeded|403/i.test(r.stderr) && /rate|limit/i.test(r.stderr);
+    // Only a genuine rate-limit should rotate tokens; a bare 403 (permission) is a real error.
+    const rateLimited = /rate limit|rate-limit|API rate limit exceeded/i.test(r.stderr);
     if (r.status === 0) {
       ghTokenIndex = tokens.length ? (ghTokenIndex + i) % tokens.length : 0;
       return r;
