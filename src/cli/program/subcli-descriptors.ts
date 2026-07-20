@@ -24,12 +24,12 @@ const subCliCommandCatalog = defineCommandDescriptorCatalog([
   },
   {
     name: "models",
-    description: "List and set OpenAI subscription-backed models",
+    description: "List and set subscription-backed models",
     hasSubcommands: true,
   },
   {
     name: "infer",
-    description: "Run OpenAI-backed model, media, search, and embedding commands",
+    description: "Run subscription-backed model, media, search, and embedding commands",
     hasSubcommands: true,
   },
   {
