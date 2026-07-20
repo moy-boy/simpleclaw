@@ -172,3 +172,47 @@ export function gh(args) {
 export function log(...args) {
   process.stderr.write(`[bittensor-tracker] ${args.join(" ")}\n`);
 }
+
+/** Best-effort single-runner lock so overlapping cron runs don't double-post / race state.
+ *  Returns a release() fn, or null if a live run already holds the lock. Stale locks
+ *  (older than staleMinutes — e.g. a crashed run) are reclaimed. */
+export function acquireLock(name, staleMinutes = 30) {
+  const p = path.join(stateDir(), `${name}.lock`);
+  const claim = () => {
+    fs.writeFileSync(p, `${process.pid} ${Date.now()}\n`);
+    const release = () => {
+      try {
+        fs.unlinkSync(p);
+      } catch {
+        // already gone
+      }
+    };
+    process.once("exit", release);
+    return release;
+  };
+  try {
+    fs.writeFileSync(p, `${process.pid} ${Date.now()}\n`, { flag: "wx" }); // atomic create
+    process.once("exit", () => {
+      try {
+        fs.unlinkSync(p);
+      } catch {
+        // already gone
+      }
+    });
+    return () => {
+      try {
+        fs.unlinkSync(p);
+      } catch {
+        // already gone
+      }
+    };
+  } catch (e) {
+    if (e.code !== "EEXIST") throw e;
+    const ts = Number(fs.readFileSync(p, "utf8").trim().split(/\s+/)[1] ?? 0);
+    if (Date.now() - ts > staleMinutes * 60_000) {
+      log(`reclaiming stale lock ${name}.lock`);
+      return claim();
+    }
+    return null; // held by a live run
+  }
+}

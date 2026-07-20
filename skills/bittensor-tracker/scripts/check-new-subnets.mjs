@@ -8,7 +8,20 @@
 // An empty/failed source never overwrites known state (avoids false "new" next run).
 
 import { getNetuids } from "./fetch-netuids.mjs";
-import { channelIdByName, env, log, readState, sendToChannel, writeState } from "./lib.mjs";
+import {
+  acquireLock,
+  channelIdByName,
+  env,
+  log,
+  readState,
+  sendToChannel,
+  writeState,
+} from "./lib.mjs";
+
+if (!acquireLock("registration-monitor")) {
+  log("registration-monitor already running; skipping this run");
+  process.exit(0);
+}
 
 const STATE = "registration-state.json";
 
