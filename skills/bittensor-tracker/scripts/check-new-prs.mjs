@@ -24,6 +24,12 @@ const out = [];
 for (const [netuid, info] of Object.entries(discovery)) {
   if (!info.repo) continue;
   const maintainers = new Set((info.maintainers ?? []).map((m) => m.toLowerCase()));
+  if (maintainers.size === 0) {
+    // No maintainers resolved -> we cannot tell maintainer PRs from external ones.
+    // Skip rather than post every open PR (would violate the maintainer-only requirement).
+    log(`no maintainers for ${info.repo}; skipping (set one in BT_OVERRIDE_FILE to enable)`);
+    continue;
+  }
 
   const r = gh([
     "pr",
@@ -60,7 +66,7 @@ for (const [netuid, info] of Object.entries(discovery)) {
 
   for (const p of prs) {
     if (p.number <= lastSeen) continue;
-    if (maintainers.size && !maintainers.has((p.author?.login ?? "").toLowerCase())) continue;
+    if (!maintainers.has((p.author?.login ?? "").toLowerCase())) continue;
     out.push({
       netuid: Number(netuid),
       repo: info.repo,
