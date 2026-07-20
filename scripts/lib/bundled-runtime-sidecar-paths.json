@@ -1,4 +1,6 @@
 [
+  "dist/extensions/slack/runtime-api.js",
+  "dist/extensions/slack/runtime-setter-api.js",
   "dist/extensions/telegram/runtime-api.js",
   "dist/extensions/telegram/runtime-setter-api.js"
 ]
