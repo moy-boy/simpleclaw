@@ -125,32 +125,32 @@ Use these hubs to discover every page, including deep dives and reference docs t
 ## Platforms
 
 - [Platforms overview](/platforms)
-- [macOS](/platforms/macos)
-- [iOS](/platforms/ios)
-- [Android](/platforms/android)
+- macOS
+- iOS
+- Android
 - [Windows (WSL2)](/platforms/windows)
 - [Linux](/platforms/linux)
 - [Web surfaces](/web)
 
 ## macOS companion app (advanced)
 
-- [macOS dev setup](/platforms/mac/dev-setup)
-- [macOS menu bar](/platforms/mac/menu-bar)
-- [macOS voice wake](/platforms/mac/voicewake)
-- [macOS voice overlay](/platforms/mac/voice-overlay)
-- [macOS WebChat](/platforms/mac/webchat)
-- [macOS Canvas](/platforms/mac/canvas)
-- [macOS child process](/platforms/mac/child-process)
-- [macOS health](/platforms/mac/health)
-- [macOS icon](/platforms/mac/icon)
-- [macOS logging](/platforms/mac/logging)
-- [macOS permissions](/platforms/mac/permissions)
-- [macOS remote](/platforms/mac/remote)
-- [macOS signing](/platforms/mac/signing)
-- [macOS gateway (launchd)](/platforms/mac/bundled-gateway)
-- [macOS XPC](/platforms/mac/xpc)
-- [macOS skills](/platforms/mac/skills)
-- [macOS Peekaboo](/platforms/mac/peekaboo)
+- macOS dev setup
+- macOS menu bar
+- macOS voice wake
+- macOS voice overlay
+- macOS WebChat
+- macOS Canvas
+- macOS child process
+- macOS health
+- macOS icon
+- macOS logging
+- macOS permissions
+- macOS remote
+- macOS signing
+- macOS gateway (launchd)
+- macOS XPC
+- macOS skills
+- macOS Peekaboo
 
 ## Plugins
 

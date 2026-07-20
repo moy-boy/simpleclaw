@@ -37,7 +37,7 @@ The laptop does **not** run the agent. It connects remotely:
 - Use the macOS app's remote mode (Settings → General → OpenClaw runs).
 - The app connects directly when the gateway is reachable on LAN/Tailnet, or opens and manages an SSH tunnel when you choose SSH.
 
-Runbook: [macOS remote access](/platforms/mac/remote).
+Runbook: macOS remote access.
 
 ### Laptop runs the Gateway
 
@@ -152,7 +152,7 @@ WebChat no longer uses a separate HTTP port. The SwiftUI chat UI connects direct
 
 The macOS menu bar app can drive the same setup end-to-end (remote status checks, WebChat, and Voice Wake forwarding).
 
-Runbook: [macOS remote access](/platforms/mac/remote).
+Runbook: macOS remote access.
 
 ## Security rules (remote/VPN)
 
