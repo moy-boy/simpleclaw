@@ -5,10 +5,7 @@ import { TOOL_DISPLAY_CONFIG, type ToolDisplayConfig } from "../src/agents/tool-
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "..");
-const outputPath = path.join(
-  repoRoot,
-  "apps/shared/OpenClawKit/Sources/OpenClawKit/Resources/tool-display.json",
-);
+const outputPath = path.join(repoRoot, "ui/src/ui/tool-display.json");
 const toolSources = [
   path.join(repoRoot, "src/agents/apply-patch.ts"),
   path.join(repoRoot, "src/agents/bash-tools.exec.ts"),
