@@ -1875,7 +1875,7 @@ export function registerCapabilityCli(program: Command) {
   const capability = program
     .command("infer")
     .alias("capability")
-    .description("Run OpenAI-backed inference commands through a stable CLI surface")
+    .description("Run subscription-backed inference commands through a stable CLI surface")
     .addHelpText(
       "after",
       () =>

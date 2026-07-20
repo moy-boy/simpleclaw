@@ -51,7 +51,7 @@ loopback/private fallbacks are rejected by design.
 - Optional target overrides:
   - `OPENCLAW_ANDROID_NODE_ID` or `OPENCLAW_ANDROID_NODE_NAME`.
   - `OPENCLAW_ANDROID_GATEWAY_URL` / `OPENCLAW_ANDROID_GATEWAY_TOKEN` / `OPENCLAW_ANDROID_GATEWAY_PASSWORD`.
-- Full Android setup details: [Android App](/platforms/android)
+- Full Android setup details: Android App
 
 ## Live: model smoke (profile keys)
 

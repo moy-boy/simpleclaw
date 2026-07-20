@@ -4,6 +4,11 @@
           - "extensions/discord/**"
           - "docs/channels/discord.md"
 
+"channel: slack":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "extensions/slack/**"
+
 "channel: telegram":
   - changed-files:
       - any-glob-to-any-file:
@@ -21,25 +26,6 @@
       - any-glob-to-any-file:
           - "extensions/openai/**"
           - "docs/providers/openai.md"
-
-"app: android":
-  - changed-files:
-      - any-glob-to-any-file:
-          - "apps/android/**"
-          - "docs/platforms/android.md"
-
-"app: ios":
-  - changed-files:
-      - any-glob-to-any-file:
-          - "apps/ios/**"
-          - "docs/platforms/ios.md"
-
-"app: macos":
-  - changed-files:
-      - any-glob-to-any-file:
-          - "apps/macos/**"
-          - "docs/platforms/macos.md"
-          - "docs/platforms/mac/**"
 
 "app: web-ui":
   - changed-files:

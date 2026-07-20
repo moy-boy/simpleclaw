@@ -12,6 +12,7 @@ const EXTENSION_TEST_CONFIG_BY_ID = {
   codex: "test/vitest/vitest.extensions.config.ts",
   discord: "test/vitest/vitest.extension-discord.config.ts",
   openai: "test/vitest/vitest.extension-provider-openai.config.ts",
+  slack: "test/vitest/vitest.extension-slack.config.ts",
   telegram: "test/vitest/vitest.extension-telegram.config.ts",
 };
 const EXTENSION_TEST_COST_MULTIPLIERS = {

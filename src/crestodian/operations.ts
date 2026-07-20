@@ -1,4 +1,3 @@
-import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 import type { ConfigSetOptions } from "../cli/config-set-input.js";
 import type { DoctorOptions } from "../commands/doctor.types.js";
 import { buildAgentMainSessionKey, normalizeAgentId } from "../routing/session-key.js";
@@ -109,7 +108,7 @@ const PLUGIN_INSTALL_RE =
 const PLUGIN_UNINSTALL_RE =
   /^(?:(?:plugins?)\s+(?:uninstall|remove)|(?:uninstall|remove)\s+plugins?)\s+(?<pluginId>[A-Za-z0-9_.@/-]+)$/i;
 
-const OPENAI_API_DEFAULT_MODEL_REF = `${DEFAULT_PROVIDER}/${DEFAULT_MODEL}`;
+const OPENAI_API_DEFAULT_MODEL_REF = "openai/gpt-5.5";
 const ANTHROPIC_API_DEFAULT_MODEL_REF = "anthropic/claude-opus-4-7";
 const CLAUDE_CLI_DEFAULT_MODEL_REF = "claude-cli/claude-opus-4-7";
 const CODEX_APP_SERVER_DEFAULT_MODEL_REF = "openai/gpt-5.5";

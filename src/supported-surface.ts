@@ -1,20 +1,16 @@
 import type { OpenClawConfig } from "./config/types.openclaw.js";
 import { normalizeOptionalLowercaseString } from "./shared/string-coerce.js";
 
-export const SUPPORTED_CHANNEL_IDS = ["telegram", "discord"] as const;
+export const SUPPORTED_CHANNEL_IDS = ["telegram", "discord", "slack"] as const;
 export const SUPPORTED_PLUGIN_IDS = [
   "telegram",
   "discord",
+  "slack",
   "openai",
   "codex",
   "anthropic",
 ] as const;
-export const SUPPORTED_MODEL_PROVIDER_IDS = [
-  "openai",
-  "openai-codex",
-  "claude-cli",
-  "anthropic",
-] as const;
+export const SUPPORTED_MODEL_PROVIDER_IDS = ["openai-codex", "claude-cli", "anthropic"] as const;
 export const SUPPORTED_SUBSCRIPTION_AUTH_CHOICES = [
   "openai-codex",
   "openai-codex-device-code",
@@ -89,7 +85,7 @@ export function isSupportedChannelId(channel: string): boolean {
 }
 
 export function formatUnsupportedChannelMessage(channel: string): string {
-  return `Unsupported channel "${channel}". This setup supports Telegram and Discord only.`;
+  return `Unsupported channel "${channel}". This setup supports Telegram, Discord, and Slack only.`;
 }
 
 export function shouldEnforceSupportedSurface(config: OpenClawConfig): boolean {
@@ -138,13 +134,13 @@ export function isSupportedModelRef(modelRef: string): boolean {
 export function formatUnsupportedModelProviderMessage(provider: string): string {
   return [
     `Unsupported provider "${provider}".`,
-    "This setup supports subscription-backed providers only: openai, openai-codex, anthropic, or claude-cli.",
+    "This setup supports subscription-backed providers only: openai-codex, anthropic, or claude-cli.",
   ].join("\n");
 }
 
 export function formatUnsupportedModelRefMessage(modelRef: string): string {
   return [
     `Unsupported model "${modelRef}".`,
-    "This setup supports subscription-backed model refs only, such as openai/gpt-5.4, anthropic/claude-opus-4-7, or claude-cli/claude-opus-4-7.",
+    "This setup supports subscription-backed model refs only, such as anthropic/claude-opus-4-7 or claude-cli/claude-opus-4-7.",
   ].join("\n");
 }

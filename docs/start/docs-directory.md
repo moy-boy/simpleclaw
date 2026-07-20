@@ -48,9 +48,9 @@ For a complete map of the docs, see [Docs hubs](/start/hubs).
 
 ## Companion apps
 
-- [macOS app](/platforms/macos)
-- [iOS app](/platforms/ios)
-- [Android app](/platforms/android)
+- macOS app
+- iOS app
+- Android app
 - [Windows (WSL2)](/platforms/windows)
 - [Linux app](/platforms/linux)
 

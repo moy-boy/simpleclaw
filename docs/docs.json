@@ -169,10 +169,6 @@
       "destination": "/concepts/agent-workspace"
     },
     {
-      "source": "/android",
-      "destination": "/platforms/android"
-    },
-    {
       "source": "/architecture",
       "destination": "/concepts/architecture"
     },
@@ -365,10 +361,6 @@
       "destination": "/nodes/images"
     },
     {
-      "source": "/ios",
-      "destination": "/platforms/ios"
-    },
-    {
       "source": "/linux",
       "destination": "/platforms/linux"
     },
@@ -385,84 +377,8 @@
       "destination": "/start/lore"
     },
     {
-      "source": "/mac/bun",
-      "destination": "/platforms/mac/bundled-gateway"
-    },
-    {
-      "source": "/platforms/mac/bun",
-      "destination": "/platforms/mac/bundled-gateway"
-    },
-    {
-      "source": "/mac/canvas",
-      "destination": "/platforms/mac/canvas"
-    },
-    {
-      "source": "/mac/child-process",
-      "destination": "/platforms/mac/child-process"
-    },
-    {
-      "source": "/mac/dev-setup",
-      "destination": "/platforms/mac/dev-setup"
-    },
-    {
-      "source": "/mac/health",
-      "destination": "/platforms/mac/health"
-    },
-    {
-      "source": "/mac/icon",
-      "destination": "/platforms/mac/icon"
-    },
-    {
-      "source": "/mac/logging",
-      "destination": "/platforms/mac/logging"
-    },
-    {
-      "source": "/mac/menu-bar",
-      "destination": "/platforms/mac/menu-bar"
-    },
-    {
-      "source": "/mac/peekaboo",
-      "destination": "/platforms/mac/peekaboo"
-    },
-    {
-      "source": "/mac/permissions",
-      "destination": "/platforms/mac/permissions"
-    },
-    {
       "source": "/mac/release",
       "destination": "/reference/RELEASING"
-    },
-    {
-      "source": "/mac/remote",
-      "destination": "/platforms/mac/remote"
-    },
-    {
-      "source": "/mac/signing",
-      "destination": "/platforms/mac/signing"
-    },
-    {
-      "source": "/mac/skills",
-      "destination": "/platforms/mac/skills"
-    },
-    {
-      "source": "/mac/voice-overlay",
-      "destination": "/platforms/mac/voice-overlay"
-    },
-    {
-      "source": "/mac/voicewake",
-      "destination": "/platforms/mac/voicewake"
-    },
-    {
-      "source": "/mac/webchat",
-      "destination": "/platforms/mac/webchat"
-    },
-    {
-      "source": "/mac/xpc",
-      "destination": "/platforms/mac/xpc"
-    },
-    {
-      "source": "/macos",
-      "destination": "/platforms/macos"
     },
     {
       "source": "/model-failover",
@@ -733,10 +649,6 @@
       "destination": "/install/azure"
     },
     {
-      "source": "/platforms/macos-vm",
-      "destination": "/install/macos-vm"
-    },
-    {
       "source": "/platforms/exe-dev",
       "destination": "/install/exe-dev"
     },
@@ -795,7 +707,11 @@
             "groups": [
               {
                 "group": "Overview",
-                "pages": ["index", "start/showcase", "concepts/features"]
+                "pages": [
+                  "index",
+                  "start/showcase",
+                  "concepts/features"
+                ]
               },
               {
                 "group": "First steps",
@@ -821,7 +737,11 @@
             "groups": [
               {
                 "group": "Install overview",
-                "pages": ["install/index", "install/installer", "install/node"]
+                "pages": [
+                  "install/index",
+                  "install/installer",
+                  "install/node"
+                ]
               },
               {
                 "group": "Maintenance",
@@ -866,7 +786,10 @@
               },
               {
                 "group": "Advanced setup",
-                "pages": ["start/setup", "pi-dev"]
+                "pages": [
+                  "start/setup",
+                  "pi-dev"
+                ]
               }
             ]
           },
@@ -875,11 +798,16 @@
             "groups": [
               {
                 "group": "Overview",
-                "pages": ["channels/index"]
+                "pages": [
+                  "channels/index"
+                ]
               },
               {
                 "group": "Mainstream messaging",
-                "pages": ["channels/discord", "channels/telegram"]
+                "pages": [
+                  "channels/discord",
+                  "channels/telegram"
+                ]
               },
               {
                 "group": "Configuration",
@@ -965,7 +893,9 @@
             "groups": [
               {
                 "group": "Overview",
-                "pages": ["tools/index"]
+                "pages": [
+                  "tools/index"
+                ]
               },
               {
                 "group": "Plugins",
@@ -1075,7 +1005,11 @@
             "groups": [
               {
                 "group": "Overview",
-                "pages": ["clawhub/index", "clawhub/quickstart", "clawhub/how-it-works"]
+                "pages": [
+                  "clawhub/index",
+                  "clawhub/quickstart",
+                  "clawhub/how-it-works"
+                ]
               },
               {
                 "group": "Using ClawHub",
@@ -1104,15 +1038,22 @@
             "groups": [
               {
                 "group": "Overview",
-                "pages": ["providers/index", "providers/models"]
+                "pages": [
+                  "providers/index",
+                  "providers/models"
+                ]
               },
               {
                 "group": "Concepts and configuration",
-                "pages": ["concepts/models"]
+                "pages": [
+                  "concepts/models"
+                ]
               },
               {
                 "group": "Providers",
-                "pages": ["providers/openai"]
+                "pages": [
+                  "providers/openai"
+                ]
               }
             ]
           },
@@ -1123,49 +1064,9 @@
                 "group": "Platforms overview",
                 "pages": [
                   "platforms/index",
-                  "platforms/macos",
                   "platforms/linux",
                   "platforms/windows",
-                  "platforms/android",
-                  "platforms/ios",
                   "platforms/easyrunner"
-                ]
-              },
-              {
-                "group": "macOS companion app",
-                "pages": [
-                  {
-                    "group": "Setup",
-                    "pages": [
-                      "platforms/mac/dev-setup",
-                      "platforms/mac/menu-bar",
-                      "platforms/mac/icon",
-                      "platforms/mac/permissions",
-                      "platforms/mac/signing"
-                    ]
-                  },
-                  {
-                    "group": "Runtime",
-                    "pages": [
-                      "platforms/mac/bundled-gateway",
-                      "platforms/mac/child-process",
-                      "platforms/mac/health",
-                      "platforms/mac/logging",
-                      "platforms/mac/remote",
-                      "platforms/mac/xpc"
-                    ]
-                  },
-                  {
-                    "group": "Features",
-                    "pages": [
-                      "platforms/mac/voicewake",
-                      "platforms/mac/voice-overlay",
-                      "platforms/mac/webchat",
-                      "platforms/mac/canvas",
-                      "platforms/mac/skills",
-                      "platforms/mac/peekaboo"
-                    ]
-                  }
                 ]
               }
             ]
@@ -1245,13 +1146,22 @@
                   },
                   {
                     "group": "Networking and discovery",
-                    "pages": ["network", "gateway/pairing", "gateway/discovery", "gateway/bonjour"]
+                    "pages": [
+                      "network",
+                      "gateway/pairing",
+                      "gateway/discovery",
+                      "gateway/bonjour"
+                    ]
                   }
                 ]
               },
               {
                 "group": "Remote access",
-                "pages": ["gateway/remote", "gateway/remote-gateway-readme", "gateway/tailscale"]
+                "pages": [
+                  "gateway/remote",
+                  "gateway/remote-gateway-readme",
+                  "gateway/tailscale"
+                ]
               },
               {
                 "group": "Security",
@@ -1279,13 +1189,23 @@
                   },
                   {
                     "group": "Node features",
-                    "pages": ["nodes/talk", "nodes/voicewake", "nodes/location-command"]
+                    "pages": [
+                      "nodes/talk",
+                      "nodes/voicewake",
+                      "nodes/location-command"
+                    ]
                   }
                 ]
               },
               {
                 "group": "Web interfaces",
-                "pages": ["web/index", "web/control-ui", "web/dashboard", "web/webchat", "web/tui"]
+                "pages": [
+                  "web/index",
+                  "web/control-ui",
+                  "web/dashboard",
+                  "web/webchat",
+                  "web/tui"
+                ]
               }
             ]
           },
@@ -1356,15 +1276,26 @@
                   },
                   {
                     "group": "Configuration",
-                    "pages": ["cli/config", "cli/configure"]
+                    "pages": [
+                      "cli/config",
+                      "cli/configure"
+                    ]
                   },
                   {
                     "group": "Plugins and skills",
-                    "pages": ["cli/plugins", "cli/path", "cli/policy", "cli/skills"]
+                    "pages": [
+                      "cli/plugins",
+                      "cli/path",
+                      "cli/policy",
+                      "cli/skills"
+                    ]
                   },
                   {
                     "group": "Interfaces",
-                    "pages": ["cli/dashboard", "cli/tui"]
+                    "pages": [
+                      "cli/dashboard",
+                      "cli/tui"
+                    ]
                   },
                   {
                     "group": "Utility",
@@ -1473,7 +1404,10 @@
               },
               {
                 "group": "Project",
-                "pages": ["reference/application-modernization-plan", "reference/credits"]
+                "pages": [
+                  "reference/application-modernization-plan",
+                  "reference/credits"
+                ]
               },
               {
                 "group": "Release and CI",
@@ -1492,23 +1426,43 @@
             "groups": [
               {
                 "group": "Start here",
-                "pages": ["help/index", "help/troubleshooting", "help/debugging"]
+                "pages": [
+                  "help/index",
+                  "help/troubleshooting",
+                  "help/debugging"
+                ]
               },
               {
                 "group": "FAQ",
-                "pages": ["help/faq", "help/faq-first-run", "help/faq-models"]
+                "pages": [
+                  "help/faq",
+                  "help/faq-first-run",
+                  "help/faq-models"
+                ]
               },
               {
                 "group": "Testing",
-                "pages": ["help/testing", "help/testing-updates-plugins", "help/testing-live"]
+                "pages": [
+                  "help/testing",
+                  "help/testing-updates-plugins",
+                  "help/testing-live"
+                ]
               },
               {
                 "group": "Diagnostics",
-                "pages": ["help/environment", "diagnostics/flags", "debug/node-issue"]
+                "pages": [
+                  "help/environment",
+                  "diagnostics/flags",
+                  "debug/node-issue"
+                ]
               },
               {
                 "group": "Community and meta",
-                "pages": ["start/lore", "start/hubs", "start/docs-directory"]
+                "pages": [
+                  "start/lore",
+                  "start/hubs",
+                  "start/docs-directory"
+                ]
               }
             ]
           }

@@ -30,10 +30,7 @@ const ANTHROPIC_CACHE_PROBE_MIN_MAX_TOKENS = 1024;
 const OPENAI_PREFIX = buildStableCachePrefix("openai");
 const OPENAI_MCP_PREFIX = buildStableCachePrefix("openai-mcp-style");
 const ANTHROPIC_PREFIX = buildStableCachePrefix("anthropic");
-const LIVE_TEST_PNG_URL = new URL(
-  "../../apps/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
-  import.meta.url,
-);
+const LIVE_TEST_PNG_URL = new URL("../../ui/public/favicon-32.png", import.meta.url);
 
 type ProviderKey = keyof typeof LIVE_CACHE_REGRESSION_BASELINE;
 type CacheLane = "image" | "mcp" | "stable" | "tool";

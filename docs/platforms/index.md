@@ -16,9 +16,9 @@ Native companion apps for Windows are also planned; the Gateway is recommended v
 
 ## Choose your OS
 
-- macOS: [macOS](/platforms/macos)
-- iOS: [iOS](/platforms/ios)
-- Android: [Android](/platforms/android)
+- macOS: macOS
+- iOS: iOS
+- Android: Android
 - Windows: [Windows](/platforms/windows)
 - Linux: [Linux](/platforms/linux)
 
@@ -57,5 +57,5 @@ The service target depends on OS:
 ## Related
 
 - [Install overview](/install)
-- [macOS app](/platforms/macos)
-- [iOS app](/platforms/ios)
+- macOS app
+- iOS app
