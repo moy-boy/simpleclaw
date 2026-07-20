@@ -6,6 +6,7 @@ packages:
   - extensions/codex
   - extensions/discord
   - extensions/openai
+  - extensions/slack
   - extensions/telegram
 
 minimumReleaseAge: 2880

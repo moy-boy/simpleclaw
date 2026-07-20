@@ -1,10 +1,11 @@
 import type { OpenClawConfig } from "./config/types.openclaw.js";
 import { normalizeOptionalLowercaseString } from "./shared/string-coerce.js";
 
-export const SUPPORTED_CHANNEL_IDS = ["telegram", "discord"] as const;
+export const SUPPORTED_CHANNEL_IDS = ["telegram", "discord", "slack"] as const;
 export const SUPPORTED_PLUGIN_IDS = [
   "telegram",
   "discord",
+  "slack",
   "openai",
   "codex",
   "anthropic",
@@ -89,7 +90,7 @@ export function isSupportedChannelId(channel: string): boolean {
 }
 
 export function formatUnsupportedChannelMessage(channel: string): string {
-  return `Unsupported channel "${channel}". This setup supports Telegram and Discord only.`;
+  return `Unsupported channel "${channel}". This setup supports Telegram, Discord, and Slack only.`;
 }
 
 export function shouldEnforceSupportedSurface(config: OpenClawConfig): boolean {

@@ -12,6 +12,7 @@
     "extensions/codex/**/*",
     "extensions/discord/**/*",
     "extensions/openai/**/*",
+    "extensions/slack/**/*",
     "extensions/telegram/**/*"
   ],
   "exclude": [
@@ -26,6 +27,7 @@
     "extensions/codex/src/test-support/**",
     "extensions/discord/src/test-support/**",
     "extensions/openai/src/test-support/**",
+    "extensions/slack/src/test-support/**",
     "extensions/telegram/src/test-support/**",
     "test/**"
   ]
