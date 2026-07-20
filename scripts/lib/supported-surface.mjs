@@ -3,12 +3,13 @@ export const SUPPORTED_BUNDLED_PLUGIN_ID_LIST = [
   "codex",
   "discord",
   "openai",
+  "slack",
   "telegram",
 ];
 export const SUPPORTED_BUNDLED_PLUGIN_IDS = new Set(SUPPORTED_BUNDLED_PLUGIN_ID_LIST);
 export const PRIVATE_QA_BUNDLED_PLUGIN_IDS = new Set(["qa-channel", "qa-lab", "qa-matrix"]);
 
-export const SUPPORTED_CHANNEL_IDS = new Set(["discord", "telegram"]);
+export const SUPPORTED_CHANNEL_IDS = new Set(["discord", "slack", "telegram"]);
 
 function shouldIncludePrivateQaBundledPlugins(env = process.env) {
   return env.OPENCLAW_BUILD_PRIVATE_QA === "1";
