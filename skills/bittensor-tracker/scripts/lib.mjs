@@ -39,7 +39,10 @@ export function readState(file, fallback) {
 
 export function writeState(file, value) {
   const p = path.join(stateDir(), file);
-  fs.writeFileSync(p, `${JSON.stringify(value, null, 2)}\n`);
+  // Atomic: write to a temp file then rename, so a crash mid-write can't corrupt state.
+  const tmp = `${p}.tmp`;
+  fs.writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`);
+  fs.renameSync(tmp, p);
   return p;
 }
 
@@ -96,6 +99,14 @@ export async function channelIdByName(name) {
   return _channelCache.get(name) ?? null;
 }
 
+/** Neutralize mass-ping mentions so untrusted PR content (titles/diffs) can't @everyone the server.
+ *  Defense-in-depth on top of NOT granting the bot the "Mention Everyone" permission. */
+export function neutralizeMentions(text) {
+  return String(text)
+    .replace(/@(everyone|here)\b/gi, "@​$1")
+    .replace(/<@&(\d+)>/g, "[role:$1]");
+}
+
 /** Post a message to a Discord channel id via the openclaw send CLI (integrated path). */
 export function sendToChannel(channelId, message) {
   const bin = env("OPENCLAW_BIN", "openclaw");
@@ -107,7 +118,7 @@ export function sendToChannel(channelId, message) {
     "--target",
     `channel:${channelId}`,
     "--message",
-    message,
+    neutralizeMentions(message),
   ]);
   if (r.status !== 0) {
     throw new Error(`send to channel ${channelId} failed: ${r.stderr || r.stdout}`);
@@ -160,4 +171,48 @@ export function gh(args) {
 
 export function log(...args) {
   process.stderr.write(`[bittensor-tracker] ${args.join(" ")}\n`);
+}
+
+/** Best-effort single-runner lock so overlapping cron runs don't double-post / race state.
+ *  Returns a release() fn, or null if a live run already holds the lock. Stale locks
+ *  (older than staleMinutes — e.g. a crashed run) are reclaimed. */
+export function acquireLock(name, staleMinutes = 30) {
+  const p = path.join(stateDir(), `${name}.lock`);
+  const claim = () => {
+    fs.writeFileSync(p, `${process.pid} ${Date.now()}\n`);
+    const release = () => {
+      try {
+        fs.unlinkSync(p);
+      } catch {
+        // already gone
+      }
+    };
+    process.once("exit", release);
+    return release;
+  };
+  try {
+    fs.writeFileSync(p, `${process.pid} ${Date.now()}\n`, { flag: "wx" }); // atomic create
+    process.once("exit", () => {
+      try {
+        fs.unlinkSync(p);
+      } catch {
+        // already gone
+      }
+    });
+    return () => {
+      try {
+        fs.unlinkSync(p);
+      } catch {
+        // already gone
+      }
+    };
+  } catch (e) {
+    if (e.code !== "EEXIST") throw e;
+    const ts = Number(fs.readFileSync(p, "utf8").trim().split(/\s+/)[1] ?? 0);
+    if (Date.now() - ts > staleMinutes * 60_000) {
+      log(`reclaiming stale lock ${name}.lock`);
+      return claim();
+    }
+    return null; // held by a live run
+  }
 }

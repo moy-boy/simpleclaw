@@ -11,7 +11,12 @@
 // First run per repo seeds lastSeenPr to the current max PR number (reviews nothing),
 // so we never dump every already-open PR on startup.
 
-import { channelIdByName, env, gh, log, readState, writeState } from "./lib.mjs";
+import { acquireLock, channelIdByName, env, gh, log, readState, writeState } from "./lib.mjs";
+
+if (!acquireLock("pr-monitor")) {
+  log("pr-monitor already running; skipping this run");
+  process.exit(0);
+}
 
 const STATE = "pr-state.json";
 const LIMIT = env("BT_PR_LIST_LIMIT", "50");

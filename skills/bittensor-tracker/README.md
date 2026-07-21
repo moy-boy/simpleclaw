@@ -12,7 +12,9 @@ Tracked subnets are derived from your Discord channels (e.g. `#subnet-5`). See
 
 1. Create an application + bot at <https://discord.com/developers>, copy the **bot token**.
 2. Enable the **Message Content** intent (and Server Members if you want member-based maintainer checks).
-3. Invite the bot to your server with **View Channels, Send Messages, Read Message History**.
+3. Invite the bot with **only** **View Channels, Send Messages, Read Message History**. Do **NOT** grant
+   **Mention Everyone** or **Administrator** — the bot posts untrusted PR content, and this prevents a
+   malicious PR title/body from mass-pinging your server (see `SKILL.md` → Security).
 4. Register it as OpenClaw's Discord account:
    ```bash
    openclaw channels add --channel discord --token "$DISCORD_BOT_TOKEN"
@@ -43,13 +45,13 @@ node skills/bittensor-tracker/scripts/check-new-prs.mjs         # seed last-seen
 ```bash
 # Monitor 2 — new subnet registration -> #announcement
 openclaw cron add --name bt-registration \
-  --every "${BT_REG_POLL_MINUTES:-45}m" --session isolated \
+  --every "${BT_REG_POLL_MINUTES:-45}m" --session isolated --tools exec \
   --model "$BT_REVIEW_MODEL" --timeout-seconds 300 \
   --message "Use the bittensor-tracker skill, Monitor 2: run scripts/check-new-subnets.mjs; for each netuid in .new, write a briefing via the bittensor-subnet skill and post it to the BT_ANNOUNCE_CHANNEL channel with 'openclaw message send'. If seeded=true or new is empty, do nothing."
 
 # Monitor 1 — maintainer PR review -> subnet channel (or #general)
 openclaw cron add --name bt-pr-review \
-  --every "${BT_PR_POLL_MINUTES:-10}m" --session isolated \
+  --every "${BT_PR_POLL_MINUTES:-10}m" --session isolated --tools exec \
   --model "$BT_REVIEW_MODEL" --timeout-seconds 900 \
   --message "Use the bittensor-tracker skill, Monitor 1: run scripts/discover-subnets.mjs then scripts/check-new-prs.mjs; for each returned PR, fetch the diff with 'gh pr diff', deeply review it, and post a concise summary to its channelId with 'openclaw message send'. Review only what the script returns."
 ```

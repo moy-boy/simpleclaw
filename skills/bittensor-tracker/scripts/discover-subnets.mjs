@@ -14,6 +14,7 @@
 import fs from "node:fs";
 import {
   env,
+  envInt,
   gh,
   listGuildChannels,
   log,
@@ -117,6 +118,20 @@ async function refresh() {
   return map;
 }
 
+// Refresh is expensive (taostats scrape + gh per subnet), so it's TTL-gated: calling this
+// every PR poll is cheap (returns cache) and it only re-resolves every BT_DISCOVERY_TTL_MINUTES.
+//   --cached  never refresh (cache only)   --force  always refresh
 const cachedOnly = process.argv.includes("--cached");
-const result = cachedOnly ? (readState(CACHE_FILE, { map: {} }).map ?? {}) : await refresh();
+const force = process.argv.includes("--force");
+const cached = readState(CACHE_FILE, null);
+const ttlMs = envInt("BT_DISCOVERY_TTL_MINUTES", 360) * 60_000;
+const fresh = Boolean(cached?.refreshedAt) && Date.now() - Date.parse(cached.refreshedAt) < ttlMs;
+
+let result;
+if (cachedOnly || (fresh && !force)) {
+  if (fresh && !cachedOnly) log("discovery cache fresh; skipping refresh (--force to override)");
+  result = cached?.map ?? {};
+} else {
+  result = await refresh();
+}
 process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
