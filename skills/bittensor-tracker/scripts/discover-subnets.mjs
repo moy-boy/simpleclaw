@@ -49,51 +49,57 @@ function normalizeRepo(text) {
   return m ? m[1].replace(/\.git$/, "").replace(/[).,"'\s]+$/, "") : null;
 }
 
-/** Resolve the subnet's repo. The authoritative source is the on-chain SubnetIdentity
- *  (github_repo the owner registered); reach it via BT_REPO_RESOLVER_CMD (default: btcli).
- *  `{netuid}` is substituted. Falls back to the (unreliable) taostats scrape. */
+// taostats subnet pages embed the on-chain SubnetIdentity (netuid, subnet_name, github_repo)
+// for EVERY subnet in one payload — the authoritative, keyless source. Fetch once, cache the map.
+let _identityMap = null;
+async function taostatsIdentityMap() {
+  if (_identityMap) return _identityMap;
+  _identityMap = {};
+  const url = env("BT_TAOSTATS_URL", "https://taostats.io/subnets/1/");
+  try {
+    const res = await fetch(url, { headers: { "user-agent": "Mozilla/5.0" } });
+    if (!res.ok) {
+      log(`taostats identity fetch ${url} -> ${res.status}`);
+      return _identityMap;
+    }
+    const html = (await res.text()).replaceAll('\\"', '"'); // RSC payload escapes quotes
+    const re = /"netuid":\s*(\d+)\s*,\s*"subnet_name":\s*"[^"]*"\s*,\s*"github_repo":\s*"([^"]+)"/g;
+    let m;
+    while ((m = re.exec(html))) {
+      const repo = normalizeRepo(m[2]);
+      if (repo && !_identityMap[m[1]]) _identityMap[m[1]] = repo;
+    }
+  } catch (e) {
+    log(`taostats identity fetch failed: ${e.message}`);
+  }
+  return _identityMap;
+}
+
+/** Resolve the subnet's repo from taostats' embedded SubnetIdentity (keyless, reliable).
+ *  Optional BT_REPO_RESOLVER_CMD (e.g. btcli) is a fallback; the override file wins upstream. */
 async function resolveRepo(netuid) {
-  // Harden against command injection: netuid must be a plain non-negative integer, and we pass
-  // it to the child via $NETUID (never interpolated as shell syntax).
+  // Harden against command injection: netuid must be a plain non-negative integer.
   const nid = Number(netuid);
   if (!Number.isInteger(nid) || nid < 0) {
     log(`invalid netuid ${JSON.stringify(netuid)}; skipping repo resolve`);
     return null;
   }
-  const cmd =
-    env("BT_REPO_RESOLVER_CMD") ??
-    "btcli subnets show --netuid \"$NETUID\" 2>/dev/null | grep -oE 'github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+' | head -1";
-  // {netuid} substitution is still supported for custom commands, but only ever inserts the
-  // validated integer above.
-  const r = run("bash", ["-lc", cmd.replaceAll("{netuid}", String(nid))], {
-    env: { ...process.env, NETUID: String(nid) },
-  });
-  const repo = r.status === 0 ? normalizeRepo(r.stdout) : null;
-  if (repo) return repo;
-  log(
-    `on-chain repo resolver empty for sn${netuid}; falling back to scrape (set BT_OVERRIDE_FILE)`,
-  );
-  return await scrapeRepo(netuid);
-}
 
-/** Last-resort: scrape the taostats page. Unreliable (SPA) — expect overrides to correct it. */
-async function scrapeRepo(netuid) {
-  try {
-    const res = await fetch(`https://taostats.io/subnets/${netuid}/`, {
-      headers: { "user-agent": "bittensor-tracker" },
+  const fromTaostats = (await taostatsIdentityMap())[nid];
+  if (fromTaostats) return fromTaostats;
+
+  // Fallback: a resolver command. netuid is passed via $NETUID (never shell-interpolated);
+  // {netuid} substitution only ever inserts the validated integer.
+  const cmd = env("BT_REPO_RESOLVER_CMD");
+  if (cmd) {
+    const r = run("bash", ["-lc", cmd.replaceAll("{netuid}", String(nid))], {
+      env: { ...process.env, NETUID: String(nid) },
     });
-    if (!res.ok) return null;
-    const html = await res.text();
-    const DENY =
-      /^(taostats|taostatsio|about|features|topics|sponsors|orgs|marketplace|pricing|login|explore)$/i;
-    for (const mm of html.matchAll(/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/g)) {
-      if (DENY.test(mm[1])) continue;
-      return normalizeRepo(`${mm[1]}/${mm[2]}`);
-    }
-    return null;
-  } catch {
-    return null;
+    const repo = r.status === 0 ? normalizeRepo(r.stdout) : null;
+    if (repo) return repo;
   }
+  log(`no repo for sn${nid} (taostats identity + resolver empty); set BT_OVERRIDE_FILE`);
+  return null;
 }
 
 /** The maintainer team = who actually lands code: top repo contributors (by commit count),
