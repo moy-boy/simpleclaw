@@ -28,6 +28,8 @@ Copy `.env.example` into your gateway environment and fill it in. The important 
 - `BT_REVIEW_MODEL` — provider/model for reviews (`claude-cli/*`, `anthropic/*`, or `openai-codex/*`).
 - `GITHUB_TOKENS` — one or more (comma-separated) for PR polling.
 - `BT_SUBNET_SOURCE_CMD` or `BT_SUBNET_SOURCE_URL` — free/no-key netuid source.
+- `BT_ALERT_CHANNEL` — where Monitor 2 posts a one-time alert if the subnet source
+  breaks (goes empty) and one when it recovers. Defaults to `BT_GENERAL_CHANNEL`.
 
 ## 3. First run (seed state without spamming)
 
