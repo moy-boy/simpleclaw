@@ -20,6 +20,7 @@ import {
   log,
   netuidFromChannelName,
   readState,
+  run,
   writeState,
 } from "./lib.mjs";
 
@@ -36,21 +37,43 @@ function loadOverrides() {
   }
 }
 
-/** Best-effort: scrape the free taostats subnet page for a github repo link. */
+/** Normalize "https://github.com/owner/repo(.git)" or "owner/repo" -> "owner/repo". */
+function normalizeRepo(text) {
+  const m = /(?:https?:\/\/github\.com\/)?([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)/.exec(
+    String(text).trim(),
+  );
+  return m ? m[1].replace(/\.git$/, "").replace(/[).,"'\s]+$/, "") : null;
+}
+
+/** Resolve the subnet's repo. The authoritative source is the on-chain SubnetIdentity
+ *  (github_repo the owner registered); reach it via BT_REPO_RESOLVER_CMD (default: btcli).
+ *  `{netuid}` is substituted. Falls back to the (unreliable) taostats scrape. */
+async function resolveRepo(netuid) {
+  const cmd =
+    env("BT_REPO_RESOLVER_CMD") ??
+    "btcli subnets show --netuid {netuid} 2>/dev/null | grep -oE 'github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+' | head -1";
+  const r = run("bash", ["-lc", cmd.replaceAll("{netuid}", String(netuid))]);
+  const repo = r.status === 0 ? normalizeRepo(r.stdout) : null;
+  if (repo) return repo;
+  log(
+    `on-chain repo resolver empty for sn${netuid}; falling back to scrape (set BT_OVERRIDE_FILE)`,
+  );
+  return await scrapeRepo(netuid);
+}
+
+/** Last-resort: scrape the taostats page. Unreliable (SPA) — expect overrides to correct it. */
 async function scrapeRepo(netuid) {
-  const url = `https://taostats.io/subnets/${netuid}/`;
   try {
-    const res = await fetch(url, { headers: { "user-agent": "bittensor-tracker" } });
+    const res = await fetch(`https://taostats.io/subnets/${netuid}/`, {
+      headers: { "user-agent": "bittensor-tracker" },
+    });
     if (!res.ok) return null;
     const html = await res.text();
-    // Skip github links that are taostats' own / social / docs chrome, not the subnet repo.
-    // (Best-effort only — set BT_OVERRIDE_FILE for anything this resolves wrong.)
     const DENY =
       /^(taostats|taostatsio|about|features|topics|sponsors|orgs|marketplace|pricing|login|explore)$/i;
     for (const mm of html.matchAll(/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/g)) {
-      const owner = mm[1];
-      if (DENY.test(owner)) continue;
-      return `${owner}/${mm[2]}`.replace(/\.git$/, "").replace(/[).,"']+$/, "");
+      if (DENY.test(mm[1])) continue;
+      return normalizeRepo(`${mm[1]}/${mm[2]}`);
     }
     return null;
   } catch {
@@ -58,22 +81,36 @@ async function scrapeRepo(netuid) {
   }
 }
 
-/** Best-effort maintainers: public members of the owning org, else the owner. */
+/** The maintainer team = who actually lands code: top repo contributors (by commit count),
+ *  with org-members / owner as fallbacks. Override wins upstream. */
 function resolveMaintainers(repo) {
+  const limit = envInt("BT_MAINTAINERS_LIMIT", 10);
+  const contrib = gh([
+    "api",
+    `repos/${repo}/contributors?per_page=${limit}`,
+    "--jq",
+    "[.[].login] | map(select(. != null))",
+  ]);
+  if (contrib.status === 0) {
+    try {
+      const arr = JSON.parse(contrib.stdout);
+      if (Array.isArray(arr) && arr.length) return arr;
+    } catch {
+      // fall through
+    }
+  }
   const owner = repo.split("/")[0];
-  // Try org public members (works for org-owned repos).
   const members = gh(["api", `orgs/${owner}/public_members`, "--jq", ".[].login"]);
   if (members.status === 0 && members.stdout.trim()) {
     return members.stdout.trim().split("\n").filter(Boolean);
   }
-  // Fall back to the owner login (user-owned repo).
   return [owner];
 }
 
-/** Resolve repo + maintainers for a netuid (override wins, else best-effort). */
+/** Resolve repo + maintainers for a netuid (override wins, else auto-discover). */
 async function resolveEntry(netuid, overrides) {
   const ov = overrides[String(netuid)] ?? {};
-  const repo = ov.repo ?? (await scrapeRepo(netuid));
+  const repo = ov.repo ?? (await resolveRepo(netuid));
   const maintainers = ov.maintainers ?? (repo ? resolveMaintainers(repo) : []);
   return { repo: repo ?? null, maintainers };
 }
