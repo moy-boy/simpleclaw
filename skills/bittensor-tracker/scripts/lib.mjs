@@ -1,5 +1,6 @@
 // Shared helpers for the Bittensor subnet tracker bot (registration + PR monitors).
-// Dependency-free: Node built-ins, global fetch, and shelling out to `gh` / `openclaw`.
+// Dependency-free: Node built-ins, global fetch, and shelling out to `gh`. Discord
+// reads/posts go direct to the REST API (no `openclaw` binary required on PATH).
 // Every secret/setting is env-driven so the logic can be built and exercised before
 // real tokens exist (see .env.example).
 
@@ -123,11 +124,12 @@ export function run(cmd, args, opts = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Discord (bot token from env; list via REST, send via the openclaw CLI so the
-// bot honors the configured discord account + streaming/formatting policy).
+// Discord (bot token from env; both list and post go direct to the REST API).
 // ---------------------------------------------------------------------------
 
 const DISCORD_API = "https://discord.com/api/v10";
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function listGuildChannels() {
   const token = env("DISCORD_BOT_TOKEN");
@@ -200,22 +202,37 @@ export function chunkForDiscord(text, max = 1900) {
   return chunks.length ? chunks : [""];
 }
 
+/** POST one chunk, honoring Discord 429 rate limits (retry after `retry_after`). */
+async function postChunk(channelId, token, content, attempt = 0) {
+  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bot ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ content, allowed_mentions: { parse: [] } }),
+  });
+  if (res.status === 429 && attempt < 5) {
+    const body = await res.json().catch(() => ({}));
+    const waitMs = Math.ceil(((Number(body.retry_after) || 1) + 0.1) * 1000);
+    log(`discord 429 on channel ${channelId}; retry ${attempt + 1} in ${waitMs}ms`);
+    await sleep(waitMs);
+    return postChunk(channelId, token, content, attempt + 1);
+  }
+  if (!res.ok) {
+    throw new Error(`post to channel ${channelId} failed: ${res.status} ${await res.text()}`);
+  }
+}
+
 /** Post a message to a Discord channel via the bot REST API — self-contained, no
  *  `openclaw` binary on PATH required. Mentions are neutralized in the text AND
  *  disabled at the API level (allowed_mentions.parse=[]) so untrusted PR content
- *  can never ping the server. Long reviews are split across messages. */
+ *  can never ping the server. Long reviews are split across messages, paced under
+ *  the per-channel bucket (5/5s) with 429 backoff. */
 export async function sendToChannel(channelId, message) {
   const token = env("DISCORD_BOT_TOKEN");
   if (!token) throw new Error("DISCORD_BOT_TOKEN is required to post to Discord");
-  for (const content of chunkForDiscord(neutralizeMentions(String(message)))) {
-    const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
-      method: "POST",
-      headers: { Authorization: `Bot ${token}`, "content-type": "application/json" },
-      body: JSON.stringify({ content, allowed_mentions: { parse: [] } }),
-    });
-    if (!res.ok) {
-      throw new Error(`post to channel ${channelId} failed: ${res.status} ${await res.text()}`);
-    }
+  const chunks = chunkForDiscord(neutralizeMentions(String(message)));
+  for (let i = 0; i < chunks.length; i++) {
+    await postChunk(channelId, token, chunks[i]);
+    if (i < chunks.length - 1) await sleep(350); // stay under the 5-per-5s channel bucket
   }
   return true;
 }

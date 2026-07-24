@@ -19,7 +19,7 @@ if (!acquireLock("pr-monitor")) {
 }
 
 const STATE = "pr-state.json";
-const LIMIT = env("BT_PR_LIST_LIMIT", "50");
+const LIMIT = env("BT_PR_LIST_LIMIT", "100");
 
 const discovery = readState("discovery-cache.json", { map: {} }).map ?? {};
 const prState = readState(STATE, {}); // { "<repo>": lastSeenPr }
@@ -33,6 +33,15 @@ for (const [netuid, info] of Object.entries(discovery)) {
     // No maintainers resolved -> we cannot tell maintainer PRs from external ones.
     // Skip rather than post every open PR (would violate the maintainer-only requirement).
     log(`no maintainers for ${info.repo}; skipping (set one in BT_OVERRIDE_FILE to enable)`);
+    continue;
+  }
+
+  // A subnet channel (info.channelId) or the #general fallback must resolve, else we
+  // have nowhere to route the review. Skip WITHOUT advancing state so a transient
+  // Discord failure is retried next run rather than silently swallowed.
+  const targetChannel = info.channelId ?? generalId;
+  if (!targetChannel) {
+    log(`no channel to route ${info.repo} (subnet + #general both unresolved); skipping`);
     continue;
   }
 
@@ -79,7 +88,7 @@ for (const [netuid, info] of Object.entries(discovery)) {
       title: p.title,
       author: p.author?.login ?? "unknown",
       url: p.url,
-      channelId: info.channelId ?? generalId,
+      channelId: targetChannel,
       route: info.channelId ? "subnet" : "general",
     });
   }
