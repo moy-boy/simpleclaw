@@ -21,6 +21,7 @@ import {
   netuidFromChannelName,
   readState,
   run,
+  taostatsIdentity,
   writeState,
 } from "./lib.mjs";
 
@@ -49,30 +50,16 @@ function normalizeRepo(text) {
   return m ? m[1].replace(/\.git$/, "").replace(/[).,"'\s]+$/, "") : null;
 }
 
-// taostats subnet pages embed the on-chain SubnetIdentity (netuid, subnet_name, github_repo)
-// for EVERY subnet in one payload — the authoritative, keyless source. Fetch once, cache the map.
-let _identityMap = null;
-async function taostatsIdentityMap() {
-  if (_identityMap) return _identityMap;
-  _identityMap = {};
-  const url = env("BT_TAOSTATS_URL", "https://taostats.io/subnets/1/");
-  try {
-    const res = await fetch(url, { headers: { "user-agent": "Mozilla/5.0" } });
-    if (!res.ok) {
-      log(`taostats identity fetch ${url} -> ${res.status}`);
-      return _identityMap;
-    }
-    const html = (await res.text()).replaceAll('\\"', '"'); // RSC payload escapes quotes
-    const re = /"netuid":\s*(\d+)\s*,\s*"subnet_name":\s*"[^"]*"\s*,\s*"github_repo":\s*"([^"]+)"/g;
-    let m;
-    while ((m = re.exec(html))) {
-      const repo = normalizeRepo(m[2]);
-      if (repo && !_identityMap[m[1]]) _identityMap[m[1]] = repo;
-    }
-  } catch (e) {
-    log(`taostats identity fetch failed: ${e.message}`);
+// The subnet -> repo map, normalized, built from lib's shared SubnetIdentity source.
+let _repoMap = null;
+async function taostatsRepoMap() {
+  if (_repoMap) return _repoMap;
+  _repoMap = {};
+  for (const { netuid, repo } of await taostatsIdentity()) {
+    const norm = normalizeRepo(repo);
+    if (norm && !(netuid in _repoMap)) _repoMap[netuid] = norm;
   }
-  return _identityMap;
+  return _repoMap;
 }
 
 /** Resolve the subnet's repo from taostats' embedded SubnetIdentity (keyless, reliable).
@@ -85,7 +72,7 @@ async function resolveRepo(netuid) {
     return null;
   }
 
-  const fromTaostats = (await taostatsIdentityMap())[nid];
+  const fromTaostats = (await taostatsRepoMap())[nid];
   if (fromTaostats) return fromTaostats;
 
   // Fallback: a resolver command. netuid is passed via $NETUID (never shell-interpolated);

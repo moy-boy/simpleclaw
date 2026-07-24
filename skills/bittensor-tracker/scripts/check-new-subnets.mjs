@@ -54,7 +54,7 @@ if (known.size === 0) {
       log("announce channel not found; skipping post");
     } else {
       for (const netuid of fresh) {
-        sendToChannel(
+        await sendToChannel(
           chId,
           `🆕 **New Bittensor subnet registered: SN${netuid}** — https://taostats.io/subnets/${netuid}`,
         );

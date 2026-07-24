@@ -7,6 +7,72 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+// ---------------------------------------------------------------------------
+// Env file loader. Cron jobs run as children of the gateway and inherit ITS
+// environment, which may not carry BT_*/GITHUB_TOKENS/DISCORD_BOT_TOKEN. So we
+// load a dotenv-style file as a FALLBACK — a real process.env value always wins,
+// so a systemd EnvironmentFile or a `source .env.dev` shell keeps precedence.
+// Location: $BT_ENV_FILE, else the nearest .env.dev / .env walking up from here.
+// ---------------------------------------------------------------------------
+
+/** Parse one KEY=VALUE line: strips surrounding quotes and inline `#` comments.
+ *  Comment detection runs on the RAW remainder (before trimming) so an empty value
+ *  with a trailing comment (`KEY=   # note`) parses to "" rather than the comment. */
+function parseEnvLine(line) {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith("#")) return null;
+  const eq = trimmed.indexOf("=");
+  if (eq < 1) return null;
+  const key = trimmed.slice(0, eq).trim();
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) return null;
+  const raw = trimmed.slice(eq + 1);
+  const quoted = raw.replace(/^\s+/, "");
+  const quote = quoted[0];
+  if (quote === '"' || quote === "'") {
+    const close = quoted.indexOf(quote, 1);
+    return [key, close === -1 ? quoted.slice(1) : quoted.slice(1, close)];
+  }
+  const comment = raw.search(/(^|\s)#/); // a # at start or after whitespace begins a comment
+  return [key, (comment === -1 ? raw : raw.slice(0, comment)).trim()];
+}
+
+function findEnvFile() {
+  const explicit = process.env.BT_ENV_FILE;
+  if (explicit) return fs.existsSync(explicit) ? explicit : null;
+  let dir = path.dirname(fileURLToPath(import.meta.url));
+  for (let depth = 0; depth < 6; depth++) {
+    for (const name of [".env.dev", ".env"]) {
+      const candidate = path.join(dir, name);
+      if (fs.existsSync(candidate)) return candidate;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+function loadEnvFile() {
+  const file = findEnvFile();
+  if (!file) return;
+  let text;
+  try {
+    text = fs.readFileSync(file, "utf8");
+  } catch {
+    return;
+  }
+  for (const line of text.split("\n")) {
+    const kv = parseEnvLine(line);
+    if (!kv) continue;
+    const [key, value] = kv;
+    const current = process.env[key];
+    if (current === undefined || current === "") process.env[key] = value; // never override real env
+  }
+}
+
+loadEnvFile();
 
 export function env(name, fallback = undefined) {
   const v = process.env[name];
@@ -107,21 +173,49 @@ export function neutralizeMentions(text) {
     .replace(/<@&(\d+)>/g, "[role:$1]");
 }
 
-/** Post a message to a Discord channel id via the openclaw send CLI (integrated path). */
-export function sendToChannel(channelId, message) {
-  const bin = env("OPENCLAW_BIN", "openclaw");
-  const r = run(bin, [
-    "message",
-    "send",
-    "--channel",
-    "discord",
-    "--target",
-    `channel:${channelId}`,
-    "--message",
-    neutralizeMentions(message),
-  ]);
-  if (r.status !== 0) {
-    throw new Error(`send to channel ${channelId} failed: ${r.stderr || r.stdout}`);
+/** Split text into Discord-sized chunks (<=2000 chars), preferring line boundaries.
+ *  A single line longer than `max` is hard-split (never truncated) so nothing is lost. */
+export function chunkForDiscord(text, max = 1900) {
+  const chunks = [];
+  let buf = "";
+  const flush = () => {
+    if (buf) chunks.push(buf);
+    buf = "";
+  };
+  for (const rawLine of String(text).split("\n")) {
+    let line = rawLine;
+    while (line.length > max) {
+      flush();
+      chunks.push(line.slice(0, max));
+      line = line.slice(max);
+    }
+    if (buf.length + line.length + 1 > max) {
+      flush();
+      buf = line;
+    } else {
+      buf = buf ? `${buf}\n${line}` : line;
+    }
+  }
+  flush();
+  return chunks.length ? chunks : [""];
+}
+
+/** Post a message to a Discord channel via the bot REST API — self-contained, no
+ *  `openclaw` binary on PATH required. Mentions are neutralized in the text AND
+ *  disabled at the API level (allowed_mentions.parse=[]) so untrusted PR content
+ *  can never ping the server. Long reviews are split across messages. */
+export async function sendToChannel(channelId, message) {
+  const token = env("DISCORD_BOT_TOKEN");
+  if (!token) throw new Error("DISCORD_BOT_TOKEN is required to post to Discord");
+  for (const content of chunkForDiscord(neutralizeMentions(String(message)))) {
+    const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bot ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ content, allowed_mentions: { parse: [] } }),
+    });
+    if (!res.ok) {
+      throw new Error(`post to channel ${channelId} failed: ${res.status} ${await res.text()}`);
+    }
   }
   return true;
 }
@@ -136,6 +230,46 @@ export function netuidFromChannelName(name) {
   if (!m) return null;
   const n = Number.parseInt(m[1], 10);
   return Number.isFinite(n) ? n : null;
+}
+
+// ---------------------------------------------------------------------------
+// taostats embedded on-chain SubnetIdentity: the single keyless source of truth
+// for BOTH "which netuids are registered" and "each subnet's github repo". The
+// subnet page ships every subnet's { netuid, subnet_name, github_repo } in one
+// RSC payload (quotes backslash-escaped). Fetched once, cached per process, so
+// discovery and the registration monitor share one authoritative request.
+// ---------------------------------------------------------------------------
+
+const TAOSTATS_IDENTITY_RE =
+  /"netuid":\s*(\d+)\s*,\s*"subnet_name":\s*"[^"]*"\s*,\s*"github_repo":\s*"([^"]+)"/g;
+
+let _identity = null;
+/** Returns [{ netuid:number, repo:string }] for every subnet taostats knows.
+ *  Empty array (never throws) when the source is unreachable, so callers can
+ *  apply their own empty-source guards instead of crashing a cron run. */
+export async function taostatsIdentity() {
+  if (_identity) return _identity;
+  const url = env("BT_TAOSTATS_URL", "https://taostats.io/subnets/1/");
+  try {
+    const res = await fetch(url, { headers: { "user-agent": "Mozilla/5.0" } });
+    if (!res.ok) {
+      log(`taostats identity fetch ${url} -> ${res.status}`);
+      return (_identity = []);
+    }
+    const html = (await res.text()).replaceAll('\\"', '"'); // RSC payload escapes quotes
+    const out = [];
+    const seen = new Set();
+    for (const m of html.matchAll(TAOSTATS_IDENTITY_RE)) {
+      const netuid = Number.parseInt(m[1], 10);
+      if (!Number.isInteger(netuid) || seen.has(netuid)) continue;
+      seen.add(netuid);
+      out.push({ netuid, repo: m[2] });
+    }
+    return (_identity = out);
+  } catch (e) {
+    log(`taostats identity fetch failed: ${e.message}`);
+    return (_identity = []);
+  }
 }
 
 // ---------------------------------------------------------------------------

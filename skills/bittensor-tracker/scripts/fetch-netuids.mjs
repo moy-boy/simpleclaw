@@ -10,7 +10,7 @@
 // Exported as getNetuids() so check-new-subnets.mjs can import it.
 
 import { spawnSync } from "node:child_process";
-import { env, log } from "./lib.mjs";
+import { env, log, taostatsIdentity } from "./lib.mjs";
 
 function uniqSortedInts(list) {
   return [...new Set(list.map((n) => Number.parseInt(n, 10)).filter(Number.isFinite))].sort(
@@ -31,25 +31,37 @@ export async function getNetuids() {
   if (cmd) {
     const r = spawnSync("bash", ["-lc", cmd], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 });
     if (r.status !== 0) throw new Error(`BT_SUBNET_SOURCE_CMD failed: ${r.stderr}`);
-    const parsed = JSON.parse(r.stdout);
+    let parsed;
+    try {
+      parsed = JSON.parse(r.stdout);
+    } catch (e) {
+      throw new Error(`BT_SUBNET_SOURCE_CMD did not print JSON: ${e.message}`);
+    }
     return uniqSortedInts(Array.isArray(parsed) ? parsed : (parsed.netuids ?? []));
   }
 
-  const url = env("BT_SUBNET_SOURCE_URL", "https://taostats.io/subnets/");
-  const res = await fetch(url, { headers: { "user-agent": "bittensor-tracker" } });
-  if (!res.ok) throw new Error(`subnet source ${url} -> ${res.status}`);
-  const body = await res.text();
-  try {
-    const json = JSON.parse(body);
-    const arr = Array.isArray(json) ? json : (json.netuids ?? json.data ?? []);
-    const nums = arr.map((x) => (typeof x === "object" ? x.netuid : x));
-    if (nums.length) return uniqSortedInts(nums);
-  } catch {
-    // not JSON -> scrape
+  // Explicit URL override (JSON array, {netuids|data}, or HTML to scrape).
+  const url = env("BT_SUBNET_SOURCE_URL");
+  if (url) {
+    const res = await fetch(url, { headers: { "user-agent": "bittensor-tracker" } });
+    if (!res.ok) throw new Error(`subnet source ${url} -> ${res.status}`);
+    const body = await res.text();
+    try {
+      const json = JSON.parse(body);
+      const arr = Array.isArray(json) ? json : (json.netuids ?? json.data ?? []);
+      const nums = arr.map((x) => (typeof x === "object" ? x.netuid : x));
+      if (nums.length) return uniqSortedInts(nums);
+    } catch {
+      // not JSON -> scrape
+    }
+    const scraped = uniqSortedInts(scrapeNetuids(body));
+    if (!scraped.length) log("warning: no netuids parsed from BT_SUBNET_SOURCE_URL");
+    return scraped;
   }
-  const scraped = uniqSortedInts(scrapeNetuids(body));
-  if (!scraped.length) log("warning: no netuids parsed from source (check BT_SUBNET_SOURCE_*)");
-  return scraped;
+
+  // Default: the shared, keyless SubnetIdentity payload — the authoritative list
+  // of every registered netuid (same source discovery uses for repos).
+  return uniqSortedInts((await taostatsIdentity()).map((s) => s.netuid));
 }
 
 // CLI: print the array.
