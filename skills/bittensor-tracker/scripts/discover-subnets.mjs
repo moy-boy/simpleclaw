@@ -37,11 +37,15 @@ function loadOverrides() {
   }
 }
 
-/** Normalize "https://github.com/owner/repo(.git)" or "owner/repo" -> "owner/repo". */
+/** Normalize "https://github.com/owner/repo(.git)", "github.com/owner/repo", or
+ *  "owner/repo" -> "owner/repo". */
 function normalizeRepo(text) {
-  const m = /(?:https?:\/\/github\.com\/)?([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)/.exec(
-    String(text).trim(),
-  );
+  const stripped = String(text)
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/^github\.com\//, "");
+  const m = /^([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)/.exec(stripped);
   return m ? m[1].replace(/\.git$/, "").replace(/[).,"'\s]+$/, "") : null;
 }
 
@@ -49,10 +53,21 @@ function normalizeRepo(text) {
  *  (github_repo the owner registered); reach it via BT_REPO_RESOLVER_CMD (default: btcli).
  *  `{netuid}` is substituted. Falls back to the (unreliable) taostats scrape. */
 async function resolveRepo(netuid) {
+  // Harden against command injection: netuid must be a plain non-negative integer, and we pass
+  // it to the child via $NETUID (never interpolated as shell syntax).
+  const nid = Number(netuid);
+  if (!Number.isInteger(nid) || nid < 0) {
+    log(`invalid netuid ${JSON.stringify(netuid)}; skipping repo resolve`);
+    return null;
+  }
   const cmd =
     env("BT_REPO_RESOLVER_CMD") ??
-    "btcli subnets show --netuid {netuid} 2>/dev/null | grep -oE 'github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+' | head -1";
-  const r = run("bash", ["-lc", cmd.replaceAll("{netuid}", String(netuid))]);
+    "btcli subnets show --netuid \"$NETUID\" 2>/dev/null | grep -oE 'github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+' | head -1";
+  // {netuid} substitution is still supported for custom commands, but only ever inserts the
+  // validated integer above.
+  const r = run("bash", ["-lc", cmd.replaceAll("{netuid}", String(nid))], {
+    env: { ...process.env, NETUID: String(nid) },
+  });
   const repo = r.status === 0 ? normalizeRepo(r.stdout) : null;
   if (repo) return repo;
   log(
