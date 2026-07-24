@@ -20,6 +20,7 @@ import {
   log,
   netuidFromChannelName,
   readState,
+  run,
   writeState,
 } from "./lib.mjs";
 
@@ -36,44 +37,101 @@ function loadOverrides() {
   }
 }
 
-/** Best-effort: scrape the free taostats subnet page for a github repo link. */
-async function scrapeRepo(netuid) {
-  const url = `https://taostats.io/subnets/${netuid}/`;
-  try {
-    const res = await fetch(url, { headers: { "user-agent": "bittensor-tracker" } });
-    if (!res.ok) return null;
-    const html = await res.text();
-    // Skip github links that are taostats' own / social / docs chrome, not the subnet repo.
-    // (Best-effort only — set BT_OVERRIDE_FILE for anything this resolves wrong.)
-    const DENY =
-      /^(taostats|taostatsio|about|features|topics|sponsors|orgs|marketplace|pricing|login|explore)$/i;
-    for (const mm of html.matchAll(/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/g)) {
-      const owner = mm[1];
-      if (DENY.test(owner)) continue;
-      return `${owner}/${mm[2]}`.replace(/\.git$/, "").replace(/[).,"']+$/, "");
-    }
-    return null;
-  } catch {
-    return null;
-  }
+/** Normalize "https://github.com/owner/repo(.git)", "github.com/owner/repo", or
+ *  "owner/repo" -> "owner/repo". */
+function normalizeRepo(text) {
+  const stripped = String(text)
+    .trim()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/^github\.com\//, "");
+  const m = /^([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)/.exec(stripped);
+  return m ? m[1].replace(/\.git$/, "").replace(/[).,"'\s]+$/, "") : null;
 }
 
-/** Best-effort maintainers: public members of the owning org, else the owner. */
+// taostats subnet pages embed the on-chain SubnetIdentity (netuid, subnet_name, github_repo)
+// for EVERY subnet in one payload — the authoritative, keyless source. Fetch once, cache the map.
+let _identityMap = null;
+async function taostatsIdentityMap() {
+  if (_identityMap) return _identityMap;
+  _identityMap = {};
+  const url = env("BT_TAOSTATS_URL", "https://taostats.io/subnets/1/");
+  try {
+    const res = await fetch(url, { headers: { "user-agent": "Mozilla/5.0" } });
+    if (!res.ok) {
+      log(`taostats identity fetch ${url} -> ${res.status}`);
+      return _identityMap;
+    }
+    const html = (await res.text()).replaceAll('\\"', '"'); // RSC payload escapes quotes
+    const re = /"netuid":\s*(\d+)\s*,\s*"subnet_name":\s*"[^"]*"\s*,\s*"github_repo":\s*"([^"]+)"/g;
+    let m;
+    while ((m = re.exec(html))) {
+      const repo = normalizeRepo(m[2]);
+      if (repo && !_identityMap[m[1]]) _identityMap[m[1]] = repo;
+    }
+  } catch (e) {
+    log(`taostats identity fetch failed: ${e.message}`);
+  }
+  return _identityMap;
+}
+
+/** Resolve the subnet's repo from taostats' embedded SubnetIdentity (keyless, reliable).
+ *  Optional BT_REPO_RESOLVER_CMD (e.g. btcli) is a fallback; the override file wins upstream. */
+async function resolveRepo(netuid) {
+  // Harden against command injection: netuid must be a plain non-negative integer.
+  const nid = Number(netuid);
+  if (!Number.isInteger(nid) || nid < 0) {
+    log(`invalid netuid ${JSON.stringify(netuid)}; skipping repo resolve`);
+    return null;
+  }
+
+  const fromTaostats = (await taostatsIdentityMap())[nid];
+  if (fromTaostats) return fromTaostats;
+
+  // Fallback: a resolver command. netuid is passed via $NETUID (never shell-interpolated);
+  // {netuid} substitution only ever inserts the validated integer.
+  const cmd = env("BT_REPO_RESOLVER_CMD");
+  if (cmd) {
+    const r = run("bash", ["-lc", cmd.replaceAll("{netuid}", String(nid))], {
+      env: { ...process.env, NETUID: String(nid) },
+    });
+    const repo = r.status === 0 ? normalizeRepo(r.stdout) : null;
+    if (repo) return repo;
+  }
+  log(`no repo for sn${nid} (taostats identity + resolver empty); set BT_OVERRIDE_FILE`);
+  return null;
+}
+
+/** The maintainer team = who actually lands code: top repo contributors (by commit count),
+ *  with org-members / owner as fallbacks. Override wins upstream. */
 function resolveMaintainers(repo) {
+  const limit = envInt("BT_MAINTAINERS_LIMIT", 10);
+  const contrib = gh([
+    "api",
+    `repos/${repo}/contributors?per_page=${limit}`,
+    "--jq",
+    "[.[].login] | map(select(. != null))",
+  ]);
+  if (contrib.status === 0) {
+    try {
+      const arr = JSON.parse(contrib.stdout);
+      if (Array.isArray(arr) && arr.length) return arr;
+    } catch {
+      // fall through
+    }
+  }
   const owner = repo.split("/")[0];
-  // Try org public members (works for org-owned repos).
   const members = gh(["api", `orgs/${owner}/public_members`, "--jq", ".[].login"]);
   if (members.status === 0 && members.stdout.trim()) {
     return members.stdout.trim().split("\n").filter(Boolean);
   }
-  // Fall back to the owner login (user-owned repo).
   return [owner];
 }
 
-/** Resolve repo + maintainers for a netuid (override wins, else best-effort). */
+/** Resolve repo + maintainers for a netuid (override wins, else auto-discover). */
 async function resolveEntry(netuid, overrides) {
   const ov = overrides[String(netuid)] ?? {};
-  const repo = ov.repo ?? (await scrapeRepo(netuid));
+  const repo = ov.repo ?? (await resolveRepo(netuid));
   const maintainers = ov.maintainers ?? (repo ? resolveMaintainers(repo) : []);
   return { repo: repo ?? null, maintainers };
 }
